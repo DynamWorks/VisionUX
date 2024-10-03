@@ -86,7 +86,7 @@ lane_count = max(1, round((x_positions.max() - x_positions.min()) / 100))  # Ass
 print(f"\nEstimated number of lanes: {lane_count}")
 
 # Traffic density using bounding boxes
-image_area = height * width
+image_area = original_height * original_width
 vehicle_df['area'] = (vehicle_df['xmax'] - vehicle_df['xmin']) * (vehicle_df['ymax'] - vehicle_df['ymin'])
 total_vehicle_area = vehicle_df['area'].sum()
 density = total_vehicle_area / image_area
