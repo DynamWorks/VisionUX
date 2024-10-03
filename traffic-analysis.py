@@ -73,15 +73,17 @@ def detect_trucks(image):
     
     # Extract the truck detections
     trucks = []
-    for result in results:
-        boxes = result.boxes.data.cpu().numpy()
-        for box in boxes:
-            x1, y1, x2, y2, conf, cls = box
-            if int(cls) == 7:  # Class 7 corresponds to trucks
-                trucks.append({
-                    'box': [x1, y1, x2-x1, y2-y1],
-                    'confidence': conf
-                })
+    if results and len(results) > 0:
+        for result in results:
+            if result.boxes is not None and hasattr(result.boxes, 'data'):
+                boxes = result.boxes.data.cpu().numpy()
+                for box in boxes:
+                    x1, y1, x2, y2, conf, cls = box
+                    if int(cls) == 7:  # Class 7 corresponds to trucks
+                        trucks.append({
+                            'box': [x1, y1, x2-x1, y2-y1],
+                            'confidence': conf
+                        })
     
     return trucks
 
@@ -154,10 +156,13 @@ save_segmentation_result(original_image, masks, "sam_segmentation_result.png")
 trucks = detect_trucks(original_image)
 
 # Process the truck detections
-for truck in trucks:
-    box = truck['box']
-    confidence = truck['confidence']
-    print(f"Truck detected: {box}, confidence: {confidence}")
+if trucks:
+    for truck in trucks:
+        box = truck['box']
+        confidence = truck['confidence']
+        print(f"Truck detected: {box}, confidence: {confidence}")
+else:
+    print("No trucks detected in the image.")
 
 classes = yolo_model.names
 vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
