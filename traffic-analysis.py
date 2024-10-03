@@ -103,7 +103,7 @@ save_yolo_result(original_image, yolo_results, "yolo_detection_result.png")
 masks = segment_image(original_image)
 
 # Save segmentation result
-save_segmentation_result(masks, "sam_segmentation_result.png")
+save_segmentation_result(original_image, masks, "sam_segmentation_result.png")
 
 classes = yolo_model.names
 vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
