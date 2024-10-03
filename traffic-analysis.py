@@ -155,9 +155,9 @@ overlap_mask = cv2.bitwise_and(yolo_mask, sam_mask)
 
 # Create highlighted image
 highlighted_image = original_image.copy()
-highlighted_image[yolo_mask > 0] = cv2.addWeighted(highlighted_image[yolo_mask > 0], 0.7, np.full_like(highlighted_image[yolo_mask > 0], [255, 0, 0]), 0.3, 0)
-highlighted_image[sam_mask > 0] = cv2.addWeighted(highlighted_image[sam_mask > 0], 0.7, np.full_like(highlighted_image[sam_mask > 0], [0, 255, 0]), 0.3, 0)
-highlighted_image[overlap_mask > 0] = cv2.addWeighted(highlighted_image[overlap_mask > 0], 0.7, np.full_like(highlighted_image[overlap_mask > 0], [0, 0, 255]), 0.3, 0)
+highlighted_image[yolo_mask > 0] = cv2.addWeighted(highlighted_image[yolo_mask > 0], 0.5, np.full_like(highlighted_image[yolo_mask > 0], [255, 0, 0]), 0.3, 0)
+highlighted_image[sam_mask > 0] = cv2.addWeighted(highlighted_image[sam_mask > 0], 0.5, np.full_like(highlighted_image[sam_mask > 0], [0, 255, 0]), 0.3, 0)
+highlighted_image[overlap_mask > 0] = cv2.addWeighted(highlighted_image[overlap_mask > 0], 0.5, np.full_like(highlighted_image[overlap_mask > 0], [0, 0, 255]), 0.3, 0)
 
 # Save highlighted result
 cv2.imwrite("highlighted_detection_result.png", highlighted_image)
