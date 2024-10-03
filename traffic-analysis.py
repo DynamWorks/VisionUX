@@ -64,7 +64,7 @@ def save_yolo_result(image, yolo_results, output_path):
         for box in boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = f"{r.names[int(box.cls)]}: {box.conf:.2f}"
+            label = f"{r.names[int(box.cls)]}: {box.conf.item():.2f}"
             cv2.putText(result_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     cv2.imwrite(output_path, result_image)
 
