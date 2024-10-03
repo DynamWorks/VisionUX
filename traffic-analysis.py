@@ -69,8 +69,8 @@ def detect_trucks(image):
     truck_model = YOLO('yolov8n-cls.pt')
     
     # Run the truck detection on the input image
-    results = truck_model(image, device=0, verbose=False, imgsz=1024, conf=0.4, iou=0.5,
-                         agnostic_nms=False, max_det=100, half=True, batch=1)
+    results = truck_model(image, device='cpu', verbose=False, imgsz=1024, conf=0.4, iou=0.5,
+                         agnostic_nms=False, max_det=100, half=False, batch=1)
     
     # Extract the truck detections
     trucks = []
