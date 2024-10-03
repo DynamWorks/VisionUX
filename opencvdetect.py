@@ -112,3 +112,38 @@ else:
 
 print("\nAll detected objects:")
 print(df['name'].value_counts())
+
+import torch
+from PIL import Image
+from transformers import CLIPProcessor, CLIPModel
+
+# Load CLIP model
+model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+def validate_detection(image, bbox, initial_class):
+    # Crop the image to the bounding box
+    cropped_image = image.crop(bbox)
+    
+    # Prepare text inputs
+    texts = ["a car", "a truck", "a bus", "a motorcycle", "a vehicle"]
+    
+    # Process inputs
+    inputs = processor(text=texts, images=cropped_image, return_tensors="pt", padding=True)
+    
+    # Get model predictions
+    outputs = model(**inputs)
+    logits_per_image = outputs.logits_per_image
+    probs = logits_per_image.softmax(dim=1)
+    
+    # Get the most likely class
+    best_class = texts[probs.argmax().item()]
+    
+    return best_class
+
+# Use this function to validate each detection
+for detection in detections:
+    validated_class = validate_detection(original_image, detection['bbox'], detection['class'])
+    if validated_class != detection['class']:
+        print(f"Corrected {detection['class']} to {validated_class}")
+        detection['class'] = validated_class
