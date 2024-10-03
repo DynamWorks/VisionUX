@@ -36,11 +36,10 @@ def validate_detection(image, bbox, initial_class):
     return best_class, confidence
 
 def segment_image(image):
-    num_cores = multiprocessing.cpu_count()
-    results = sam_model(image, device=0, verbose=False, retina_masks=True, 
+    results = sam_model(image, device='cpu', verbose=False, retina_masks=True, 
                         imgsz=1024, conf=0.4, iou=0.9, 
                         agnostic_nms=False, max_det=300, 
-                        half=True, batch=num_cores)
+                        half=False, batch=1)
     masks = results[0].masks.data.cpu().numpy()
     return masks
 
@@ -78,13 +77,35 @@ def detect_trucks(image):
         boxes = result.boxes.data.cpu().numpy()
         for box in boxes:
             x1, y1, x2, y2, conf, cls = box
-            if int(cls) == 5:  # Class 5 corresponds to trucks
+            if int(cls) == 7:  # Class 7 corresponds to trucks
                 trucks.append({
                     'box': [x1, y1, x2-x1, y2-y1],
                     'confidence': conf
                 })
     
     return trucks
+
+def detect_buses(image):
+    # Load the pre-trained YOLO model for bus detection
+    bus_model = YOLO('yolov8n-cls.pt')
+    
+    # Run the bus detection on the input image
+    results = bus_model(image, device='cpu', verbose=False, imgsz=1024, conf=0.4, iou=0.5,
+                        agnostic_nms=False, max_det=100, half=False, batch=1)
+    
+    # Extract the bus detections
+    buses = []
+    for result in results:
+        boxes = result.boxes.data.cpu().numpy()
+        for box in boxes:
+            x1, y1, x2, y2, conf, cls = box
+            if int(cls) == 5:  # Class 5 corresponds to buses
+                buses.append({
+                    'box': [x1, y1, x2-x1, y2-y1],
+                    'confidence': conf
+                })
+    
+    return buses
 
 def save_yolo_result(image, yolo_results, output_path):
     result_image = image.copy()
