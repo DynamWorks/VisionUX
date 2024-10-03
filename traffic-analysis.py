@@ -82,6 +82,21 @@ def combine_detections(yolo_results, masks, original_image):
     vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
     image_height, image_width = original_image.shape[:2]
 
+    # Create YOLO mask
+    yolo_mask = np.zeros((image_height, image_width), dtype=np.uint8)
+    for r in yolo_results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            cv2.rectangle(yolo_mask, (x1, y1), (x2, y2), 255, -1)
+
+    # Create SAM mask
+    sam_mask = np.zeros((image_height, image_width), dtype=np.uint8)
+    for mask in masks:
+        sam_mask = np.logical_or(sam_mask, mask).astype(np.uint8) * 255
+
+    # Find overlap
+    overlap_mask = cv2.bitwise_and(yolo_mask, sam_mask)
+
     # Pool SAM masks
     for i, mask in enumerate(masks):
         mask_y, mask_x = np.where(mask)
@@ -127,33 +142,17 @@ def combine_detections(yolo_results, masks, original_image):
 
     # Process duplicates and overlaps
     combined_detections = []
-    for i, detection in enumerate(pooled_detections):
-        overlapping_detections = [d for j, d in enumerate(pooled_detections) if i != j and 
-                                  (detection['xmin'] < d['xmax'] and detection['xmax'] > d['xmin'] and
-                                   detection['ymin'] < d['ymax'] and detection['ymax'] > d['ymin'])]
+    for detection in pooled_detections:
+        x1, y1, x2, y2 = detection['xmin'], detection['ymin'], detection['xmax'], detection['ymax']
+        detection_mask = np.zeros((image_height, image_width), dtype=np.uint8)
+        detection_mask[y1:y2, x1:x2] = 255
         
-        if not overlapping_detections:
-            combined_detections.append(detection)
-        else:
-            # If YOLO detection overlaps with SAM masks
-            if detection['detection_type'] == 'yolo':
-                sam_masks = [d for d in overlapping_detections if d['detection_type'] == 'sam']
-                if sam_masks:
-                    for sam_mask in sam_masks:
-                        combined_detections.append(sam_mask)
-                    # Check for undetected area in YOLO detection
-                    yolo_area = (detection['xmax'] - detection['xmin']) * (detection['ymax'] - detection['ymin'])
-                    sam_area = sum(d['mask_area'] for d in sam_masks)
-                    if yolo_area > sam_area * 1.2:  # 20% threshold for undetected area
-                        combined_detections.append(detection)
-                else:
-                    combined_detections.append(detection)
-            # If SAM mask doesn't overlap with YOLO detection
-            elif detection['detection_type'] == 'sam' and not any(d['detection_type'] == 'yolo' for d in overlapping_detections):
+        if detection['detection_type'] == 'sam':
+            if np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
                 combined_detections.append(detection)
-            # # If YOLO detection doesn't overlap with SAM mask
-            # elif detection['detection_type'] == 'yolo' and not any(d['detection_type'] == 'sam' for d in overlapping_detections):
-            #     combined_detections.append(detection)
+        elif detection['detection_type'] == 'yolo':
+            if not np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
+                combined_detections.append(detection)
 
     # Validate final detections
     validated_detections = []
