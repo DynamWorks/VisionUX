@@ -19,10 +19,10 @@ clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 sam_model = SAM('sam2_b.pt')
 
 def validate_detection(image, bbox, initial_class):
-    x1, y1, x2, y2 = bbox
-    cropped_image = Image.fromarray(cv2.cvtColor(image[int(y1):int(y2), int(x1):int(x2)], cv2.COLOR_BGR2RGB))
+    x1, y1, x2, y2 = map(int, bbox)
+    cropped_image = Image.fromarray(cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2RGB))
     
-    texts = ["a car", "a truck", "a bus", "a motorcycle"]
+    texts = ["a car", "a pickup truck", "a large truck", "a bus", "a motorcycle"]
     
     inputs = clip_processor(text=texts, images=[cropped_image], return_tensors="pt", padding=True)
     
@@ -80,6 +80,7 @@ def combine_detections(yolo_results, masks, original_image):
     combined_detections = []
     classes = yolo_model.names
     vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
+    image_height, image_width = original_image.shape[:2]
 
     for r in yolo_results:
         for box in r.boxes:
@@ -96,8 +97,8 @@ def combine_detections(yolo_results, masks, original_image):
                 if len(overlapping_masks) > 0:
                     for i, mask in enumerate(overlapping_masks):
                         mask_y, mask_x = np.where(mask)
-                        mask_x1, mask_x2 = mask_x.min(), mask_x.max()
-                        mask_y1, mask_y2 = mask_y.min(), mask_y.max()
+                        mask_x1, mask_x2 = max(0, mask_x.min()), min(image_width - 1, mask_x.max())
+                        mask_y1, mask_y2 = max(0, mask_y.min()), min(image_height - 1, mask_y.max())
                         
                         validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), classes[class_id])
                         
@@ -121,11 +122,11 @@ def combine_detections(yolo_results, masks, original_image):
                         'name': validated_class,
                         'original_name': classes[class_id],
                         'confidence': combined_confidence,
-                        'xmin': x1,
-                        'ymin': y1,
-                        'xmax': x2,
-                        'ymax': y2,
-                        'mask_area': (x2 - x1) * (y2 - y1)
+                        'xmin': max(0, x1),
+                        'ymin': max(0, y1),
+                        'xmax': min(image_width - 1, x2),
+                        'ymax': min(image_height - 1, y2),
+                        'mask_area': (min(image_width - 1, x2) - max(0, x1)) * (min(image_height - 1, y2) - max(0, y1))
                     })
 
     return combined_detections
