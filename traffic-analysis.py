@@ -54,13 +54,37 @@ def classify_mask(mask, yolo_results):
                 return int(box.cls), float(box.conf)
     return None, 0.0
 
-def save_segmentation_result(masks, output_path):
+def save_segmentation_result(image, masks, output_path):
     plt.figure(figsize=(12, 8))
+    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     for i, mask in enumerate(masks):
+        color = np.random.rand(3)
         plt.imshow(mask, alpha=0.5, cmap='jet')
     plt.axis('off')
     plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
     plt.close()
+
+def detect_trucks(image):
+    # Load the pre-trained YOLO model for truck detection
+    truck_model = YOLO('yolov8n-cls.pt')
+    
+    # Run the truck detection on the input image
+    results = truck_model(image, device=0, verbose=False, imgsz=1024, conf=0.4, iou=0.5,
+                         agnostic_nms=False, max_det=100, half=True, batch=1)
+    
+    # Extract the truck detections
+    trucks = []
+    for result in results:
+        boxes = result.boxes.data.cpu().numpy()
+        for box in boxes:
+            x1, y1, x2, y2, conf, cls = box
+            if int(cls) == 5:  # Class 5 corresponds to trucks
+                trucks.append({
+                    'box': [x1, y1, x2-x1, y2-y1],
+                    'confidence': conf
+                })
+    
+    return trucks
 
 def save_yolo_result(image, yolo_results, output_path):
     result_image = image.copy()
