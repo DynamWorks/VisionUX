@@ -125,19 +125,18 @@ def combine_detections(yolo_results, masks, original_image):
                                          if detection['detection_type'] == 'sam' and 
                                          np.any(np.logical_and(yolo_mask, detection['mask']))]
                 
-                if not overlapping_sam_masks:
-                    combined_detections.append({
-                        'name': validated_class,
-                        'original_name': classes[class_id],
-                        'confidence': combined_confidence,
-                        'xmin': max(0, x1),
-                        'ymin': max(0, y1),
-                        'xmax': min(image_width - 1, x2),
-                        'ymax': min(image_height - 1, y2),
-                        'mask': yolo_mask,
-                        'mask_area': np.sum(yolo_mask),
-                        'detection_type': 'yolo'
-                    })
+                combined_detections.append({
+                    'name': validated_class,
+                    'original_name': classes[class_id],
+                    'confidence': combined_confidence,
+                    'xmin': max(0, x1),
+                    'ymin': max(0, y1),
+                    'xmax': min(image_width - 1, x2),
+                    'ymax': min(image_height - 1, y2),
+                    'mask': yolo_mask if not overlapping_sam_masks else None,
+                    'mask_area': np.sum(yolo_mask),
+                    'detection_type': 'yolo'
+                })
 
     return combined_detections
 
@@ -186,18 +185,18 @@ output_image = original_image.copy()
 combined_mask = np.zeros((original_image.shape[0], original_image.shape[1], 3), dtype=np.uint8)
 
 for detection in combined_detections:
-    mask = detection['mask']
     label = f"{detection['name']}: {detection['confidence']:.2f}"
-    if detection['detection_type'] == 'yolo':
-        color = (0, 255, 0)  # Green for YOLO detections
-    else:
-        color = (0, 0, 255)  # Red for SAM detections
+    x1, y1, x2, y2 = detection['xmin'], detection['ymin'], detection['xmax'], detection['ymax']
     
-    # Apply colored mask
-    combined_mask[mask] = color
-
+    if detection['mask'] is not None:
+        # Apply colored mask for SAM detections or YOLO detections with masks
+        color = (0, 0, 255) if detection['detection_type'] == 'sam' else (0, 255, 0)
+        combined_mask[detection['mask']] = color
+    else:
+        # Draw bounding box for YOLO detections without masks
+        cv2.rectangle(output_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    
     # Add label
-    x1, y1 = detection['xmin'], detection['ymin']
     cv2.putText(output_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
 # Apply the combined mask to the output image
