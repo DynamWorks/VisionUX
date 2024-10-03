@@ -66,32 +66,36 @@ cv2.imwrite("vehicle_detection_opencv.png", output_image)
 # Analytics
 vehicle_classes = ['car', 'truck', 'bus', 'motorbike']
 vehicle_df = df[df['name'].isin(vehicle_classes)]
-vehicle_counts = vehicle_df['name'].value_counts()
-total_vehicles = vehicle_counts.sum()
+total_vehicles = len(vehicle_df)
 
 print(f"Total vehicles detected: {total_vehicles}")
-print("\nVehicle counts by type:")
-print(vehicle_counts)
 
-print("\nAverage confidence by vehicle type:")
-print(vehicle_df.groupby('name')['confidence'].mean())
+if total_vehicles > 0:
+    vehicle_counts = vehicle_df['name'].value_counts()
+    print("\nVehicle counts by type:")
+    print(vehicle_counts)
 
-print("\nSpatial distribution:")
-print(f"X-range: {vehicle_df['xmin'].min():.2f} to {vehicle_df['xmax'].max():.2f}")
-print(f"Y-range: {vehicle_df['ymin'].min():.2f} to {vehicle_df['ymax'].max():.2f}")
+    print("\nAverage confidence by vehicle type:")
+    print(vehicle_df.groupby('name')['confidence'].mean())
 
-# Calculate and print lane estimates
-x_positions = (vehicle_df['xmin'] + vehicle_df['xmax']) / 2
-lane_count = max(1, round((x_positions.max() - x_positions.min()) / 100))  # Assuming average lane width of 100 pixels
-print(f"\nEstimated number of lanes: {lane_count}")
+    print("\nSpatial distribution:")
+    print(f"X-range: {vehicle_df['xmin'].min():.2f} to {vehicle_df['xmax'].max():.2f}")
+    print(f"Y-range: {vehicle_df['ymin'].min():.2f} to {vehicle_df['ymax'].max():.2f}")
 
-# Traffic density using bounding boxes
-image_area = original_height * original_width
-vehicle_df['area'] = (vehicle_df['xmax'] - vehicle_df['xmin']) * (vehicle_df['ymax'] - vehicle_df['ymin'])
-total_vehicle_area = vehicle_df['area'].sum()
-density = total_vehicle_area / image_area
-print(f"\nTraffic density (fraction of image covered by vehicles): {density:.2%}")
+    # Calculate and print lane estimates
+    x_positions = (vehicle_df['xmin'] + vehicle_df['xmax']) / 2
+    lane_count = max(1, round((x_positions.max() - x_positions.min()) / 100))  # Assuming average lane width of 100 pixels
+    print(f"\nEstimated number of lanes: {lane_count}")
 
-# Average vehicle size by type
-print("\nAverage vehicle size by type (in pixels):")
-print(vehicle_df.groupby('name')['area'].mean())
+    # Traffic density using bounding boxes
+    image_area = original_height * original_width
+    vehicle_df['area'] = (vehicle_df['xmax'] - vehicle_df['xmin']) * (vehicle_df['ymax'] - vehicle_df['ymin'])
+    total_vehicle_area = vehicle_df['area'].sum()
+    density = total_vehicle_area / image_area
+    print(f"\nTraffic density (fraction of image covered by vehicles): {density:.2%}")
+
+    # Average vehicle size by type
+    print("\nAverage vehicle size by type (in pixels):")
+    print(vehicle_df.groupby('name')['area'].mean())
+else:
+    print("No vehicles detected in the image.")
