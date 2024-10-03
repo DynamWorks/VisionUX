@@ -203,6 +203,9 @@ for mask in masks:
 # Create overlap mask
 overlap_mask = cv2.bitwise_and(yolo_mask, sam_mask)
 
+# Save overlap mask
+cv2.imwrite("overlap_mask.png", overlap_mask)
+
 # Create highlighted image
 highlighted_image = original_image.copy()
 highlighted_image[yolo_mask > 0] = cv2.addWeighted(highlighted_image[yolo_mask > 0], 0.7, np.full_like(highlighted_image[yolo_mask > 0], [255, 0, 0]), 0.3, 0)
