@@ -82,6 +82,30 @@ def combine_detections(yolo_results, masks, original_image):
     vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
     image_height, image_width = original_image.shape[:2]
 
+    # Process SAM masks first
+    for i, mask in enumerate(masks):
+        mask_y, mask_x = np.where(mask)
+        if len(mask_y) == 0 or len(mask_x) == 0:
+            continue
+        mask_x1, mask_x2 = max(0, mask_x.min()), min(image_width - 1, mask_x.max())
+        mask_y1, mask_y2 = max(0, mask_y.min()), min(image_height - 1, mask_y.max())
+        
+        validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), 'unknown')
+        
+        if validated_class in vehicle_classes:
+            combined_detections.append({
+                'name': validated_class,
+                'original_name': 'unknown',
+                'confidence': clip_confidence,
+                'xmin': int(mask_x1),
+                'ymin': int(mask_y1),
+                'xmax': int(mask_x2),
+                'ymax': int(mask_y2),
+                'mask': mask,
+                'mask_area': np.sum(mask),
+                'detection_type': 'sam'
+            })
+
     # Process YOLO detections
     for r in yolo_results:
         for box in r.boxes:
@@ -93,83 +117,29 @@ def combine_detections(yolo_results, masks, original_image):
                 validated_class, clip_confidence = validate_detection(original_image, (x1, y1, x2, y2), classes[class_id])
                 combined_confidence = (yolo_confidence + clip_confidence) / 2
                 
-                # Find the best matching SAM mask
-                best_mask = None
-                best_iou = 0
-                for mask in masks:
-                    mask_y, mask_x = np.where(mask)
-                    if len(mask_y) == 0 or len(mask_x) == 0:
-                        continue
-                    mask_x1, mask_x2 = mask_x.min(), mask_x.max()
-                    mask_y1, mask_y2 = mask_y.min(), mask_y.max()
-                    
-                    intersection = np.sum(mask[y1:y2, x1:x2])
-                    union = np.sum(mask) + (x2-x1)*(y2-y1) - intersection
-                    iou = intersection / union if union > 0 else 0
-                    
-                    if iou > best_iou:
-                        best_iou = iou
-                        best_mask = mask
+                yolo_mask = np.zeros((image_height, image_width), dtype=bool)
+                yolo_mask[y1:y2, x1:x2] = True
+                
+                # Check if this YOLO detection overlaps with any SAM mask
+                overlapping_sam_masks = [detection for detection in combined_detections 
+                                         if detection['detection_type'] == 'sam' and 
+                                         np.any(np.logical_and(yolo_mask, detection['mask']))]
+                
+                if not overlapping_sam_masks:
+                    combined_detections.append({
+                        'name': validated_class,
+                        'original_name': classes[class_id],
+                        'confidence': combined_confidence,
+                        'xmin': max(0, x1),
+                        'ymin': max(0, y1),
+                        'xmax': min(image_width - 1, x2),
+                        'ymax': min(image_height - 1, y2),
+                        'mask': yolo_mask,
+                        'mask_area': np.sum(yolo_mask),
+                        'detection_type': 'yolo'
+                    })
 
-                combined_detections.append({
-                    'name': validated_class,
-                    'original_name': classes[class_id],
-                    'confidence': combined_confidence,
-                    'xmin': max(0, x1),
-                    'ymin': max(0, y1),
-                    'xmax': min(image_width - 1, x2),
-                    'ymax': min(image_height - 1, y2),
-                    'mask': best_mask if best_mask is not None else np.zeros((image_height, image_width), dtype=bool),
-                    'mask_area': np.sum(best_mask) if best_mask is not None else (x2-x1)*(y2-y1),
-                    'detection_type': 'yolo'
-                })
-
-    # Process SAM masks that don't overlap with YOLO detections
-    for mask in masks:
-        if not any(np.any(np.logical_and(mask, detection['mask'])) for detection in combined_detections):
-            mask_y, mask_x = np.where(mask)
-            if len(mask_y) == 0 or len(mask_x) == 0:
-                continue
-            mask_x1, mask_x2 = max(0, mask_x.min()), min(image_width - 1, mask_x.max())
-            mask_y1, mask_y2 = max(0, mask_y.min()), min(image_height - 1, mask_y.max())
-            
-            validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), 'unknown')
-            
-            if validated_class in vehicle_classes:
-                combined_detections.append({
-                    'name': validated_class,
-                    'original_name': 'unknown',
-                    'confidence': clip_confidence,
-                    'xmin': int(mask_x1),
-                    'ymin': int(mask_y1),
-                    'xmax': int(mask_x2),
-                    'ymax': int(mask_y2),
-                    'mask': mask,
-                    'mask_area': np.sum(mask),
-                    'detection_type': 'sam'
-                })
-
-    # Remove duplicates based on IoU
-    def calculate_iou(mask1, mask2):
-        intersection = np.logical_and(mask1, mask2).sum()
-        union = np.logical_or(mask1, mask2).sum()
-        return intersection / union if union > 0 else 0
-
-    filtered_detections = []
-    for detection in combined_detections:
-        if detection['name'] in vehicle_classes:
-            is_duplicate = False
-            for existing in filtered_detections:
-                if calculate_iou(detection['mask'], existing['mask']) > 0.5:  # Adjust threshold as needed
-                    if detection['confidence'] > existing['confidence']:
-                        filtered_detections.remove(existing)
-                        filtered_detections.append(detection)
-                    is_duplicate = True
-                    break
-            if not is_duplicate:
-                filtered_detections.append(detection)
-
-    return filtered_detections
+    return combined_detections
 
 # Main processing
 start_time = time.time()
@@ -213,6 +183,8 @@ df = pd.DataFrame(combined_detections)
 
 # Save final result
 output_image = original_image.copy()
+combined_mask = np.zeros((original_image.shape[0], original_image.shape[1], 3), dtype=np.uint8)
+
 for detection in combined_detections:
     mask = detection['mask']
     label = f"{detection['name']}: {detection['confidence']:.2f}"
@@ -222,13 +194,14 @@ for detection in combined_detections:
         color = (0, 0, 255)  # Red for SAM detections
     
     # Apply colored mask
-    colored_mask = np.zeros_like(output_image)
-    colored_mask[mask] = color
-    output_image = cv2.addWeighted(output_image, 1, colored_mask, 0.5, 0)
-    
+    combined_mask[mask] = color
+
     # Add label
     x1, y1 = detection['xmin'], detection['ymin']
-    cv2.putText(output_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    cv2.putText(output_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+# Apply the combined mask to the output image
+output_image = cv2.addWeighted(output_image, 1, combined_mask, 0.5, 0)
 
 cv2.imwrite("final_detection_result.png", output_image)
 
