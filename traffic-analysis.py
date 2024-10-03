@@ -10,7 +10,7 @@ import time
 from ultralytics import YOLO, SAM
 
 # Load models
-yolo_model = YOLO("yolov8n.pt")
+yolo_model = YOLO("yolov10n.pt")
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 sam_model = SAM('sam_b.pt')
