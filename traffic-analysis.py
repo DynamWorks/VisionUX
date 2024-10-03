@@ -82,6 +82,22 @@ def combine_detections(yolo_results, masks, original_image):
     vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
     image_height, image_width = original_image.shape[:2]
 
+    # Create YOLO mask
+    yolo_mask = np.zeros((image_height, image_width), dtype=np.uint8)
+    for r in yolo_results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            cv2.rectangle(yolo_mask, (x1, y1), (x2, y2), 255, -1)
+
+    # Create SAM mask
+    sam_mask = np.zeros((image_height, image_width), dtype=np.uint8)
+    for mask in masks:
+        sam_mask = np.logical_or(sam_mask, mask).astype(np.uint8) * 255
+
+    # Create overlap mask
+    overlap_mask = cv2.bitwise_and(yolo_mask, sam_mask)
+
+    # Process YOLO detections
     for r in yolo_results:
         for box in r.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -89,45 +105,41 @@ def combine_detections(yolo_results, masks, original_image):
             yolo_confidence = float(box.conf)
             
             if classes[class_id] in vehicle_classes:
-                overlapping_masks = []
-                for mask in masks:
-                    if np.any(mask[y1:y2, x1:x2]):
-                        overlapping_masks.append(mask)
+                validated_class, clip_confidence = validate_detection(original_image, (x1, y1, x2, y2), classes[class_id])
+                combined_confidence = (yolo_confidence + clip_confidence) / 2
                 
-                if len(overlapping_masks) > 0:
-                    for i, mask in enumerate(overlapping_masks):
-                        mask_y, mask_x = np.where(mask)
-                        mask_x1, mask_x2 = max(0, mask_x.min()), min(image_width - 1, mask_x.max())
-                        mask_y1, mask_y2 = max(0, mask_y.min()), min(image_height - 1, mask_y.max())
-                        
-                        validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), classes[class_id])
-                        
-                        combined_confidence = (yolo_confidence + clip_confidence) / 2
-                        
-                        combined_detections.append({
-                            'name': validated_class,
-                            'original_name': classes[class_id],
-                            'confidence': combined_confidence,
-                            'xmin': int(mask_x1),
-                            'ymin': int(mask_y1),
-                            'xmax': int(mask_x2),
-                            'ymax': int(mask_y2),
-                            'mask_area': mask.sum()
-                        })
-                else:
-                    validated_class, clip_confidence = validate_detection(original_image, (x1, y1, x2, y2), classes[class_id])
-                    combined_confidence = (yolo_confidence + clip_confidence) / 2
-                    
-                    combined_detections.append({
-                        'name': validated_class,
-                        'original_name': classes[class_id],
-                        'confidence': combined_confidence,
-                        'xmin': max(0, x1),
-                        'ymin': max(0, y1),
-                        'xmax': min(image_width - 1, x2),
-                        'ymax': min(image_height - 1, y2),
-                        'mask_area': (min(image_width - 1, x2) - max(0, x1)) * (min(image_height - 1, y2) - max(0, y1))
-                    })
+                combined_detections.append({
+                    'name': validated_class,
+                    'original_name': classes[class_id],
+                    'confidence': combined_confidence,
+                    'xmin': max(0, x1),
+                    'ymin': max(0, y1),
+                    'xmax': min(image_width - 1, x2),
+                    'ymax': min(image_height - 1, y2),
+                    'mask_area': (min(image_width - 1, x2) - max(0, x1)) * (min(image_height - 1, y2) - max(0, y1)),
+                    'detection_type': 'yolo'
+                })
+
+    # Process SAM masks that don't overlap with YOLO detections
+    for mask in masks:
+        if np.any(np.logical_and(mask, np.logical_not(yolo_mask))):
+            mask_y, mask_x = np.where(mask)
+            mask_x1, mask_x2 = max(0, mask_x.min()), min(image_width - 1, mask_x.max())
+            mask_y1, mask_y2 = max(0, mask_y.min()), min(image_height - 1, mask_y.max())
+            
+            validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), 'unknown')
+            
+            combined_detections.append({
+                'name': validated_class,
+                'original_name': 'unknown',
+                'confidence': clip_confidence,
+                'xmin': int(mask_x1),
+                'ymin': int(mask_y1),
+                'xmax': int(mask_x2),
+                'ymax': int(mask_y2),
+                'mask_area': mask.sum(),
+                'detection_type': 'sam'
+            })
 
     return combined_detections
 
@@ -176,7 +188,10 @@ output_image = original_image.copy()
 for detection in combined_detections:
     x1, y1, x2, y2 = detection['xmin'], detection['ymin'], detection['xmax'], detection['ymax']
     label = f"{detection['name']}: {detection['confidence']:.2f}"
-    color = (0, 255, 0)
+    if detection['detection_type'] == 'yolo':
+        color = (0, 255, 0)  # Green for YOLO detections
+    else:
+        color = (0, 0, 255)  # Red for SAM detections
     cv2.rectangle(output_image, (x1, y1), (x2, y2), color, 2)
     cv2.putText(output_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
