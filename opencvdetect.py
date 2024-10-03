@@ -32,27 +32,32 @@ for r in results:
 # Get class names
 classes = model.names
 
+# Define vehicle classes
+vehicle_classes = ['car', 'truck', 'bus', 'motorbike']
+
 # Create DataFrame for analytics
 data = []
 # Visualize results
 output_image = original_image.copy()
 for box, confidence, class_id in zip(boxes, confidences, class_ids):
-    x, y, w, h = box
-    label = f"{classes[class_id]}: {confidence:.2f}"
-    color = (0, 255, 0)  # Green color for bounding box
-    
-    cv2.rectangle(output_image, (x, y), (x + w, y + h), color, 2)
-    cv2.putText(output_image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-    
-    # Add to data list
-    data.append({
-        'name': classes[class_id],
-        'confidence': confidence,
-        'xmin': x,
-        'ymin': y,
-        'xmax': x + w,
-        'ymax': y + h
-    })
+    class_name = classes[class_id]
+    if class_name in vehicle_classes:
+        x, y, w, h = box
+        label = f"{class_name}: {confidence:.2f}"
+        color = (0, 255, 0)  # Green color for bounding box
+        
+        cv2.rectangle(output_image, (x, y), (x + w, y + h), color, 2)
+        cv2.putText(output_image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+        # Add to data list
+        data.append({
+            'name': class_name,
+            'confidence': confidence,
+            'xmin': x,
+            'ymin': y,
+            'xmax': x + w,
+            'ymax': y + h
+        })
 
 # Create DataFrame from collected data
 df = pd.DataFrame(data)
