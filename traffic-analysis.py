@@ -8,6 +8,7 @@ from transformers import CLIPProcessor, CLIPModel
 from scipy import stats
 import time
 from ultralytics import YOLO, SAM
+import matplotlib.pyplot as plt
 
 # Load models
 yolo_model = YOLO("yolov10n.pt")
@@ -48,6 +49,25 @@ def classify_mask(mask, yolo_results):
                 return int(box.cls), float(box.conf)
     return None, 0.0
 
+def save_segmentation_result(masks, output_path):
+    plt.figure(figsize=(12, 8))
+    for i, mask in enumerate(masks):
+        plt.imshow(mask, alpha=0.5, cmap='jet')
+    plt.axis('off')
+    plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
+    plt.close()
+
+def save_yolo_result(image, yolo_results, output_path):
+    result_image = image.copy()
+    for r in yolo_results:
+        boxes = r.boxes
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            label = f"{r.names[int(box.cls)]}: {box.conf:.2f}"
+            cv2.putText(result_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    cv2.imwrite(output_path, result_image)
+
 def refine_vehicle_count(masks):
     refined_count = len(masks)
     return refined_count
@@ -71,8 +91,14 @@ original_height, original_width = original_image.shape[:2]
 # YOLOv8 detection
 yolo_results = yolo_model(original_image)
 
+# Save YOLO detection result
+save_yolo_result(original_image, yolo_results, "yolo_detection_result.png")
+
 # SAM segmentation
 masks = segment_image(original_image)
+
+# Save segmentation result
+save_segmentation_result(masks, "sam_segmentation_result.png")
 
 classes = yolo_model.names
 vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
@@ -120,7 +146,8 @@ for i, mask in enumerate(masks):
 
 df = pd.DataFrame(data)
 
-cv2.imwrite("vehicle_detection_sam2.png", output_image)
+# Save final result
+cv2.imwrite("final_detection_result.png", output_image)
 
 end_time = time.time()
 processing_time = end_time - start_time
