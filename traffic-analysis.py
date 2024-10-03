@@ -11,7 +11,7 @@ from ultralytics import YOLO, SAM
 
 # Load models
 yolo_model = YOLO("yolov8n.pt")
-clip_model = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 sam_model = SAM('sam_b.pt')
 
@@ -21,7 +21,7 @@ def validate_detection(image, bbox, initial_class):
     
     texts = ["a car", "a truck", "a bus", "a motorcycle"]
     
-    inputs = clip_processor(text=texts, images=cropped_image, return_tensors="pt", padding=True)
+    inputs = clip_processor(text=texts, images=[cropped_image], return_tensors="pt", padding=True)
     
     with torch.no_grad():
         outputs = clip_model(**inputs)
