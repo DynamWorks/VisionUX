@@ -2,10 +2,17 @@ import cv2
 import numpy as np
 import pandas as pd
 from ultralytics import YOLO
+import torch
+from PIL import Image
+from transformers import CLIPProcessor, CLIPModel
 
 # Load YOLOv8 model
-model = YOLO("yolov8n.pt")
-# model = YOLO('./runs/detect/train/weights/best.pt')
+yolo_model = YOLO("yolov8n.pt")
+# yolo_model = YOLO('./runs/detect/train/weights/best.pt')
+
+# Load CLIP model
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
 # Load image
 original_image = cv2.imread("GettyImages-AB27006.jpg")
@@ -15,7 +22,7 @@ original_height, original_width = original_image.shape[:2]
 resized_image = cv2.resize(original_image, (640, 640))
 
 # YOLOv8 detection
-results = model(resized_image)
+results = yolo_model(resized_image)
 
 # Process YOLOv8 output
 boxes = []
@@ -38,7 +45,29 @@ for r in results:
         class_ids.append(cls)
 
 # Get class names
-classes = model.names
+classes = yolo_model.names
+
+def validate_detection(image, bbox, initial_class):
+    # Crop the image to the bounding box
+    x1, y1, x2, y2 = bbox
+    cropped_image = Image.fromarray(cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2RGB))
+    
+    # Prepare text inputs
+    texts = ["a car", "a truck", "a bus", "a motorcycle", "a vehicle"]
+    
+    # Process inputs
+    inputs = clip_processor(text=texts, images=cropped_image, return_tensors="pt", padding=True)
+    
+    # Get model predictions
+    with torch.no_grad():
+        outputs = clip_model(**inputs)
+    logits_per_image = outputs.logits_per_image
+    probs = logits_per_image.softmax(dim=1)
+    
+    # Get the most likely class
+    best_class = texts[probs.argmax().item()].split()[-1]
+    
+    return best_class
 
 # Define vehicle classes
 vehicle_classes = ['car', 'truck', 'bus', 'motorbike']
@@ -51,7 +80,11 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
     class_name = classes[class_id]
     if class_name in vehicle_classes:
         x, y, w, h = box
-        label = f"{class_name}: {confidence:.2f}"
+        
+        # Validate detection using CLIP
+        validated_class = validate_detection(original_image, (x, y, x+w, y+h), class_name)
+        
+        label = f"{validated_class}: {confidence:.2f}"
         color = (0, 255, 0)  # Green color for bounding box
         
         cv2.rectangle(output_image, (x, y), (x + w, y + h), color, 2)
@@ -59,7 +92,8 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
         
         # Add to data list
         data.append({
-            'name': class_name,
+            'name': validated_class,
+            'original_name': class_name,
             'confidence': confidence,
             'xmin': x,
             'ymin': y,
