@@ -7,16 +7,13 @@ from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 from scipy import stats
 import time
-from segment_anything import SamPredictor, sam_model_registry
+from ultralytics import YOLO, SAM
 
 # Load models
 yolo_model = YOLO("yolov8n.pt")
 clip_model = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-sam_checkpoint = "sam_vit_h_4b8939.pth"
-sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint)
-sam.to(device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-sam_predictor = SamPredictor(sam)
+sam_model = SAM('sam_b.pt')
 
 def validate_detection(image, bbox, initial_class):
     x1, y1, x2, y2 = bbox
@@ -37,12 +34,12 @@ def validate_detection(image, bbox, initial_class):
     return best_class, confidence
 
 def segment_vehicles(image, boxes):
-    sam_predictor.set_image(image)
     masks = []
     for box in boxes:
         x, y, w, h = box
-        input_box = np.array([x, y, x+w, y+h])
-        masks.append(sam_predictor.predict(box=input_box, multimask_output=False)[0])
+        results = sam_model(image, bboxes=[box])
+        mask = results[0].masks.data[0].cpu().numpy()
+        masks.append(mask)
     return masks
 
 def refine_vehicle_count(masks):
@@ -91,7 +88,7 @@ classes = yolo_model.names
 vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
 
 # Perform SAM segmentation
-masks = segment_vehicles(original_image, boxes)
+masks = segment_vehicles(original_image, [box[:4] for box in boxes])  # Use only x, y, w, h
 
 # Create DataFrame for analytics
 data = []
