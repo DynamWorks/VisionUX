@@ -1,7 +1,5 @@
-opencv-python == 4.9.0.80
-ultralytics == 8.3.3
-numpy
-pandas
-torch
-Pillow
-transformers
+opencv-python==4.9.0.80
+ultralytics==8.3.3
+pandas==2.1.4
+torch==2.1.2
+transformers==4.36.2
