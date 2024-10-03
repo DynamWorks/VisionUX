@@ -129,19 +129,48 @@ def combine_detections(yolo_results, masks, original_image):
             
             validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), 'unknown')
             
-            combined_detections.append({
-                'name': validated_class,
-                'original_name': 'unknown',
-                'confidence': clip_confidence,
-                'xmin': int(mask_x1),
-                'ymin': int(mask_y1),
-                'xmax': int(mask_x2),
-                'ymax': int(mask_y2),
-                'mask_area': mask.sum(),
-                'detection_type': 'sam'
-            })
+            if validated_class in vehicle_classes:
+                combined_detections.append({
+                    'name': validated_class,
+                    'original_name': 'unknown',
+                    'confidence': clip_confidence,
+                    'xmin': int(mask_x1),
+                    'ymin': int(mask_y1),
+                    'xmax': int(mask_x2),
+                    'ymax': int(mask_y2),
+                    'mask_area': mask.sum(),
+                    'detection_type': 'sam'
+                })
 
-    return combined_detections
+    # Remove duplicates based on IoU
+    def calculate_iou(box1, box2):
+        x1 = max(box1['xmin'], box2['xmin'])
+        y1 = max(box1['ymin'], box2['ymin'])
+        x2 = min(box1['xmax'], box2['xmax'])
+        y2 = min(box1['ymax'], box2['ymax'])
+        
+        intersection = max(0, x2 - x1) * max(0, y2 - y1)
+        area1 = (box1['xmax'] - box1['xmin']) * (box1['ymax'] - box1['ymin'])
+        area2 = (box2['xmax'] - box2['xmin']) * (box2['ymax'] - box2['ymin'])
+        
+        iou = intersection / (area1 + area2 - intersection)
+        return iou
+
+    filtered_detections = []
+    for detection in combined_detections:
+        if detection['name'] in vehicle_classes:
+            is_duplicate = False
+            for existing in filtered_detections:
+                if calculate_iou(detection, existing) > 0.5:  # Adjust threshold as needed
+                    if detection['confidence'] > existing['confidence']:
+                        filtered_detections.remove(existing)
+                        filtered_detections.append(detection)
+                    is_duplicate = True
+                    break
+            if not is_duplicate:
+                filtered_detections.append(detection)
+
+    return filtered_detections
 
 # Main processing
 start_time = time.time()
