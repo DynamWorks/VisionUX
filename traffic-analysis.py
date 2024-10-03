@@ -10,6 +10,7 @@ import time
 from ultralytics import YOLO, SAM
 import matplotlib.pyplot as plt
 import multiprocessing
+import json
 
 # Load models
 yolo_model = YOLO("yolov8n.pt")
@@ -19,7 +20,7 @@ sam_model = SAM('sam2_b.pt')
 
 def validate_detection(image, bbox, initial_class):
     x1, y1, x2, y2 = bbox
-    cropped_image = Image.fromarray(cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2RGB))
+    cropped_image = Image.fromarray(cv2.cvtColor(image[int(y1):int(y2), int(x1):int(x2)], cv2.COLOR_BGR2RGB))
     
     texts = ["a car", "a truck", "a bus", "a motorcycle"]
     
@@ -63,52 +64,6 @@ def save_segmentation_result(image, masks, output_path):
     plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-def detect_trucks(image):
-    # Load the pre-trained YOLO model for truck detection
-    truck_model = YOLO('yolov8n-cls.pt')
-    
-    # Run the truck detection on the input image
-    results = truck_model(image, device='cpu', verbose=False, imgsz=1024, conf=0.4, iou=0.5,
-                         agnostic_nms=False, max_det=100, half=False, batch=1)
-    
-    # Extract the truck detections
-    trucks = []
-    if results and len(results) > 0:
-        for result in results:
-            if result.boxes is not None and hasattr(result.boxes, 'data'):
-                boxes = result.boxes.data.cpu().numpy()
-                for box in boxes:
-                    x1, y1, x2, y2, conf, cls = box
-                    if int(cls) == 7:  # Class 7 corresponds to trucks
-                        trucks.append({
-                            'box': [x1, y1, x2-x1, y2-y1],
-                            'confidence': conf
-                        })
-    
-    return trucks
-
-def detect_buses(image):
-    # Load the pre-trained YOLO model for bus detection
-    bus_model = YOLO('yolov8n-cls.pt')
-    
-    # Run the bus detection on the input image
-    results = bus_model(image, device='cpu', verbose=False, imgsz=1024, conf=0.4, iou=0.5,
-                        agnostic_nms=False, max_det=100, half=False, batch=1)
-    
-    # Extract the bus detections
-    buses = []
-    for result in results:
-        boxes = result.boxes.data.cpu().numpy()
-        for box in boxes:
-            x1, y1, x2, y2, conf, cls = box
-            if int(cls) == 5:  # Class 5 corresponds to buses
-                buses.append({
-                    'box': [x1, y1, x2-x1, y2-y1],
-                    'confidence': conf
-                })
-    
-    return buses
-
 def save_yolo_result(image, yolo_results, output_path):
     result_image = image.copy()
     yolo_mask = np.zeros(image.shape[:2], dtype=np.uint8)
@@ -121,20 +76,59 @@ def save_yolo_result(image, yolo_results, output_path):
             cv2.putText(result_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
     return result_image, yolo_mask
 
-def refine_vehicle_count(masks):
-    refined_count = len(masks)
-    return refined_count
+def combine_detections(yolo_results, masks, original_image):
+    combined_detections = []
+    classes = yolo_model.names
+    vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
 
-def estimate_vehicle_count(image_shape, masks):
-    total_area = image_shape[0] * image_shape[1]
-    vehicle_area = sum([mask.sum() for mask in masks])
-    avg_vehicle_size = vehicle_area / len(masks)
-    return vehicle_area / avg_vehicle_size
+    for r in yolo_results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            class_id = int(box.cls)
+            yolo_confidence = float(box.conf)
+            
+            if classes[class_id] in vehicle_classes:
+                overlapping_masks = []
+                for mask in masks:
+                    if np.any(mask[y1:y2, x1:x2]):
+                        overlapping_masks.append(mask)
+                
+                if len(overlapping_masks) > 0:
+                    for i, mask in enumerate(overlapping_masks):
+                        mask_y, mask_x = np.where(mask)
+                        mask_x1, mask_x2 = mask_x.min(), mask_x.max()
+                        mask_y1, mask_y2 = mask_y.min(), mask_y.max()
+                        
+                        validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), classes[class_id])
+                        
+                        combined_confidence = (yolo_confidence + clip_confidence) / 2
+                        
+                        combined_detections.append({
+                            'name': validated_class,
+                            'original_name': classes[class_id],
+                            'confidence': combined_confidence,
+                            'xmin': int(mask_x1),
+                            'ymin': int(mask_y1),
+                            'xmax': int(mask_x2),
+                            'ymax': int(mask_y2),
+                            'mask_area': mask.sum()
+                        })
+                else:
+                    validated_class, clip_confidence = validate_detection(original_image, (x1, y1, x2, y2), classes[class_id])
+                    combined_confidence = (yolo_confidence + clip_confidence) / 2
+                    
+                    combined_detections.append({
+                        'name': validated_class,
+                        'original_name': classes[class_id],
+                        'confidence': combined_confidence,
+                        'xmin': x1,
+                        'ymin': y1,
+                        'xmax': x2,
+                        'ymax': y2,
+                        'mask_area': (x2 - x1) * (y2 - y1)
+                    })
 
-def combine_estimates(estimates, weights):
-    weighted_estimate = sum(e * w for e, w in zip(estimates, weights))
-    error_margin = np.std(estimates)
-    return round(weighted_estimate), round(error_margin, 2)
+    return combined_detections
 
 # Main processing
 start_time = time.time()
@@ -170,109 +164,66 @@ cv2.imwrite("highlighted_detection_result.png", highlighted_image)
 # Save segmentation result
 save_segmentation_result(original_image, masks, "sam_segmentation_result.png")
 
-# Detect trucks
-trucks = detect_trucks(original_image)
-
-# Process the truck detections
-if trucks:
-    for truck in trucks:
-        box = truck['box']
-        confidence = truck['confidence']
-        print(f"Truck detected: {box}, confidence: {confidence}")
-else:
-    print("No trucks detected in the image.")
-
-classes = yolo_model.names
-vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
+# Combine YOLO and SAM detections
+combined_detections = combine_detections(yolo_results, masks, original_image)
 
 # Create DataFrame for analytics
-data = []
-output_image = original_image.copy()
-
-for i, mask in enumerate(masks):
-    class_id, yolo_confidence = classify_mask(mask, yolo_results)
-    
-    if class_id is not None and classes[class_id] in vehicle_classes:
-        class_name = classes[class_id]
-        
-        # Get bounding box of the mask
-        y, x = np.where(mask)
-        x1, x2, y1, y2 = x.min(), x.max(), y.min(), y.max()
-        
-        validated_class, clip_confidence = validate_detection(original_image, (x1, y1, x2, y2), class_name)
-        
-        # Combine YOLO and CLIP confidences
-        combined_confidence = (yolo_confidence + clip_confidence) / 2
-        
-        label = f"{validated_class}: {combined_confidence:.2f}"
-        color = (0, 255, 0)
-        
-        cv2.rectangle(output_image, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(output_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        
-        # Overlay segmentation mask
-        mask_overlay = output_image.copy()
-        mask_overlay[mask] = mask_overlay[mask] * 0.5 + np.array([0, 255, 0]) * 0.5
-        cv2.addWeighted(mask_overlay, 0.5, output_image, 0.5, 0, output_image)
-        
-        data.append({
-            'name': validated_class,
-            'original_name': class_name,
-            'confidence': combined_confidence,
-            'xmin': x1,
-            'ymin': y1,
-            'xmax': x2,
-            'ymax': y2,
-            'mask_area': mask.sum()
-        })
-
-df = pd.DataFrame(data)
+df = pd.DataFrame(combined_detections)
 
 # Save final result
+output_image = original_image.copy()
+for detection in combined_detections:
+    x1, y1, x2, y2 = detection['xmin'], detection['ymin'], detection['xmax'], detection['ymax']
+    label = f"{detection['name']}: {detection['confidence']:.2f}"
+    color = (0, 255, 0)
+    cv2.rectangle(output_image, (x1, y1), (x2, y2), color, 2)
+    cv2.putText(output_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
 cv2.imwrite("final_detection_result.png", output_image)
 
 end_time = time.time()
 processing_time = end_time - start_time
 
 # Analytics
-sam_vehicle_count = len(df)
-refined_count = refine_vehicle_count(masks)
-area_based_estimate = estimate_vehicle_count((original_height, original_width), masks)
+vehicle_count = len(df)
+area_based_estimate = df['mask_area'].sum() / df['mask_area'].mean()
 
 # Combine estimates
-estimates = [float(sam_vehicle_count), float(refined_count), float(area_based_estimate)]
-weights = [0.3, 0.4, 0.3]  # Adjust weights based on confidence in each method
+estimates = [float(vehicle_count), float(area_based_estimate)]
+weights = [0.6, 0.4]  # Adjust weights based on confidence in each method
 final_count, error_margin = combine_estimates(estimates, weights)
 
-print(f"Estimated total vehicles: {final_count} ± {error_margin}")
-print(f"\nSAM detected vehicles: {sam_vehicle_count}")
-print(f"Refined count (based on segmentation): {refined_count}")
-print(f"Area-based estimate: {round(area_based_estimate)}")
+# Prepare analytics data
+analytics_data = {
+    "estimated_total_vehicles": final_count,
+    "error_margin": error_margin,
+    "detected_vehicles": vehicle_count,
+    "area_based_estimate": round(area_based_estimate),
+    "vehicle_counts_by_type": df['name'].value_counts().to_dict(),
+    "average_confidence_by_type": df.groupby('name')['confidence'].mean().to_dict(),
+    "spatial_distribution": {
+        "x_range": {"min": float(df['xmin'].min()), "max": float(df['xmax'].max())},
+        "y_range": {"min": float(df['ymin'].min()), "max": float(df['ymax'].max())}
+    },
+    "average_vehicle_size_by_type": df.groupby('name')['mask_area'].mean().to_dict(),
+    "confidence_stats": {
+        "min": float(df['confidence'].min()),
+        "max": float(df['confidence'].max()),
+        "mean": float(df['confidence'].mean()),
+        "std": float(df['confidence'].std())
+    },
+    "misclassified_vehicles": len(df[df['name'] != df['original_name']]),
+    "processing_time": processing_time
+}
 
-print("\nVehicle counts by type:")
-print(df['name'].value_counts())
+# Combine detections and analytics data
+output_data = {
+    "detections": combined_detections,
+    "analytics": analytics_data
+}
 
-print("\nAverage confidence by vehicle type:")
-print(df.groupby('name')['confidence'].mean())
+# Save to JSON file
+with open("traffic_analysis_results.json", "w") as f:
+    json.dump(output_data, f, indent=2)
 
-print("\nSpatial distribution:")
-print(f"X-range: {df['xmin'].min():.2f} to {df['xmax'].max():.2f}")
-print(f"Y-range: {df['ymin'].min():.2f} to {df['ymax'].max():.2f}")
-
-print("\nAverage vehicle size by type (in pixels):")
-print(df.groupby('name')['mask_area'].mean())
-
-# Error analysis
-print("\nError Analysis:")
-print(f"YOLO+CLIP confidence range: {df['confidence'].min():.2f} to {df['confidence'].max():.2f}")
-print(f"Average confidence: {df['confidence'].mean():.2f}")
-print(f"Standard deviation of confidence: {df['confidence'].std():.2f}")
-
-# Misclassification analysis
-misclassified = df[df['name'] != df['original_name']]
-print(f"\nMisclassified vehicles: {len(misclassified)}")
-if len(misclassified) > 0:
-    print("Misclassification details:")
-    print(misclassified[['original_name', 'name', 'confidence']])
-
-print(f"\nTotal processing time: {processing_time:.2f} seconds")
+print("Analysis complete. Results saved to traffic_analysis_results.json")
