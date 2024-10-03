@@ -151,6 +151,9 @@ def combine_detections(yolo_results, masks, original_image):
             # If SAM mask doesn't overlap with YOLO detection
             elif detection['detection_type'] == 'sam' and not any(d['detection_type'] == 'yolo' for d in overlapping_detections):
                 combined_detections.append(detection)
+            # # If YOLO detection doesn't overlap with SAM mask
+            # elif detection['detection_type'] == 'yolo' and not any(d['detection_type'] == 'sam' for d in overlapping_detections):
+            #     combined_detections.append(detection)
 
     # Validate final detections
     validated_detections = []
