@@ -4,8 +4,8 @@ import pandas as pd
 from ultralytics import YOLO
 
 # Load YOLOv8 model
-#model = YOLO("yolov8n.pt")
-model = YOLO('./runs/detect/train/weights/best.pt')
+model = YOLO("yolov8n.pt")
+# model = YOLO('./runs/detect/train/weights/best.pt')
 
 # Load image
 original_image = cv2.imread("GettyImages-AB27006.jpg")
