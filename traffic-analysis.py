@@ -111,14 +111,15 @@ def detect_buses(image):
 
 def save_yolo_result(image, yolo_results, output_path):
     result_image = image.copy()
+    yolo_mask = np.zeros(image.shape[:2], dtype=np.uint8)
     for r in yolo_results:
         boxes = r.boxes
         for box in boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.rectangle(yolo_mask, (x1, y1), (x2, y2), 255, -1)
             label = f"{r.names[int(box.cls)]}: {box.conf.item():.2f}"
-            cv2.putText(result_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    cv2.imwrite(output_path, result_image)
+            cv2.putText(result_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+    return result_image, yolo_mask
 
 def refine_vehicle_count(masks):
     refined_count = len(masks)
@@ -143,11 +144,28 @@ original_height, original_width = original_image.shape[:2]
 # YOLOv8 detection
 yolo_results = yolo_model(original_image)
 
-# Save YOLO detection result
-save_yolo_result(original_image, yolo_results, "yolo_detection_result.png")
+# Get YOLO result and mask
+yolo_result_image, yolo_mask = save_yolo_result(original_image, yolo_results, "yolo_detection_result.png")
 
 # SAM segmentation
 masks = segment_image(original_image)
+
+# Create SAM mask
+sam_mask = np.zeros(original_image.shape[:2], dtype=np.uint8)
+for mask in masks:
+    sam_mask = np.logical_or(sam_mask, mask).astype(np.uint8) * 255
+
+# Create overlap mask
+overlap_mask = cv2.bitwise_and(yolo_mask, sam_mask)
+
+# Create highlighted image
+highlighted_image = original_image.copy()
+highlighted_image[yolo_mask > 0] = cv2.addWeighted(highlighted_image[yolo_mask > 0], 0.7, np.full_like(highlighted_image[yolo_mask > 0], [255, 0, 0]), 0.3, 0)
+highlighted_image[sam_mask > 0] = cv2.addWeighted(highlighted_image[sam_mask > 0], 0.7, np.full_like(highlighted_image[sam_mask > 0], [0, 255, 0]), 0.3, 0)
+highlighted_image[overlap_mask > 0] = cv2.addWeighted(highlighted_image[overlap_mask > 0], 0.7, np.full_like(highlighted_image[overlap_mask > 0], [0, 0, 255]), 0.3, 0)
+
+# Save highlighted result
+cv2.imwrite("highlighted_detection_result.png", highlighted_image)
 
 # Save segmentation result
 save_segmentation_result(original_image, masks, "sam_segmentation_result.png")
