@@ -188,6 +188,11 @@ processing_time = end_time - start_time
 vehicle_count = len(df)
 area_based_estimate = df['mask_area'].sum() / df['mask_area'].mean()
 
+def combine_estimates(estimates, weights):
+    weighted_estimate = sum(e * w for e, w in zip(estimates, weights))
+    error_margin = np.std(estimates)
+    return round(weighted_estimate), round(error_margin, 2)
+
 # Combine estimates
 estimates = [float(vehicle_count), float(area_based_estimate)]
 weights = [0.6, 0.4]  # Adjust weights based on confidence in each method
