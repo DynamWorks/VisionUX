@@ -8,9 +8,9 @@ from ultralytics import YOLO
 model = YOLO('./runs/detect/train/weights/best.pt')
 
 # Load image
-image = cv2.imread("GettyImages-AB27006.jpg")
-image_resize = cv2.resize(image, (640, 640))
-height, width = image_resize.shape[:2]
+original_image = cv2.imread("GettyImages-AB27006.jpg")
+original_height, original_width = original_image.shape[:2]
+image_resize = cv2.resize(original_image, (640, 640))
 
 # YOLOv8 detection
 results = model(image_resize)
@@ -50,12 +50,15 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
     new_row = pd.DataFrame({
         'name': [classes[class_id]],
         'confidence': [confidence],
-        'xmin': [x],
-        'ymin': [y],
-        'xmax': [x + w],
-        'ymax': [y + h]
+        'xmin': [x * original_width / 640],
+        'ymin': [y * original_height / 640],
+        'xmax': [(x + w) * original_width / 640],
+        'ymax': [(y + h) * original_height / 640]
     })
     df = pd.concat([df, new_row], ignore_index=True)
+
+# Rescale output image to original size
+output_image = cv2.resize(output_image, (original_width, original_height))
 
 # Save output image
 cv2.imwrite("vehicle_detection_opencv.png", output_image)
