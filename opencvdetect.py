@@ -45,14 +45,15 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
     cv2.putText(output_image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     
     # Add to DataFrame
-    df = df.append({
-        'name': classes[class_id],
-        'confidence': confidence,
-        'xmin': x,
-        'ymin': y,
-        'xmax': x + w,
-        'ymax': y + h
-    }, ignore_index=True)
+    new_row = pd.DataFrame({
+        'name': [classes[class_id]],
+        'confidence': [confidence],
+        'xmin': [x],
+        'ymin': [y],
+        'xmax': [x + w],
+        'ymax': [y + h]
+    })
+    df = pd.concat([df, new_row], ignore_index=True)
 
 # Save output image
 cv2.imwrite("vehicle_detection_opencv.png", output_image)
