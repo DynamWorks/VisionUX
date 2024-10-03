@@ -10,10 +10,9 @@ model = YOLO("yolov8n.pt")
 # Load image
 original_image = cv2.imread("GettyImages-AB27006.jpg")
 original_height, original_width = original_image.shape[:2]
-image_resize = cv2.resize(original_image, (640, 640))
 
 # YOLOv8 detection
-results = model(image_resize)
+results = model(original_image)
 
 # Process YOLOv8 output
 boxes = []
@@ -36,7 +35,7 @@ classes = model.names
 # Create DataFrame for analytics
 data = []
 # Visualize results
-output_image = image_resize.copy()
+output_image = original_image.copy()
 for box, confidence, class_id in zip(boxes, confidences, class_ids):
     x, y, w, h = box
     label = f"{classes[class_id]}: {confidence:.2f}"
@@ -49,17 +48,14 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
     data.append({
         'name': classes[class_id],
         'confidence': confidence,
-        'xmin': x * original_width / 640,
-        'ymin': y * original_height / 640,
-        'xmax': (x + w) * original_width / 640,
-        'ymax': (y + h) * original_height / 640
+        'xmin': x,
+        'ymin': y,
+        'xmax': x + w,
+        'ymax': y + h
     })
 
 # Create DataFrame from collected data
 df = pd.DataFrame(data)
-
-# Rescale output image to original size
-output_image = cv2.resize(output_image, (original_width, original_height))
 
 # Save output image
 cv2.imwrite("vehicle_detection_opencv.png", output_image)
