@@ -148,10 +148,10 @@ def combine_detections(yolo_results, masks, original_image):
         detection_mask[y1:y2, x1:x2] = 255
         
         if detection['detection_type'] == 'sam':
-            if np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
-                combined_detections.append(detection)
+            #if np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
+            combined_detections.append(detection)
         elif detection['detection_type'] == 'yolo':
-            if not np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
+            if (cv2.bitwise_and(detection_mask, overlap_mask)):
                 combined_detections.append(detection)
 
     # Validate final detections
