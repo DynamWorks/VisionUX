@@ -42,6 +42,8 @@ def lane_based_estimate(image_shape, num_lanes, avg_vehicle_length_pixels):
     return num_lanes * (lane_length / avg_vehicle_length_pixels)
 
 def combine_estimates(estimates, weights):
+    # Convert estimates to float to ensure homogeneous types
+    estimates = [float(e) for e in estimates]
     weighted_mean = np.average(estimates, weights=weights)
     error_margin = stats.sem(estimates) * 1.96  # 95% confidence interval
     return round(weighted_mean), round(error_margin, 2)
@@ -132,7 +134,7 @@ density_estimate = density_based_estimate((original_height, original_width), tra
 lane_estimate = lane_based_estimate((original_height, original_width), lane_count, avg_vehicle_length)
 
 # Combine estimates
-estimates = [yolo_vehicle_count, density_estimate, lane_estimate]
+estimates = [float(yolo_vehicle_count), float(density_estimate), float(lane_estimate)]
 weights = [0.5, 0.25, 0.25]  # Adjust weights based on confidence in each method
 final_count, error_margin = combine_estimates(estimates, weights)
 
