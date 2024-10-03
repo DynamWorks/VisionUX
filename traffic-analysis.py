@@ -199,19 +199,29 @@ estimates = [float(vehicle_count), float(area_based_estimate)]
 weights = [0.6, 0.4]  # Adjust weights based on confidence in each method
 final_count, error_margin = combine_estimates(estimates, weights)
 
+def json_serialize(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
+
 # Prepare analytics data
 analytics_data = {
     "estimated_total_vehicles": final_count,
     "error_margin": error_margin,
     "detected_vehicles": vehicle_count,
     "area_based_estimate": round(area_based_estimate),
-    "vehicle_counts_by_type": df['name'].value_counts().to_dict(),
-    "average_confidence_by_type": df.groupby('name')['confidence'].mean().to_dict(),
+    "vehicle_counts_by_type": json_serialize(df['name'].value_counts().to_dict()),
+    "average_confidence_by_type": json_serialize(df.groupby('name')['confidence'].mean().to_dict()),
     "spatial_distribution": {
         "x_range": {"min": float(df['xmin'].min()), "max": float(df['xmax'].max())},
         "y_range": {"min": float(df['ymin'].min()), "max": float(df['ymax'].max())}
     },
-    "average_vehicle_size_by_type": df.groupby('name')['mask_area'].mean().to_dict(),
+    "average_vehicle_size_by_type": json_serialize(df.groupby('name')['mask_area'].mean().to_dict()),
     "confidence_stats": {
         "min": float(df['confidence'].min()),
         "max": float(df['confidence'].max()),
@@ -224,12 +234,12 @@ analytics_data = {
 
 # Combine detections and analytics data
 output_data = {
-    "detections": combined_detections,
+    "detections": json_serialize(combined_detections),
     "analytics": analytics_data
 }
 
 # Save to JSON file
 with open("traffic_analysis_results.json", "w") as f:
-    json.dump(output_data, f, indent=2)
+    json.dump(output_data, f, indent=2, default=json_serialize)
 
 print("Analysis complete. Results saved to traffic_analysis_results.json")
