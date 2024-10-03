@@ -192,8 +192,8 @@ for detection in combined_detections:
         # Apply colored mask for SAM detections or YOLO detections with masks
         color = (0, 0, 255) if detection['detection_type'] == 'sam' else (0, 255, 0)
         combined_mask[detection['mask']] = color
-    else:
-        # Draw bounding box for YOLO detections without masks
+    elif detection['detection_type'] == 'yolo':
+        # Draw bounding box only for YOLO detections without overlapping SAM masks
         cv2.rectangle(output_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
     
     # Add label
