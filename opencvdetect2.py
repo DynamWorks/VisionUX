@@ -6,6 +6,7 @@ import torch
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 from scipy import stats
+import time
 
 # Load YOLOv8 model
 yolo_model = YOLO("yolov8n.pt")
@@ -48,7 +49,36 @@ def combine_estimates(estimates, weights):
     error_margin = stats.sem(estimates) * 1.96  # 95% confidence interval
     return round(weighted_mean), round(error_margin, 2)
 
+def identify_missed_detections(image, existing_boxes):
+    # Create a mask of existing detections
+    mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    for box in existing_boxes:
+        x, y, w, h = box
+        cv2.rectangle(mask, (x, y), (x+w, y+h), 255, -1)
+    
+    # Apply background subtraction
+    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
+    fgmask = fgbg.apply(image)
+    
+    # Remove existing detections from the foreground mask
+    fgmask = cv2.bitwise_and(fgmask, fgmask, mask=cv2.bitwise_not(mask))
+    
+    # Find contours in the foreground mask
+    contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Filter contours based on area
+    min_area = 500  # Adjust this value based on your needs
+    potential_missed = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > min_area:
+            x, y, w, h = cv2.boundingRect(contour)
+            potential_missed.append([x, y, w, h])
+    
+    return potential_missed
+
 # Load and process image
+start_time = time.time()
 original_image = cv2.imread("GettyImages-AB27006.jpg")
 original_height, original_width = original_image.shape[:2]
 resized_image = cv2.resize(original_image, (640, 640))
@@ -108,9 +138,37 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
             'ymax': y + h
         })
 
+# Identify missed detections
+missed_boxes = identify_missed_detections(original_image, boxes)
+
+# Validate missed detections
+for box in missed_boxes:
+    x, y, w, h = box
+    validated_class, clip_confidence = validate_detection(original_image, (x, y, x+w, y+h), "unknown")
+    
+    if validated_class in vehicle_classes and clip_confidence > 0.5:  # Adjust threshold as needed
+        label = f"{validated_class}: {clip_confidence:.2f}"
+        color = (0, 0, 255)  # Red color for missed detections
+        
+        cv2.rectangle(output_image, (x, y), (x + w, y + h), color, 2)
+        cv2.putText(output_image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+        data.append({
+            'name': validated_class,
+            'original_name': "missed",
+            'confidence': clip_confidence,
+            'xmin': x,
+            'ymin': y,
+            'xmax': x + w,
+            'ymax': y + h
+        })
+
 df = pd.DataFrame(data)
 
-cv2.imwrite("vehicle_detection_opencv_improved.png", output_image)
+cv2.imwrite("vehicle_detection_opencv_improved_with_missed.png", output_image)
+
+end_time = time.time()
+processing_time = end_time - start_time
 
 # Analytics
 vehicle_df = df[df['name'].isin(vehicle_classes)]
@@ -174,3 +232,12 @@ print(f"\nMisclassified vehicles: {len(misclassified)}")
 if len(misclassified) > 0:
     print("Misclassification details:")
     print(misclassified[['original_name', 'name', 'confidence']])
+
+# Missed detection analysis
+missed_detections = df[df['original_name'] == "missed"]
+print(f"\nMissed detections identified: {len(missed_detections)}")
+if len(missed_detections) > 0:
+    print("Missed detection details:")
+    print(missed_detections[['name', 'confidence']])
+
+print(f"\nTotal processing time: {processing_time:.2f} seconds")
