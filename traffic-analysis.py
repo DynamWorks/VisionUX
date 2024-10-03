@@ -177,6 +177,7 @@ def combine_detections(yolo_results, masks, original_image):
                 'mask_area': detection['mask_area'],
                 'detection_type': detection['detection_type']
             })
+        # If validated_class is not in vehicle_classes, it will be excluded
 
     return validated_detections
 
