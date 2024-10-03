@@ -1,2 +1,7 @@
 opencv-python == 4.9.0.80
 ultralytics == 8.3.3
+numpy
+pandas
+torch
+Pillow
+transformers
