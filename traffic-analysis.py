@@ -15,7 +15,7 @@ import multiprocessing
 yolo_model = YOLO("yolov8n.pt")
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-sam_model = SAM('sam_b.pt')
+sam_model = SAM('sam2_b.pt')
 
 def validate_detection(image, bbox, initial_class):
     x1, y1, x2, y2 = bbox
