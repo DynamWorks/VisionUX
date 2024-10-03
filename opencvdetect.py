@@ -1,61 +1,44 @@
 import cv2
 import numpy as np
 import pandas as pd
+from ultralytics import YOLO
 
-# Load YOLOv3-tiny
-net = cv2.dnn.readNetFromDarknet(cv2.samples.findFile("yolov3-tiny.cfg"),
-                                 cv2.samples.findFile("yolov3-tiny.weights"))
-net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
-
-# Load class names
-classes = open(cv2.samples.findFile("coco.names")).read().strip().split('\n')
+# Load YOLOv8 model
+model = YOLO("yolov8n.pt")
 
 # Load image
 image = cv2.imread("GettyImages-AB27006.jpg")
 height, width = image.shape[:2]
 
-# YOLO detection
-blob = cv2.dnn.blobFromImage(image, 1/255.0, (416, 416), swapRB=True, crop=False)
-net.setInput(blob)
-layer_names = net.getLayerNames()
-output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-outputs = net.forward(output_layers)
+# YOLOv8 detection
+results = model(image)
 
-# Process YOLO output
+# Process YOLOv8 output
 boxes = []
 confidences = []
 class_ids = []
 
-for output in outputs:
-    for detection in output:
-        scores = detection[5:]
-        class_id = np.argmax(scores)
-        confidence = scores[class_id]
-        if confidence > 0.5:
-            center_x = int(detection[0] * width)
-            center_y = int(detection[1] * height)
-            w = int(detection[2] * width)
-            h = int(detection[3] * height)
-            x = int(center_x - w / 2)
-            y = int(center_y - h / 2)
-            boxes.append([x, y, w, h])
-            confidences.append(float(confidence))
-            class_ids.append(class_id)
+for r in results:
+    for box in r.boxes:
+        x1, y1, x2, y2 = box.xyxy[0]
+        x, y, w, h = int(x1), int(y1), int(x2 - x1), int(y2 - y1)
+        conf = float(box.conf)
+        cls = int(box.cls)
+        boxes.append([x, y, w, h])
+        confidences.append(conf)
+        class_ids.append(cls)
 
-# Apply non-maximum suppression
-indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+# Get class names
+classes = model.names
 
 # Create DataFrame for analytics
 df = pd.DataFrame(columns=['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax'])
 
 # Visualize results
 output_image = image.copy()
-for i in indices:
-    i = i[0] if isinstance(i, (tuple, list)) else i  # Adjust for OpenCV version differences
-    box = boxes[i]
+for box, confidence, class_id in zip(boxes, confidences, class_ids):
     x, y, w, h = box
-    label = f"{classes[class_ids[i]]}: {confidences[i]:.2f}"
+    label = f"{classes[class_id]}: {confidence:.2f}"
     color = (0, 255, 0)  # Green color for bounding box
     
     cv2.rectangle(output_image, (x, y), (x + w, y + h), color, 2)
@@ -63,8 +46,8 @@ for i in indices:
     
     # Add to DataFrame
     df = df.append({
-        'name': classes[class_ids[i]],
-        'confidence': confidences[i],
+        'name': classes[class_id],
+        'confidence': confidence,
         'xmin': x,
         'ymin': y,
         'xmax': x + w,
