@@ -4,14 +4,16 @@ import pandas as pd
 from ultralytics import YOLO
 
 # Load YOLOv8 model
-model = YOLO("yolov8n.pt")
+#model = YOLO("yolov8n.pt")
+model = YOLO('./runs/detect/train/weights/best.pt')
 
 # Load image
 image = cv2.imread("GettyImages-AB27006.jpg")
-height, width = image.shape[:2]
+image_resize = cv2.resize(image, (640, 640))
+height, width = image_resize.shape[:2]
 
 # YOLOv8 detection
-results = model(image)
+results = model(image_resize)
 
 # Process YOLOv8 output
 boxes = []
@@ -35,7 +37,7 @@ classes = model.names
 df = pd.DataFrame(columns=['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax'])
 
 # Visualize results
-output_image = image.copy()
+output_image = image_resize.copy()
 for box, confidence, class_id in zip(boxes, confidences, class_ids):
     x, y, w, h = box
     label = f"{classes[class_id]}: {confidence:.2f}"
