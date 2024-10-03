@@ -9,6 +9,7 @@ from scipy import stats
 import time
 from ultralytics import YOLO, SAM
 import matplotlib.pyplot as plt
+import multiprocessing
 
 # Load models
 yolo_model = YOLO("yolov8n.pt")
@@ -35,7 +36,11 @@ def validate_detection(image, bbox, initial_class):
     return best_class, confidence
 
 def segment_image(image):
-    results = sam_model(image)
+    num_cores = multiprocessing.cpu_count()
+    results = sam_model(image, device=0, verbose=False, retina_masks=True, 
+                        imgsz=1024, conf=0.4, iou=0.9, 
+                        agnostic_nms=False, max_det=300, 
+                        half=True, batch=num_cores)
     masks = results[0].masks.data.cpu().numpy()
     return masks
 
