@@ -34,8 +34,7 @@ for r in results:
 classes = model.names
 
 # Create DataFrame for analytics
-df = pd.DataFrame(columns=['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax'])
-
+data = []
 # Visualize results
 output_image = image_resize.copy()
 for box, confidence, class_id in zip(boxes, confidences, class_ids):
@@ -46,16 +45,18 @@ for box, confidence, class_id in zip(boxes, confidences, class_ids):
     cv2.rectangle(output_image, (x, y), (x + w, y + h), color, 2)
     cv2.putText(output_image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     
-    # Add to DataFrame
-    new_row = pd.DataFrame({
-        'name': [classes[class_id]],
-        'confidence': [confidence],
-        'xmin': [x * original_width / 640],
-        'ymin': [y * original_height / 640],
-        'xmax': [(x + w) * original_width / 640],
-        'ymax': [(y + h) * original_height / 640]
+    # Add to data list
+    data.append({
+        'name': classes[class_id],
+        'confidence': confidence,
+        'xmin': x * original_width / 640,
+        'ymin': y * original_height / 640,
+        'xmax': (x + w) * original_width / 640,
+        'ymax': (y + h) * original_height / 640
     })
-    df = pd.concat([df, new_row], ignore_index=True)
+
+# Create DataFrame from collected data
+df = pd.DataFrame(data)
 
 # Rescale output image to original size
 output_image = cv2.resize(output_image, (original_width, original_height))
@@ -99,3 +100,6 @@ if total_vehicles > 0:
     print(vehicle_df.groupby('name')['area'].mean())
 else:
     print("No vehicles detected in the image.")
+
+print("\nAll detected objects:")
+print(df['name'].value_counts())
