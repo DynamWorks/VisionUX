@@ -77,12 +77,12 @@ def save_yolo_result(image, yolo_results, output_path):
     return result_image, yolo_mask
 
 def combine_detections(yolo_results, masks, original_image):
-    combined_detections = []
+    pooled_detections = []
     classes = yolo_model.names
     vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
     image_height, image_width = original_image.shape[:2]
 
-    # Process SAM masks first
+    # Pool SAM masks
     for i, mask in enumerate(masks):
         mask_y, mask_x = np.where(mask)
         if len(mask_y) == 0 or len(mask_x) == 0:
@@ -90,23 +90,19 @@ def combine_detections(yolo_results, masks, original_image):
         mask_x1, mask_x2 = max(0, mask_x.min()), min(image_width - 1, mask_x.max())
         mask_y1, mask_y2 = max(0, mask_y.min()), min(image_height - 1, mask_y.max())
         
-        validated_class, clip_confidence = validate_detection(original_image, (mask_x1, mask_y1, mask_x2, mask_y2), 'unknown')
-        
-        if validated_class in vehicle_classes:
-            combined_detections.append({
-                'name': validated_class,
-                'original_name': 'unknown',
-                'confidence': clip_confidence,
-                'xmin': int(mask_x1),
-                'ymin': int(mask_y1),
-                'xmax': int(mask_x2),
-                'ymax': int(mask_y2),
-                'mask': mask,
-                'mask_area': np.sum(mask),
-                'detection_type': 'sam'
-            })
+        pooled_detections.append({
+            'xmin': int(mask_x1),
+            'ymin': int(mask_y1),
+            'xmax': int(mask_x2),
+            'ymax': int(mask_y2),
+            'mask': mask,
+            'mask_area': np.sum(mask),
+            'detection_type': 'sam',
+            'class': 'unknown',
+            'confidence': 0
+        })
 
-    # Process YOLO detections
+    # Pool YOLO detections
     for r in yolo_results:
         for box in r.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -114,31 +110,71 @@ def combine_detections(yolo_results, masks, original_image):
             yolo_confidence = float(box.conf)
             
             if classes[class_id] in vehicle_classes:
-                validated_class, clip_confidence = validate_detection(original_image, (x1, y1, x2, y2), classes[class_id])
-                combined_confidence = (yolo_confidence + clip_confidence) / 2
-                
                 yolo_mask = np.zeros((image_height, image_width), dtype=bool)
                 yolo_mask[y1:y2, x1:x2] = True
                 
-                # Check if this YOLO detection overlaps with any SAM mask
-                overlapping_sam_masks = [detection for detection in combined_detections 
-                                         if detection['detection_type'] == 'sam' and 
-                                         np.any(np.logical_and(yolo_mask, detection['mask']))]
-                
-                combined_detections.append({
-                    'name': validated_class,
-                    'original_name': classes[class_id],
-                    'confidence': combined_confidence,
+                pooled_detections.append({
                     'xmin': max(0, x1),
                     'ymin': max(0, y1),
                     'xmax': min(image_width - 1, x2),
                     'ymax': min(image_height - 1, y2),
-                    'mask': yolo_mask if not overlapping_sam_masks else None,
+                    'mask': yolo_mask,
                     'mask_area': np.sum(yolo_mask),
-                    'detection_type': 'yolo'
+                    'detection_type': 'yolo',
+                    'class': classes[class_id],
+                    'confidence': yolo_confidence
                 })
 
-    return combined_detections
+    # Process duplicates and overlaps
+    combined_detections = []
+    for i, detection in enumerate(pooled_detections):
+        overlapping_detections = [d for j, d in enumerate(pooled_detections) if i != j and 
+                                  (detection['xmin'] < d['xmax'] and detection['xmax'] > d['xmin'] and
+                                   detection['ymin'] < d['ymax'] and detection['ymax'] > d['ymin'])]
+        
+        if not overlapping_detections:
+            combined_detections.append(detection)
+        else:
+            # If YOLO detection overlaps with SAM masks
+            if detection['detection_type'] == 'yolo':
+                sam_masks = [d for d in overlapping_detections if d['detection_type'] == 'sam']
+                if sam_masks:
+                    for sam_mask in sam_masks:
+                        combined_detections.append(sam_mask)
+                    # Check for undetected area in YOLO detection
+                    yolo_area = (detection['xmax'] - detection['xmin']) * (detection['ymax'] - detection['ymin'])
+                    sam_area = sum(d['mask_area'] for d in sam_masks)
+                    if yolo_area > sam_area * 1.2:  # 20% threshold for undetected area
+                        combined_detections.append(detection)
+                else:
+                    combined_detections.append(detection)
+            # If SAM mask doesn't overlap with YOLO detection
+            elif detection['detection_type'] == 'sam' and not any(d['detection_type'] == 'yolo' for d in overlapping_detections):
+                combined_detections.append(detection)
+
+    # Validate final detections
+    validated_detections = []
+    for detection in combined_detections:
+        bbox = (detection['xmin'], detection['ymin'], detection['xmax'], detection['ymax'])
+        validated_class, clip_confidence = validate_detection(original_image, bbox, detection['class'])
+        
+        if validated_class in vehicle_classes:
+            combined_confidence = (detection['confidence'] + clip_confidence) / 2 if detection['detection_type'] == 'yolo' else clip_confidence
+            
+            validated_detections.append({
+                'name': validated_class,
+                'original_name': detection['class'],
+                'confidence': combined_confidence,
+                'xmin': detection['xmin'],
+                'ymin': detection['ymin'],
+                'xmax': detection['xmax'],
+                'ymax': detection['ymax'],
+                'mask': detection['mask'],
+                'mask_area': detection['mask_area'],
+                'detection_type': detection['detection_type']
+            })
+
+    return validated_detections
 
 # Main processing
 start_time = time.time()
