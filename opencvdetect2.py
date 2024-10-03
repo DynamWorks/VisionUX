@@ -35,11 +35,11 @@ def validate_detection(image, bbox, initial_class):
 def density_based_estimate(image_shape, traffic_density, avg_vehicle_size):
     image_area = image_shape[0] * image_shape[1]
     vehicle_area = image_area * traffic_density
-    return vehicle_area / avg_vehicle_size
+    return float(vehicle_area / avg_vehicle_size)
 
 def lane_based_estimate(image_shape, num_lanes, avg_vehicle_length_pixels):
     lane_length = image_shape[0]
-    return num_lanes * (lane_length / avg_vehicle_length_pixels)
+    return float(num_lanes * (lane_length / avg_vehicle_length_pixels))
 
 def combine_estimates(estimates, weights):
     # Convert estimates to float to ensure homogeneous types
@@ -127,14 +127,14 @@ x_positions = (vehicle_df['xmin'] + vehicle_df['xmax']) / 2
 lane_count = max(1, round((x_positions.max() - x_positions.min()) / 100))
 
 # Additional estimates
-avg_vehicle_size = vehicle_df['area'].mean()
-avg_vehicle_length = vehicle_df['xmax'] - vehicle_df['xmin'].mean()
+avg_vehicle_size = float(vehicle_df['area'].mean())
+avg_vehicle_length = float((vehicle_df['xmax'] - vehicle_df['xmin']).mean())
 
 density_estimate = density_based_estimate((original_height, original_width), traffic_density, avg_vehicle_size)
 lane_estimate = lane_based_estimate((original_height, original_width), lane_count, avg_vehicle_length)
 
 # Combine estimates
-estimates = [float(yolo_vehicle_count), float(density_estimate), float(lane_estimate)]
+estimates = [float(yolo_vehicle_count), density_estimate, lane_estimate]
 weights = [0.5, 0.25, 0.25]  # Adjust weights based on confidence in each method
 final_count, error_margin = combine_estimates(estimates, weights)
 
