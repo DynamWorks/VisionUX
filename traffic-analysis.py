@@ -65,10 +65,9 @@ def combine_estimates(estimates, weights):
 start_time = time.time()
 original_image = cv2.imread("GettyImages-AB27006.jpg")
 original_height, original_width = original_image.shape[:2]
-resized_image = cv2.resize(original_image, (640, 640))
 
 # YOLOv8 detection
-results = yolo_model(resized_image)
+results = yolo_model(original_image)
 
 # Process YOLOv8 output
 boxes = []
@@ -78,11 +77,7 @@ class_ids = []
 for r in results:
     for box in r.boxes:
         x1, y1, x2, y2 = box.xyxy[0]
-        x1 = int(x1 * original_width / 640)
-        y1 = int(y1 * original_height / 640)
-        x2 = int(x2 * original_width / 640)
-        y2 = int(y2 * original_height / 640)
-        x, y, w, h = x1, y1, x2 - x1, y2 - y1
+        x, y, w, h = int(x1), int(y1), int(x2 - x1), int(y2 - y1)
         conf = float(box.conf)
         cls = int(box.cls)
         boxes.append([x, y, w, h])
