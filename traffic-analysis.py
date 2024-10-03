@@ -105,6 +105,15 @@ masks = segment_image(original_image)
 # Save segmentation result
 save_segmentation_result(original_image, masks, "sam_segmentation_result.png")
 
+# Detect trucks
+trucks = detect_trucks(original_image)
+
+# Process the truck detections
+for truck in trucks:
+    box = truck['box']
+    confidence = truck['confidence']
+    print(f"Truck detected: {box}, confidence: {confidence}")
+
 classes = yolo_model.names
 vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
 
