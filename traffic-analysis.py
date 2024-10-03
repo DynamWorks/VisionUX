@@ -56,6 +56,11 @@ def estimate_vehicle_count(image_shape, masks):
     avg_vehicle_size = vehicle_area / len(masks)
     return vehicle_area / avg_vehicle_size
 
+def combine_estimates(estimates, weights):
+    weighted_estimate = sum(e * w for e, w in zip(estimates, weights))
+    error_margin = np.std(estimates)
+    return round(weighted_estimate), round(error_margin, 2)
+
 # Main processing
 start_time = time.time()
 original_image = cv2.imread("GettyImages-AB27006.jpg")
