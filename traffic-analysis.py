@@ -147,14 +147,22 @@ def combine_detections(yolo_results, masks, original_image):
         detection_mask = np.zeros((image_height, image_width), dtype=np.uint8)
         detection_mask[y1:y2, x1:x2] = 255
         
-        if detection['detection_type'] == 'sam':
-            #if np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
+        if detection['detection_type'] == 'yolo':
             combined_detections.append(detection)
-        elif detection['detection_type'] == 'yolo':
+        elif detection['detection_type'] == 'sam':
             overlap = cv2.bitwise_and(detection_mask, overlap_mask)
             overlap_ratio = np.sum(overlap) / np.sum(detection_mask)
-            if overlap_ratio < 0.7:
+            if overlap_ratio <0.3 or overlap_ratio == 0.0:
                 combined_detections.append(detection)
+
+        # if detection['detection_type'] == 'sam':
+        #     #if np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
+        #     combined_detections.append(detection)
+        # elif detection['detection_type'] == 'yolo':
+        #     notoverlap = cv2.bitwise_and(detection_mask, overlap_mask)
+        #     notoverlap_ratio = np.sum(notoverlap) / np.sum(detection_mask)
+        #     if notoverlap_ratio < 0.7:
+        #         combined_detections.append(detection)
 
     # Validate final detections
     validated_detections = []
@@ -309,3 +317,4 @@ with open("traffic_analysis_results.json", "w") as f:
     json.dump(output_data, f, indent=2, default=json_serialize)
 
 print("Analysis complete. Results saved to traffic_analysis_results.json")
+
