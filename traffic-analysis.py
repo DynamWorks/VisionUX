@@ -318,3 +318,37 @@ with open("traffic_analysis_results.json", "w") as f:
 
 print("Analysis complete. Results saved to traffic_analysis_results.json")
 
+# Load the JSON file to validate the final image
+with open("traffic_analysis_results.json", "r") as f:
+    loaded_data = json.load(f)
+
+# Create a validation image
+validation_image = original_image.copy()
+
+# Draw bounding boxes and labels for each detection
+for detection in loaded_data["detections"]:
+    x1, y1, x2, y2 = detection["xmin"], detection["ymin"], detection["xmax"], detection["ymax"]
+    label = f"{detection['name']}: {detection['confidence']:.2f}"
+    
+    # Draw bounding box
+    cv2.rectangle(validation_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    
+    # Add label
+    cv2.putText(validation_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+# Add analytics information to the image
+analytics = loaded_data["analytics"]
+info_text = [
+    f"Estimated total vehicles: {analytics['estimated_total_vehicles']} ± {analytics['error_margin']}",
+    f"Detected vehicles: {analytics['detected_vehicles']}",
+    f"Processing time: {analytics['processing_time']:.2f} seconds"
+]
+
+for i, text in enumerate(info_text):
+    cv2.putText(validation_image, text, (10, 30 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+# Save the validation image
+cv2.imwrite("validation_result.png", validation_image)
+
+print("Validation image saved as validation_result.png")
+
