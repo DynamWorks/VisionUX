@@ -3,3 +3,5 @@
 *.mp4
 *.png
 *.jpg
+*labels/
+output_csv/
