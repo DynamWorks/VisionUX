@@ -313,14 +313,22 @@ print("Results going into JSON:")
 print(json.dumps(output_data, indent=2, default=json_serialize))
 
 # Save to JSON file
+json_output = json.dumps(output_data, indent=2, default=json_serialize)
 with open("traffic_analysis_results.json", "w") as f:
-    json.dump(output_data, f, indent=2, default=json_serialize)
+    f.write(json_output)
 
 print("\nAnalysis complete. Results saved to traffic_analysis_results.json")
 
 # Load the JSON file to validate the final image
-with open("traffic_analysis_results.json", "r") as f:
-    loaded_data = json.load(f)
+try:
+    with open("traffic_analysis_results.json", "r") as f:
+        loaded_data = json.load(f)
+except json.JSONDecodeError as e:
+    print(f"Error reading JSON file: {e}")
+    print("Contents of the file:")
+    with open("traffic_analysis_results.json", "r") as f:
+        print(f.read())
+    exit(1)
 
 # Create a validation image
 validation_image = original_image.copy()
