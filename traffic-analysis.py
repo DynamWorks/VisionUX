@@ -306,17 +306,33 @@ analytics_data = {
     "processing_time": processing_time
 }
 
+# Count YOLO, SAM, and overlapped detections
+yolo_detections = sum(1 for d in combined_detections if d['detection_type'] == 'yolo')
+sam_detections = sum(1 for d in combined_detections if d['detection_type'] == 'sam')
+overlapped_detections = len(yolo_results[0]) + len(masks) - len(combined_detections)
+
+# Update analytics data with new counts
+analytics_data.update({
+    "yolo_detections": yolo_detections,
+    "sam_detections": sam_detections,
+    "overlapped_detections": overlapped_detections
+})
+
 # Combine detections and analytics data
 output_data = {
     "detections": json_serialize(combined_detections),
     "analytics": analytics_data
 }
 
+# Print results going into JSON
+print("Results going into JSON:")
+print(json.dumps(output_data, indent=2, default=json_serialize))
+
 # Save to JSON file
 with open("traffic_analysis_results.json", "w") as f:
     json.dump(output_data, f, indent=2, default=json_serialize)
 
-print("Analysis complete. Results saved to traffic_analysis_results.json")
+print("\nAnalysis complete. Results saved to traffic_analysis_results.json")
 
 # Load the JSON file to validate the final image
 with open("traffic_analysis_results.json", "r") as f:
