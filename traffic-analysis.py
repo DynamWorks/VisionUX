@@ -152,7 +152,7 @@ def combine_detections(yolo_results, masks, original_image):
         elif detection['detection_type'] == 'sam':
             overlap = cv2.bitwise_and(detection_mask, overlap_mask)
             overlap_ratio = np.sum(overlap) / np.sum(detection_mask)
-            if overlap_ratio <0.3 or overlap_ratio == 0.0:
+            if overlap_ratio <0.7 or overlap_ratio == 0.0:
                 combined_detections.append(detection)
 
         # if detection['detection_type'] == 'sam':
