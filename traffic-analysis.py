@@ -288,39 +288,23 @@ analytics_data = {
     "estimated_total_vehicles": final_count,
     "error_margin": error_margin,
     "detected_vehicles": vehicle_count,
-    "area_based_estimate": round(area_based_estimate),
     "vehicle_counts_by_type": json_serialize(df['name'].value_counts().to_dict()),
-    "average_confidence_by_type": json_serialize(df.groupby('name')['confidence'].mean().to_dict()),
-    "spatial_distribution": {
-        "x_range": {"min": float(df['xmin'].min()), "max": float(df['xmax'].max())},
-        "y_range": {"min": float(df['ymin'].min()), "max": float(df['ymax'].max())}
-    },
-    "average_vehicle_size_by_type": json_serialize(df.groupby('name')['mask_area'].mean().to_dict()),
-    "confidence_stats": {
-        "min": float(df['confidence'].min()),
-        "max": float(df['confidence'].max()),
-        "mean": float(df['confidence'].mean()),
-        "std": float(df['confidence'].std())
-    },
-    "misclassified_vehicles": len(df[df['name'] != df['original_name']]),
+    "yolo_detections": sum(1 for d in combined_detections if d['detection_type'] == 'yolo'),
+    "sam_detections": sum(1 for d in combined_detections if d['detection_type'] == 'sam'),
     "processing_time": processing_time
 }
 
-# Count YOLO, SAM, and overlapped detections
-yolo_detections = sum(1 for d in combined_detections if d['detection_type'] == 'yolo')
-sam_detections = sum(1 for d in combined_detections if d['detection_type'] == 'sam')
-overlapped_detections = len(yolo_results[0]) + len(masks) - len(combined_detections)
-
-# Update analytics data with new counts
-analytics_data.update({
-    "yolo_detections": yolo_detections,
-    "sam_detections": sam_detections,
-    "overlapped_detections": overlapped_detections
-})
-
 # Combine detections and analytics data
 output_data = {
-    "detections": json_serialize(combined_detections),
+    "detections": json_serialize([{
+        "name": d['name'],
+        "confidence": d['confidence'],
+        "xmin": d['xmin'],
+        "ymin": d['ymin'],
+        "xmax": d['xmax'],
+        "ymax": d['ymax'],
+        "detection_type": d['detection_type']
+    } for d in combined_detections]),
     "analytics": analytics_data
 }
 
