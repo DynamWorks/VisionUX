@@ -140,29 +140,33 @@ def combine_detections(yolo_results, masks, original_image):
                     'confidence': yolo_confidence
                 })
 
-    # Process duplicates and overlaps
+    # Process overlaps and combine detections
     combined_detections = []
     for detection in pooled_detections:
         x1, y1, x2, y2 = detection['xmin'], detection['ymin'], detection['xmax'], detection['ymax']
         detection_mask = np.zeros((image_height, image_width), dtype=np.uint8)
         detection_mask[y1:y2, x1:x2] = 255
         
-        if detection['detection_type'] == 'yolo':
+        overlap = cv2.bitwise_and(detection_mask, overlap_mask)
+        overlap_ratio = np.sum(overlap) / np.sum(detection_mask)
+        
+        if detection['detection_type'] == 'sam':
+            if overlap_ratio == 1.0:
+                detection['overlap_type'] = 'fully_overlapping'
+            elif overlap_ratio > 0:
+                detection['overlap_type'] = 'partially_overlapping'
+            else:
+                detection['overlap_type'] = 'sam_only'
             combined_detections.append(detection)
-        elif detection['detection_type'] == 'sam':
-            overlap = cv2.bitwise_and(detection_mask, overlap_mask)
-            overlap_ratio = np.sum(overlap) / np.sum(detection_mask)
-            if overlap_ratio <0.7 or overlap_ratio == 0.0:
+        elif detection['detection_type'] == 'yolo':
+            if overlap_ratio == 0:
+                detection['overlap_type'] = 'yolo_only'
                 combined_detections.append(detection)
-
-        # if detection['detection_type'] == 'sam':
-        #     #if np.any(cv2.bitwise_and(detection_mask, overlap_mask)):
-        #     combined_detections.append(detection)
-        # elif detection['detection_type'] == 'yolo':
-        #     notoverlap = cv2.bitwise_and(detection_mask, overlap_mask)
-        #     notoverlap_ratio = np.sum(notoverlap) / np.sum(detection_mask)
-        #     if notoverlap_ratio < 0.7:
-        #         combined_detections.append(detection)
+            elif overlap_ratio < 1.0:
+                non_overlap_area = np.sum(detection_mask) - np.sum(overlap)
+                if non_overlap_area > 0:
+                    detection['overlap_type'] = 'possibly_overlapping'
+                    combined_detections.append(detection)
 
     # Validate final detections
     validated_detections = []
@@ -183,7 +187,8 @@ def combine_detections(yolo_results, masks, original_image):
                 'ymax': detection['ymax'],
                 'mask': detection['mask'],
                 'mask_area': detection['mask_area'],
-                'detection_type': detection['detection_type']
+                'detection_type': detection['detection_type'],
+                'overlap_type': detection['overlap_type']
             })
         # If validated_class is not in vehicle_classes, it will be excluded
 
