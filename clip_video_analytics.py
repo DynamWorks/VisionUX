@@ -9,6 +9,33 @@ from collections import defaultdict
 from ultralytics import YOLO
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
+import concurrent.futures
+from queue import Queue
+import threading
+
+class ProcessingQueue:
+    def __init__(self, max_size=10):
+        self.frame_queue = Queue(maxsize=max_size)
+        self.result_queue = Queue(maxsize=max_size)
+        self.is_running = False
+        
+    def start(self):
+        self.is_running = True
+        
+    def stop(self):
+        self.is_running = False
+        
+    def put_frame(self, frame):
+        self.frame_queue.put(frame)
+        
+    def get_result(self):
+        return self.result_queue.get()
+        
+    def put_result(self, result):
+        self.result_queue.put(result)
+        
+    def get_frame(self):
+        return self.frame_queue.get()
 
 class ClipVideoAnalyzer:
     def __init__(self, model_name: str = "openai/clip-vit-base-patch32",
@@ -106,6 +133,47 @@ class ClipVideoAnalyzer:
             })
         
         return signs
+
+    def parallel_process_frame(self, frame: np.ndarray, text_queries: List[str],
+                             confidence_threshold: float = 0.5) -> Dict:
+        """Process different aspects of frame analysis in parallel"""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all tasks
+            lanes_future = executor.submit(self.detect_lanes, frame)
+            text_future = executor.submit(self.detect_text, frame)
+            signs_future = executor.submit(self.detect_traffic_signs, frame)
+            
+            # Convert BGR to RGB for YOLO and CLIP
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Submit YOLO+SAHI detection
+            detection_future = executor.submit(
+                get_sliced_prediction,
+                frame_rgb,
+                self.detection_model,
+                slice_height=512,
+                slice_width=512,
+                overlap_height_ratio=0.2,
+                overlap_width_ratio=0.2,
+                perform_standard_pred=True,
+                postprocess_type="NMS",
+                postprocess_match_metric="IOU",
+                postprocess_match_threshold=0.5,
+                postprocess_class_agnostic=True
+            )
+            
+            # Get results as they complete
+            lanes_info = lanes_future.result()
+            text_detections = text_future.result()
+            traffic_signs = signs_future.result()
+            result = detection_future.result()
+            
+            return {
+                'lanes': lanes_info,
+                'text_detections': text_detections,
+                'traffic_signs': traffic_signs,
+                'detections': result
+            }
 
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str], 
                      confidence_threshold: float = 0.5) -> Dict:
@@ -251,7 +319,7 @@ class ClipVideoAnalyzer:
 
 def process_video(video_path: str, text_queries: List[str], 
                  output_path: str = None, sample_rate: int = 1,
-                 time_interval: float = 1.0):
+                 time_interval: float = 1.0, buffer_size: int = 10):
     """
     Process a video file using CLIP model with object tracking
     
@@ -263,6 +331,7 @@ def process_video(video_path: str, text_queries: List[str],
         time_interval: time interval in seconds for object counting
     """
     analyzer = ClipVideoAnalyzer()
+    processing_queue = ProcessingQueue(max_size=buffer_size)
     cap = cv2.VideoCapture(video_path)
     
     if not cap.isOpened():
@@ -270,6 +339,20 @@ def process_video(video_path: str, text_queries: List[str],
     
     frame_count = 0
     results = []
+    
+    # Start worker threads
+    def process_frames():
+        while processing_queue.is_running:
+            frame = processing_queue.get_frame()
+            if frame is None:
+                break
+            result = analyzer.parallel_process_frame(frame, text_queries)
+            processing_queue.put_result(result)
+    
+    # Start processing threads
+    processing_queue.start()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        workers = [executor.submit(process_frames) for _ in range(4)]
     
     while True:
         ret, frame = cap.read()
