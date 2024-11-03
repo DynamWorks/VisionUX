@@ -54,22 +54,24 @@ class ClipVideoAnalyzer:
         # Convert BGR to RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Get YOLO + SAHI predictions
+        # Get YOLO + SAHI predictions with automatic merging
         result = get_sliced_prediction(
             frame_rgb,
             self.detection_model,
             slice_height=512,
             slice_width=512,
             overlap_height_ratio=0.2,
-            overlap_width_ratio=0.2
+            overlap_width_ratio=0.2,
+            perform_standard_pred=True,
+            postprocess_type="NMS",
+            postprocess_match_metric="IOU",
+            postprocess_match_threshold=0.5,
+            postprocess_class_agnostic=True
         )
         
-        # Merge predictions using SAHI's built-in functionality
-        merged_predictions = result.merge()
-        
-        # Process each merged detection with CLIP
+        # Process each detection with CLIP
         segments_info = []
-        for pred in merged_predictions:
+        for pred in result.object_prediction_list:
             bbox = pred.bbox.to_xyxy()
             # Extract segment
             x1, y1, x2, y2 = map(int, bbox)
@@ -114,7 +116,7 @@ class ClipVideoAnalyzer:
                 del self.tracked_objects[obj_id]
         
         # Add new trackers for SAHI detections
-        for pred in merged_predictions:
+        for pred in result.object_prediction_list:
             bbox = pred.bbox.to_xyxy()
             x1, y1, x2, y2 = map(int, bbox)
             w, h = x2 - x1, y2 - y1
