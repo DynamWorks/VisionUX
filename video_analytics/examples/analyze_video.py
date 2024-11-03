@@ -21,7 +21,7 @@ def analyze_video(video_path: str, text_queries: list, api_url: str = "http://lo
     payload = {
         "video_path": str(Path(video_path).absolute()),
         "text_queries": text_queries,
-        "sample_rate": 1,  # Process every frame
+        "sample_rate": 5,  # Process every frame
         "max_workers": 4   # Number of parallel workers
     }
     
