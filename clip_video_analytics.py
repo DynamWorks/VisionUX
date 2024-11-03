@@ -339,24 +339,15 @@ def process_video(video_path: str, text_queries: List[str],
     # Validate input file exists
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
-    """
-    Process a video file using CLIP model with object tracking
-    
-    Args:
-        video_path: path to input video file
-        text_queries: list of text descriptions to detect
-        output_path: path to save the analysis results
-        sample_rate: process every nth frame
-        time_interval: time interval in seconds for object counting
-    """
+        
     try:
         analyzer = ClipVideoAnalyzer()
         cap = cv2.VideoCapture(video_path)
         
         if not cap.isOpened():
             raise ValueError(f"Could not open video file: {video_path}")
-    
-    # Get total frame count for progress tracking
+        
+        # Get total frame count for progress tracking
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"Processing video with {total_frames} frames at {fps} FPS")
