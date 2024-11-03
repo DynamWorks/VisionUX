@@ -14,7 +14,7 @@ class ClipVideoAnalyzer:
         self.model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
         # Initialize object tracker
-        self.tracker = cv2.TrackerCSRT_create
+        self.tracker = cv2.TrackerCSRT.create
         self.tracked_objects = {}
         self.object_ids = set()
         self.scene_objects = defaultdict(int)
