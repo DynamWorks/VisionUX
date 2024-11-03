@@ -90,12 +90,9 @@ class ClipVideoAnalyzer:
                 logits_per_image = outputs.logits_per_image
                 probs = logits_per_image.softmax(dim=1)
             
-            # Get segment bbox
-            segment_bbox = cv2.boundingRect(mask.astype(np.uint8))
-            
             # Store segment info
             segments_info.append({
-                'bbox': segment_bbox,
+                'bbox': tuple(map(int, bbox)),
                 'class': text_queries[probs.argmax().item()],
                 'confidence': float(probs.max())
             })
