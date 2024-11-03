@@ -12,15 +12,16 @@ from sahi.predict import get_sliced_prediction
 
 class ClipVideoAnalyzer:
     def __init__(self, model_name: str = "openai/clip-vit-base-patch32",
-                 yolo_model: str = "yolov8x.pt"):
-        """Initialize CLIP model, YOLO, and preprocessing pipeline"""
+                 yolo_model: str = "yolov8x.pt",
+                 traffic_sign_model: str = "yolov8n.pt"):
+        """Initialize all models and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
         # Initialize CLIP
         self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
         
-        # Initialize YOLO with SAHI
+        # Initialize YOLO with SAHI for general object detection
         self.yolo = YOLO(yolo_model)
         self.detection_model = AutoDetectionModel.from_pretrained(
             model_type='yolov8',
@@ -28,6 +29,16 @@ class ClipVideoAnalyzer:
             confidence_threshold=0.3,
             device=self.device
         )
+        
+        # Initialize traffic sign detection model
+        self.traffic_sign_model = YOLO(traffic_sign_model)
+        
+        # Initialize text recognition
+        import easyocr
+        self.reader = easyocr.Reader(['en'])
+        
+        # Initialize lane detection parameters
+        self.lane_detector = cv2.createLineSegmentDetector(0)
         
         # Initialize object tracker
         self.tracker = cv2.TrackerKCF_create
@@ -37,6 +48,65 @@ class ClipVideoAnalyzer:
         self.frame_objects = defaultdict(set)
         print(f"Models loaded on {self.device}")
         
+    def detect_lanes(self, frame: np.ndarray) -> List[Dict]:
+        """Detect lane markings in the frame"""
+        # Convert to grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Apply edge detection
+        edges = cv2.Canny(gray, 50, 150)
+        
+        # Detect line segments
+        lines = self.lane_detector.detect(edges)[0]
+        
+        if lines is None:
+            return []
+        
+        lane_info = []
+        for line in lines:
+            x1, y1, x2, y2 = map(int, line[0])
+            angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
+            
+            # Filter for likely lane markings (near vertical lines)
+            if 20 < abs(angle) < 80:
+                lane_info.append({
+                    'coordinates': ((x1, y1), (x2, y2)),
+                    'angle': angle,
+                    'length': np.sqrt((x2-x1)**2 + (y2-y1)**2)
+                })
+        
+        return lane_info
+
+    def detect_text(self, frame: np.ndarray) -> List[Dict]:
+        """Detect and recognize text in the frame"""
+        results = self.reader.readtext(frame)
+        text_detections = []
+        
+        for bbox, text, conf in results:
+            if conf > 0.5:  # Confidence threshold
+                text_detections.append({
+                    'text': text,
+                    'confidence': conf,
+                    'bbox': bbox,
+                })
+        
+        return text_detections
+
+    def detect_traffic_signs(self, frame: np.ndarray) -> List[Dict]:
+        """Detect traffic signs in the frame"""
+        results = self.traffic_sign_model(frame)[0]
+        signs = []
+        
+        for r in results.boxes.data:
+            x1, y1, x2, y2, conf, cls = r
+            signs.append({
+                'class': results.names[int(cls)],
+                'confidence': float(conf),
+                'bbox': (int(x1), int(y1), int(x2), int(y2))
+            })
+        
+        return signs
+
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str], 
                      confidence_threshold: float = 0.5) -> Dict:
         """
@@ -154,12 +224,24 @@ class ClipVideoAnalyzer:
         for obj_id in current_objects:
             self.scene_objects[obj_id] += 1
         
+        # Detect additional elements
+        lane_info = self.detect_lanes(frame)
+        text_detections = self.detect_text(frame)
+        traffic_signs = self.detect_traffic_signs(frame)
+        
         results = {
             'scene_analysis': scene_results,
             'current_objects': len(current_objects),
             'new_objects': len(current_objects - self.frame_objects['previous']),
             'exited_objects': len(removed_objects),
-            'total_tracked_objects': len(self.object_ids)
+            'total_tracked_objects': len(self.object_ids),
+            'lanes': {
+                'count': len(lane_info),
+                'details': lane_info
+            },
+            'text_detections': text_detections,
+            'traffic_signs': traffic_signs,
+            'segments': segments_info
         }
         
         # Update frame objects history
