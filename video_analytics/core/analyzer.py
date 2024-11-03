@@ -172,8 +172,7 @@ class ClipVideoAnalyzer:
         result = get_sliced_prediction(
             frame_rgb,
             self.detection_model,
-            **self.sahi_params,
-            num_workers=0  # Disable multiprocessing
+            **self.sahi_params
         )
         
         # Process detections with CLIP
