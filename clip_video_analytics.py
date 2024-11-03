@@ -6,25 +6,35 @@ from typing import List, Tuple, Dict, Set
 import time
 from transformers import CLIPProcessor, CLIPModel
 from collections import defaultdict
+from segment_anything_2 import sam2_model, SamPredictor
 
 class ClipVideoAnalyzer:
-    def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
-        """Initialize CLIP model and preprocessing pipeline"""
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32", 
+                 sam_checkpoint: str = "sam2_h.pth"):
+        """Initialize CLIP model, SAM2, and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = CLIPModel.from_pretrained(model_name).to(self.device)
+        # Initialize CLIP
+        self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
+        
+        # Initialize SAM2
+        self.sam = sam2_model.build_sam2(checkpoint=sam_checkpoint)
+        self.sam.to(device=self.device)
+        self.predictor = SamPredictor(self.sam)
+        
         # Initialize object tracker
         self.tracker = cv2.TrackerKCF_create
         self.tracked_objects = {}
         self.object_ids = set()
         self.scene_objects = defaultdict(int)
         self.frame_objects = defaultdict(set)
-        print(f"Model loaded on {self.device}")
+        print(f"Models loaded on {self.device}")
         
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str], 
                      confidence_threshold: float = 0.5) -> Dict:
         """
-        Analyze a single frame using CLIP model and track objects
+        Analyze a single frame using SAM2 for segmentation, CLIP for identification,
+        and OpenCV for tracking
         
         Args:
             frame: numpy array of the frame (BGR format from OpenCV)
@@ -34,26 +44,46 @@ class ClipVideoAnalyzer:
         Returns:
             Dictionary containing scene analysis and object tracking results
         """
-        # Convert BGR to RGB and then to PIL Image
+        # Convert BGR to RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(frame_rgb)
         
-        # Process inputs for scene analysis
-        inputs = self.processor(
-            text=text_queries,
-            images=image,
-            return_tensors="pt",
-            padding=True
-        )
+        # Get SAM2 segmentation
+        self.predictor.set_image(frame_rgb)
+        masks = self.predictor.generate()  # Get automatic masks
         
-        # Move inputs to device
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        # Process each segment with CLIP
+        segments_info = []
+        for mask in masks:
+            # Apply mask to get segment
+            segment = cv2.bitwise_and(frame_rgb, frame_rgb, mask=mask.astype(np.uint8))
+            segment_pil = Image.fromarray(segment)
         
-        with torch.no_grad():
-            # Get model predictions
-            outputs = self.model(**inputs)
-            logits_per_image = outputs.logits_per_image
-            probs = logits_per_image.softmax(dim=1)
+            # Process segment with CLIP
+            inputs = self.processor(
+                text=text_queries,
+                images=segment_pil,
+                return_tensors="pt",
+                padding=True
+            )
+            
+            # Move inputs to device
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            
+            with torch.no_grad():
+                # Get model predictions
+                outputs = self.clip_model(**inputs)
+                logits_per_image = outputs.logits_per_image
+                probs = logits_per_image.softmax(dim=1)
+            
+            # Get segment bbox
+            segment_bbox = cv2.boundingRect(mask.astype(np.uint8))
+            
+            # Store segment info
+            segments_info.append({
+                'bbox': segment_bbox,
+                'class': text_queries[probs.argmax().item()],
+                'confidence': float(probs.max())
+            })
         
         # Update object tracking
         current_objects = set()

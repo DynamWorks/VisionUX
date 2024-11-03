@@ -4,3 +4,4 @@ pandas==2.2.3
 torch==2.4.1
 transformers==4.45.1
 Pillow==10.2.0
+segment-anything-2==0.1.3
