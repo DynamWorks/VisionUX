@@ -1,0 +1,14 @@
+models:
+  clip: "openai/clip-vit-base-patch32"
+  yolo: "yolov8x.pt"
+  traffic_signs: "yolov8n.pt"
+
+processing:
+  sample_rate: 1
+  max_workers: 4
+  confidence_threshold: 0.5
+
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
