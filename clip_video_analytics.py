@@ -331,54 +331,69 @@ def process_video(video_path: str, text_queries: List[str],
         time_interval: time interval in seconds for object counting
     """
     analyzer = ClipVideoAnalyzer()
-    processing_queue = ProcessingQueue(max_size=buffer_size)
     cap = cv2.VideoCapture(video_path)
     
     if not cap.isOpened():
         raise ValueError(f"Could not open video file: {video_path}")
     
+    # Get total frame count for progress tracking
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"Processing video with {total_frames} frames at {fps} FPS")
+    
     frame_count = 0
+    processed_count = 0
     results = []
     
-    # Start worker threads
-    def process_frames():
-        while processing_queue.is_running:
-            frame = processing_queue.get_frame()
-            if frame is None:
-                break
-            result = analyzer.parallel_process_frame(frame, text_queries)
-            processing_queue.put_result(result)
-    
-    # Start processing threads
-    processing_queue.start()
+    # Create thread pool for parallel processing
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        workers = [executor.submit(process_frames) for _ in range(4)]
-    
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+        # Create a list to store future objects
+        future_results = []
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+                
+            frame_count += 1
+            if frame_count % sample_rate != 0:
+                continue
+                
+            # Submit frame for parallel processing
+            future = executor.submit(analyzer.parallel_process_frame, frame, text_queries)
+            future_results.append((frame_count, future))
             
-        frame_count += 1
-        if frame_count % sample_rate != 0:
-            continue
+            # Process completed frames
+            for frame_idx, future in future_results[:]:
+                if future.done():
+                    frame_results = future.result()
+                    timestamp = (frame_idx / fps)
+                    interval_idx = int(timestamp / time_interval)
+                    
+                    frame_results['timestamp'] = timestamp
+                    frame_results['interval'] = interval_idx
+                    results.append(frame_results)
+                    
+                    processed_count += 1
+                    future_results.remove((frame_idx, future))
+                    
+                    # Print progress
+                    progress = (frame_count * 100) / total_frames
+                    print(f"\rProgress: {progress:.1f}% - Processed {processed_count} frames", end="")
             
-        # Analyze frame
-        frame_results = analyzer.analyze_frame(frame, text_queries)
-        
-        # Add timestamp and interval statistics
-        timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0  # convert to seconds
-        interval_idx = int(timestamp / time_interval)
-        
-        frame_results['timestamp'] = timestamp
-        frame_results['interval'] = interval_idx
-        results.append(frame_results)
-        
-        print(f"Processed frame {frame_count} at {timestamp:.2f}s:")
-        print(f"Scene analysis: {frame_results['scene_analysis']}")
-        print(f"Objects in frame: {frame_results['current_objects']}")
-        print(f"New objects: {frame_results['new_objects']}")
-        print(f"Exited objects: {frame_results['exited_objects']}")
+        # Wait for remaining frames to be processed
+        print("\nFinalizing processing...")
+        for frame_idx, future in future_results:
+            frame_results = future.result()
+            timestamp = (frame_idx / fps)
+            interval_idx = int(timestamp / time_interval)
+            
+            frame_results['timestamp'] = timestamp
+            frame_results['interval'] = interval_idx
+            results.append(frame_results)
+            
+            processed_count += 1
+            print(f"\rFinishing: {processed_count} frames processed", end="")
     
     cap.release()
     
