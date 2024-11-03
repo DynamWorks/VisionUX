@@ -64,9 +64,12 @@ class ClipVideoAnalyzer:
             overlap_width_ratio=0.2
         )
         
-        # Process each detection with CLIP
+        # Merge predictions using SAHI's built-in functionality
+        merged_predictions = result.merge()
+        
+        # Process each merged detection with CLIP
         segments_info = []
-        for pred in result.object_prediction_list:
+        for pred in merged_predictions:
             bbox = pred.bbox.to_xyxy()
             # Extract segment
             x1, y1, x2, y2 = map(int, bbox)
@@ -97,7 +100,7 @@ class ClipVideoAnalyzer:
                 'confidence': float(probs.max())
             })
         
-        # Update object tracking
+        # Update object tracking using SAHI predictions
         current_objects = set()
         removed_objects = set()
         
@@ -110,23 +113,33 @@ class ClipVideoAnalyzer:
                 removed_objects.add(obj_id)
                 del self.tracked_objects[obj_id]
         
-        # Detect new objects (using simple difference detection for demo)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (21, 21), 0)
-        thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)[1]
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Add new trackers for detected objects
-        for contour in contours:
-            if cv2.contourArea(contour) > 500:  # Minimum area threshold
-                x, y, w, h = cv2.boundingRect(contour)
-                if (x, y, w, h) not in self.object_ids:
-                    tracker = self.tracker()
-                    tracker.init(frame, (x, y, w, h))
-                    new_id = len(self.object_ids)
-                    self.tracked_objects[new_id] = tracker
-                    self.object_ids.add((x, y, w, h))
-                    current_objects.add(new_id)
+        # Add new trackers for SAHI detections
+        for pred in merged_predictions:
+            bbox = pred.bbox.to_xyxy()
+            x1, y1, x2, y2 = map(int, bbox)
+            w, h = x2 - x1, y2 - y1
+            
+            # Check if this bbox overlaps significantly with any existing tracker
+            is_new_object = True
+            for obj_id in current_objects:
+                success, existing_bbox = self.tracked_objects[obj_id].update(frame)
+                if success:
+                    ex, ey, ew, eh = existing_bbox
+                    # Calculate IoU
+                    intersection = max(0, min(x1+w, ex+ew) - max(x1, ex)) * \
+                                 max(0, min(y1+h, ey+eh) - max(y1, ey))
+                    union = w*h + ew*eh - intersection
+                    if intersection/union > 0.5:  # IoU threshold
+                        is_new_object = False
+                        break
+            
+            if is_new_object:
+                tracker = self.tracker()
+                tracker.init(frame, (x1, y1, w, h))
+                new_id = len(self.object_ids)
+                self.tracked_objects[new_id] = tracker
+                self.object_ids.add((x1, y1, w, h))
+                current_objects.add(new_id)
         
         # Convert scene analysis to dictionary
         scene_results = {
