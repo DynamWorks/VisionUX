@@ -48,9 +48,25 @@ def analyze_video():
             max_workers=max_workers
         )
         
+        # Format results for API response
+        formatted_results = []
+        for frame_result in results:
+            formatted_results.append({
+                'frame_number': frame_result.get('frame_number'),
+                'timestamp': frame_result.get('timestamp'),
+                'detections': {
+                    'segments': frame_result.get('segments', []),
+                    'lanes': frame_result.get('lanes', []),
+                    'text': frame_result.get('text', []),
+                    'signs': frame_result.get('signs', []),
+                    'tracking': frame_result.get('tracking', {})
+                }
+            })
+
         return jsonify({
             'status': 'success',
-            'results': results
+            'total_frames': len(formatted_results),
+            'results': formatted_results
         })
         
     except Exception as e:

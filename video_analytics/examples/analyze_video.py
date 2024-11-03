@@ -74,7 +74,11 @@ def main():
             args.queries,
             args.api_url
         )
-        print(f"Detected {len(results['results'])} frames with objects")
+        total_frames = results.get('total_frames', 0)
+        total_detections = sum(len(frame.get('detections', {}).get('segments', [])) 
+                             for frame in results.get('results', []))
+        print(f"Processed {total_frames} frames")
+        print(f"Detected {total_detections} objects across all frames")
         
     except Exception as e:
         print(f"Error: {str(e)}")
