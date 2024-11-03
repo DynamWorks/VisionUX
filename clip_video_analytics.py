@@ -227,5 +227,5 @@ if __name__ == "__main__":
         video_path=video_path,
         text_queries=text_queries,
         output_path="clip_analysis_results.json",
-        sample_rate=3  # Process every 30th frame
+        sample_rate=30  # Process every 30th frame
     )
