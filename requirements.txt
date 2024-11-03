@@ -1,4 +1,4 @@
-opencv-contrib-python<=4.9.0.80
+opencv-contrib-python==4.9.0.80
 ultralytics==8.3.3
 pandas==2.2.3
 torch==2.4.1

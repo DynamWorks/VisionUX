@@ -177,12 +177,13 @@ if __name__ == "__main__":
         "traffic jam",
         "bicycle",
         "pedestrian crossing",
-        "traffic light","a car", "a truck", "a bus", "a motorcycle", "a vehicle"
+        "traffic light",
+        "car", "truck", "bus", "motorcycle", "vehicle"
     ]
     
     results = process_video(
         video_path=video_path,
         text_queries=text_queries,
         output_path="clip_analysis_results.json",
-        sample_rate=30  # Process every 30th frame
+        sample_rate=1  # Process every 30th frame
     )
