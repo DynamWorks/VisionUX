@@ -27,8 +27,8 @@ class ClipVideoAnalyzer:
             self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
             self.processor = CLIPProcessor.from_pretrained(model_name)
             # Save locally
-            self.clip_model.save_pretrained('models/clip')
-            self.processor.save_pretrained('models/clip')
+            self.clip_model.save_pretrained('video_analytics/models/clip')
+            self.processor.save_pretrained('video_analytics/models/clip')
         
         # Initialize YOLO with SAHI
         if os.path.exists('video_analytics/models/yolo/' + os.path.basename(yolo_model)):
