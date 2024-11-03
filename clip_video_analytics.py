@@ -1,16 +1,17 @@
 import torch
-import clip
 from PIL import Image
 import cv2
 import numpy as np
 from typing import List, Tuple, Dict
 import time
+from transformers import CLIPProcessor, CLIPModel
 
 class ClipVideoAnalyzer:
-    def __init__(self, model_name: str = "ViT-B/32"):
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
         """Initialize CLIP model and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model, self.preprocess = clip.load(model_name, device=self.device)
+        self.model = CLIPModel.from_pretrained(model_name).to(self.device)
+        self.processor = CLIPProcessor.from_pretrained(model_name)
         print(f"Model loaded on {self.device}")
         
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str], 
@@ -30,28 +31,27 @@ class ClipVideoAnalyzer:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(frame_rgb)
         
-        # Preprocess image
-        image_input = self.preprocess(image).unsqueeze(0).to(self.device)
+        # Process inputs
+        inputs = self.processor(
+            text=text_queries,
+            images=image,
+            return_tensors="pt",
+            padding=True
+        )
         
-        # Encode text queries
-        text_tokens = clip.tokenize(text_queries).to(self.device)
+        # Move inputs to device
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
         with torch.no_grad():
-            # Get image and text features
-            image_features = self.model.encode_image(image_input)
-            text_features = self.model.encode_text(text_tokens)
-            
-            # Normalize features
-            image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-            
-            # Calculate similarity
-            similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+            # Get model predictions
+            outputs = self.model(**inputs)
+            logits_per_image = outputs.logits_per_image
+            probs = logits_per_image.softmax(dim=1)
             
         # Convert to dictionary
         results = {
             query: float(score) 
-            for query, score in zip(text_queries, similarity[0].cpu().numpy())
+            for query, score in zip(text_queries, probs[0].cpu().numpy())
             if float(score) >= confidence_threshold
         }
         
