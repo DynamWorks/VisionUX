@@ -14,9 +14,18 @@ class Config:
         """
         self.config = {
             'models': {
-                'clip': 'openai/clip-vit-base-patch32',
-                'yolo': 'yolov8x.pt',
-                'traffic_signs': 'yolov8n.pt'
+                'clip': {
+                    'name': 'openai/clip-vit-base-patch32',
+                    'local_path': 'models/clip-vit-base-patch32'
+                },
+                'yolo': {
+                    'name': 'yolov8x.pt',
+                    'local_path': 'models/yolov8x.pt'
+                },
+                'traffic_signs': {
+                    'name': 'yolov8n.pt',
+                    'local_path': 'models/yolov8n.pt'
+                }
             },
             'processing': {
                 'sample_rate': 1,

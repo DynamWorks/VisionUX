@@ -1,3 +1,4 @@
+import os
 import torch
 from PIL import Image
 import cv2
@@ -18,20 +19,42 @@ class ClipVideoAnalyzer:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
         # Initialize CLIP
-        self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
-        self.processor = CLIPProcessor.from_pretrained(model_name)
+        try:
+            self.clip_model = CLIPModel.from_pretrained('models/clip').to(self.device)
+            self.processor = CLIPProcessor.from_pretrained('models/clip')
+        except:
+            print("Local CLIP model not found, downloading from hub...")
+            self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
+            self.processor = CLIPProcessor.from_pretrained(model_name)
+            # Save locally
+            self.clip_model.save_pretrained('models/clip')
+            self.processor.save_pretrained('models/clip')
         
         # Initialize YOLO with SAHI
-        self.yolo = YOLO(yolo_model)
+        if os.path.exists('models/yolo/' + os.path.basename(yolo_model)):
+            yolo_path = 'models/yolo/' + os.path.basename(yolo_model)
+        else:
+            print("Local YOLO model not found, downloading...")
+            os.makedirs('models/yolo', exist_ok=True)
+            yolo_path = yolo_model
+            
+        self.yolo = YOLO(yolo_path)
         self.detection_model = AutoDetectionModel.from_pretrained(
             model_type='yolov8',
-            model_path=yolo_model,
+            model_path=yolo_path,
             confidence_threshold=0.3,
             device=self.device
         )
         
         # Initialize traffic sign detection
-        self.traffic_sign_model = YOLO(traffic_sign_model)
+        if os.path.exists('models/traffic_signs/' + os.path.basename(traffic_sign_model)):
+            sign_path = 'models/traffic_signs/' + os.path.basename(traffic_sign_model)
+        else:
+            print("Local traffic sign model not found, downloading...")
+            os.makedirs('models/traffic_signs', exist_ok=True) 
+            sign_path = traffic_sign_model
+            
+        self.traffic_sign_model = YOLO(sign_path)
         
         # Initialize text recognition
         self.reader = easyocr.Reader(['en'])
