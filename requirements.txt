@@ -4,4 +4,3 @@ pandas==2.2.3
 torch==2.4.1
 transformers==4.45.1
 Pillow==10.2.0
-git+https://github.com/openai/CLIP.git
