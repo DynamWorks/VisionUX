@@ -172,7 +172,8 @@ class ClipVideoAnalyzer:
         result = get_sliced_prediction(
             frame_rgb,
             self.detection_model,
-            **self.sahi_params
+            **self.sahi_params,
+            num_workers=0  # Disable multiprocessing
         )
         
         # Process detections with CLIP
@@ -257,24 +258,24 @@ class ClipVideoAnalyzer:
         # For HD resolution (1920x1080) or lower
         if self.frame_width <= 1920:
             self.sahi_params = {
-                'slice_height': 512,
-                'slice_width': 512,
+                'slice_height': 384,
+                'slice_width': 384,
                 'overlap_height_ratio': 0.2,
                 'overlap_width_ratio': 0.2
             }
         # For 2K resolution
         elif self.frame_width <= 2560:
             self.sahi_params = {
-                'slice_height': 640,
-                'slice_width': 640,
+                'slice_height': 512,
+                'slice_width': 512,
                 'overlap_height_ratio': 0.3,
                 'overlap_width_ratio': 0.3
             }
         # For 4K resolution
         else:
             self.sahi_params = {
-                'slice_height': 768,
-                'slice_width': 768,
+                'slice_height': 640,
+                'slice_width': 640,
                 'overlap_height_ratio': 0.4,
                 'overlap_width_ratio': 0.4
             }
