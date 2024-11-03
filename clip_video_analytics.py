@@ -348,9 +348,9 @@ def process_video(video_path: str, text_queries: List[str],
             raise ValueError(f"Could not open video file: {video_path}")
         
         # Get total frame count for progress tracking
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"Processing video with {total_frames} frames at {fps} FPS")
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        print(f"Processing video with {total_frames} frames at {fps} FPS")
     
     frame_count = 0
     processed_count = 0
