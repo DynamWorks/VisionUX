@@ -53,7 +53,8 @@ class ClipVideoAnalyzer:
         segments_info = []
         for mask in masks:
             # Apply mask to get segment
-            segment = cv2.bitwise_and(frame_rgb, frame_rgb, mask=mask.astype(np.uint8))
+            mask_np = mask.cpu().numpy()
+            segment = cv2.bitwise_and(frame_rgb, frame_rgb, mask=mask_np.astype(np.uint8))
             segment_pil = Image.fromarray(segment)
         
             # Process segment with CLIP
