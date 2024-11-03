@@ -20,8 +20,8 @@ class ClipVideoAnalyzer:
         
         # Initialize CLIP
         try:
-            self.clip_model = CLIPModel.from_pretrained('models/clip').to(self.device)
-            self.processor = CLIPProcessor.from_pretrained('models/clip')
+            self.clip_model = CLIPModel.from_pretrained('video_analytics/models/clip').to(self.device)
+            self.processor = CLIPProcessor.from_pretrained('video_analytics/models/clip')
         except:
             print("Local CLIP model not found, downloading from hub...")
             self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
@@ -31,11 +31,11 @@ class ClipVideoAnalyzer:
             self.processor.save_pretrained('models/clip')
         
         # Initialize YOLO with SAHI
-        if os.path.exists('models/yolo/' + os.path.basename(yolo_model)):
-            yolo_path = 'models/yolo/' + os.path.basename(yolo_model)
+        if os.path.exists('video_analytics/models/yolo/' + os.path.basename(yolo_model)):
+            yolo_path = 'video_analytics/models/yolo/' + os.path.basename(yolo_model)
         else:
             print("Local YOLO model not found, downloading...")
-            os.makedirs('models/yolo', exist_ok=True)
+            os.makedirs('video_analytics/models/yolo', exist_ok=True)
             yolo_path = yolo_model
             
         self.yolo = YOLO(yolo_path)
@@ -47,11 +47,11 @@ class ClipVideoAnalyzer:
         )
         
         # Initialize traffic sign detection
-        if os.path.exists('models/traffic_signs/' + os.path.basename(traffic_sign_model)):
-            sign_path = 'models/traffic_signs/' + os.path.basename(traffic_sign_model)
+        if os.path.exists('video_analytics/models/traffic_signs/' + os.path.basename(traffic_sign_model)):
+            sign_path = 'video_analytics/models/traffic_signs/' + os.path.basename(traffic_sign_model)
         else:
             print("Local traffic sign model not found, downloading...")
-            os.makedirs('models/traffic_signs', exist_ok=True) 
+            os.makedirs('video_analytics/models/traffic_signs', exist_ok=True) 
             sign_path = traffic_sign_model
             
         self.traffic_sign_model = YOLO(sign_path)

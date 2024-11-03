@@ -16,15 +16,15 @@ class Config:
             'models': {
                 'clip': {
                     'name': 'openai/clip-vit-base-patch32',
-                    'local_path': 'models/clip-vit-base-patch32'
+                    'local_path': 'video_analytics/models/clip-vit-base-patch32'
                 },
                 'yolo': {
                     'name': 'yolov8x.pt',
-                    'local_path': 'models/yolov8x.pt'
+                    'local_path': 'video_analytics/models/yolo/yolov8x.pt'
                 },
                 'traffic_signs': {
                     'name': 'yolov8n.pt',
-                    'local_path': 'models/yolov8n.pt'
+                    'local_path': 'video_analytics/models/traffic_signs/yolov8n.pt'
                 }
             },
             'processing': {
