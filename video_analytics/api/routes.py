@@ -10,8 +10,10 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 api = Blueprint('api', __name__)
 
-# Initialize processor
-processor = VideoProcessor(analyzer=ClipVideoAnalyzer())
+# Initialize processor with config
+from ..utils.config import Config
+config = Config()
+processor = VideoProcessor(analyzer=ClipVideoAnalyzer(config=config.config))
 
 @api.route('/analyze', methods=['POST'])
 def analyze_video():

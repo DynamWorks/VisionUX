@@ -12,11 +12,29 @@ import easyocr
 from collections import defaultdict
 
 class ClipVideoAnalyzer:
-    def __init__(self, model_name: str = "openai/clip-vit-base-patch32",
+    def __init__(self, config: dict = None, model_name: str = "openai/clip-vit-base-patch32",
                  yolo_model: str = "yolov8x.pt",
                  traffic_sign_model: str = "yolov8n.pt"):
         """Initialize all models and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        # Initialize default config if none provided
+        self.config = config or {
+            'models': {
+                'clip': {
+                    'name': model_name,
+                    'local_path': 'video_analytics/models/clip'
+                },
+                'yolo': {
+                    'name': yolo_model,
+                    'local_path': 'video_analytics/models/yolo'
+                },
+                'traffic_signs': {
+                    'name': traffic_sign_model,
+                    'local_path': 'video_analytics/models/traffic_signs'
+                }
+            }
+        }
         
         # Initialize CLIP
         try:
