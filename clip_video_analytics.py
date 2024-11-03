@@ -1,5 +1,7 @@
+import os
 import torch
 from PIL import Image
+import logging
 import cv2
 import numpy as np
 from typing import List, Tuple, Dict, Set
@@ -329,12 +331,30 @@ def process_video(video_path: str, text_queries: List[str],
         output_path: path to save the analysis results
         sample_rate: process every nth frame
         time_interval: time interval in seconds for object counting
+        
+    Raises:
+        ValueError: If video file cannot be opened or is invalid
+        FileNotFoundError: If video file does not exist
     """
-    analyzer = ClipVideoAnalyzer()
-    cap = cv2.VideoCapture(video_path)
+    # Validate input file exists
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file not found: {video_path}")
+    """
+    Process a video file using CLIP model with object tracking
     
-    if not cap.isOpened():
-        raise ValueError(f"Could not open video file: {video_path}")
+    Args:
+        video_path: path to input video file
+        text_queries: list of text descriptions to detect
+        output_path: path to save the analysis results
+        sample_rate: process every nth frame
+        time_interval: time interval in seconds for object counting
+    """
+    try:
+        analyzer = ClipVideoAnalyzer()
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            raise ValueError(f"Could not open video file: {video_path}")
     
     # Get total frame count for progress tracking
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -406,21 +426,36 @@ def process_video(video_path: str, text_queries: List[str],
     return results
 
 if __name__ == "__main__":
-    # Example usage
-    video_path = "sample_video.mp4"
-    text_queries = [
-        "person walking",
-        "car driving",
-        "traffic jam",
-        "bicycle",
-        "pedestrian crossing",
-        "traffic light",
-        "car", "truck", "bus", "motorcycle", "vehicle"
-    ]
+    # Configure logging
+    logging.basicConfig(level=logging.INFO,
+                       format='%(asctime)s - %(levelname)s - %(message)s')
     
-    results = process_video(
-        video_path=video_path,
-        text_queries=text_queries,
-        output_path="clip_analysis_results.json",
-        sample_rate=30  # Process every 30th frame
-    )
+    try:
+        # Example usage
+        video_path = "sample_video.mp4"
+        text_queries = [
+            "person walking",
+            "car driving", 
+            "traffic jam",
+            "bicycle",
+            "pedestrian crossing",
+            "traffic light",
+            "car", "truck", "bus", "motorcycle", "vehicle"
+        ]
+        
+        if not os.path.exists(video_path):
+            raise FileNotFoundError(f"Video file not found: {video_path}")
+            
+        results = process_video(
+            video_path=video_path,
+            text_queries=text_queries,
+            output_path="clip_analysis_results.json",
+            sample_rate=30  # Process every 30th frame
+        )
+        
+    except FileNotFoundError as e:
+        logging.error(f"File error: {e}")
+    except ValueError as e:
+        logging.error(f"Processing error: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
