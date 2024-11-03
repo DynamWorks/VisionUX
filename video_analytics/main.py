@@ -33,7 +33,12 @@ def create_app(config_path: str = None) -> Flask:
 
 def main():
     """Run the application"""
-    app = create_app()
+    import argparse
+    parser = argparse.ArgumentParser(description='Video Analytics API')
+    parser.add_argument('--config', type=str, help='Path to config file')
+    args = parser.parse_args()
+    
+    app = create_app(args.config)
     app.run(
         host=app.config['api']['host'],
         port=app.config['api']['port'],
