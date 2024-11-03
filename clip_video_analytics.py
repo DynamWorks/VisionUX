@@ -18,7 +18,7 @@ class ClipVideoAnalyzer:
         self.processor = CLIPProcessor.from_pretrained(model_name)
         
         # Initialize SAM
-        self.sam = SAM('sam_b.pt')  # or 'sam_l.pt' for larger model
+        self.sam = SAM('sam2_b.pt')  # or 'sam_l.pt' for larger model
         
         # Initialize object tracker
         self.tracker = cv2.TrackerKCF_create
@@ -213,5 +213,5 @@ if __name__ == "__main__":
         video_path=video_path,
         text_queries=text_queries,
         output_path="clip_analysis_results.json",
-        sample_rate=1  # Process every 30th frame
+        sample_rate=3  # Process every 30th frame
     )
