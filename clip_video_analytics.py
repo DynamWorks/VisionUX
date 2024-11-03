@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Set
 import time
 from transformers import CLIPProcessor, CLIPModel
 from collections import defaultdict
-from segment_anything_2 import sam2_model, SamPredictor
+from ultralytics import SAM
 
 class ClipVideoAnalyzer:
     def __init__(self, model_name: str = "openai/clip-vit-base-patch32", 
@@ -17,10 +17,8 @@ class ClipVideoAnalyzer:
         self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
         
-        # Initialize SAM2
-        self.sam = sam2_model.build_sam2(checkpoint=sam_checkpoint)
-        self.sam.to(device=self.device)
-        self.predictor = SamPredictor(self.sam)
+        # Initialize SAM
+        self.sam = SAM('sam_b.pt')  # or 'sam_l.pt' for larger model
         
         # Initialize object tracker
         self.tracker = cv2.TrackerKCF_create
@@ -47,9 +45,9 @@ class ClipVideoAnalyzer:
         # Convert BGR to RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Get SAM2 segmentation
-        self.predictor.set_image(frame_rgb)
-        masks = self.predictor.generate()  # Get automatic masks
+        # Get SAM segmentation
+        results = self.sam(frame_rgb, device=self.device)
+        masks = results[0].masks.data  # Get masks tensor
         
         # Process each segment with CLIP
         segments_info = []
