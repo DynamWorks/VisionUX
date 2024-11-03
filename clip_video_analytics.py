@@ -108,13 +108,14 @@ def process_video(video_path: str, text_queries: List[str],
 
 if __name__ == "__main__":
     # Example usage
-    video_path = "path_to_your_video.mp4"
+    video_path = "sample_video.mp4"
     text_queries = [
         "person walking",
         "car driving",
         "traffic jam",
         "bicycle",
-        "pedestrian crossing"
+        "pedestrian crossing",
+        "traffic light","a car", "a truck", "a bus", "a motorcycle", "a vehicle"
     ]
     
     results = process_video(
