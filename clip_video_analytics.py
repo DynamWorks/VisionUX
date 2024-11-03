@@ -351,10 +351,10 @@ def process_video(video_path: str, text_queries: List[str],
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         print(f"Processing video with {total_frames} frames at {fps} FPS")
-    
-    frame_count = 0
-    processed_count = 0
-    results = []
+        
+        frame_count = 0
+        processed_count = 0
+        results = []
     
     # Create thread pool for parallel processing
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
