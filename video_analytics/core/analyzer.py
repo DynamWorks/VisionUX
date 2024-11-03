@@ -17,6 +17,9 @@ class ClipVideoAnalyzer:
                  traffic_sign_model: str = "yolov8n.pt"):
         """Initialize all models and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.frame_height = None
+        self.frame_width = None
+        self.sahi_params = None
         
         # Initialize default config if none provided
         self.config = config or {
@@ -135,14 +138,30 @@ class ClipVideoAnalyzer:
         """Analyze a single frame"""
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Get predictions
+        # Analyze first frame resolution and set SAHI parameters
+        if self.frame_height is None:
+            self.frame_height, self.frame_width = frame.shape[:2]
+            self._set_sahi_params()
+            
+            # Get initial scene understanding
+            inputs = self.processor(
+                text=["This is a scene of", "This shows a view of"],
+                images=Image.fromarray(frame_rgb),
+                return_tensors="pt",
+                padding=True
+            ).to(self.device)
+            
+            with torch.no_grad():
+                outputs = self.clip_model(**inputs)
+                scene_probs = outputs.logits_per_image.softmax(dim=1)
+                print(f"Initial scene analysis score: {scene_probs.max().item():.2f}")
+                print(f"Frame resolution: {self.frame_width}x{self.frame_height}")
+        
+        # Get predictions with optimized SAHI parameters
         result = get_sliced_prediction(
             frame_rgb,
             self.detection_model,
-            slice_height=512,
-            slice_width=512,
-            overlap_height_ratio=0.2,
-            overlap_width_ratio=0.2
+            **self.sahi_params
         )
         
         # Process detections with CLIP
@@ -222,3 +241,29 @@ class ClipVideoAnalyzer:
                 if intersection/union > 0.5:
                     return False
         return True
+    def _set_sahi_params(self):
+        """Set SAHI parameters based on frame resolution"""
+        # For HD resolution (1920x1080) or lower
+        if self.frame_width <= 1920:
+            self.sahi_params = {
+                'slice_height': 512,
+                'slice_width': 512,
+                'overlap_height_ratio': 0.2,
+                'overlap_width_ratio': 0.2
+            }
+        # For 2K resolution
+        elif self.frame_width <= 2560:
+            self.sahi_params = {
+                'slice_height': 640,
+                'slice_width': 640,
+                'overlap_height_ratio': 0.3,
+                'overlap_width_ratio': 0.3
+            }
+        # For 4K resolution
+        else:
+            self.sahi_params = {
+                'slice_height': 768,
+                'slice_width': 768,
+                'overlap_height_ratio': 0.4,
+                'overlap_width_ratio': 0.4
+            }
