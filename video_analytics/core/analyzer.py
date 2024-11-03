@@ -59,13 +59,24 @@ class ClipVideoAnalyzer:
             os.makedirs(os.path.dirname(yolo_path), exist_ok=True)
             yolo_path = yolo_model
             
-        self.yolo = YOLO(yolo_path)
-        self.detection_model = AutoDetectionModel.from_pretrained(
-            model_type='yolov8',
-            model_path=yolo_path,
-            confidence_threshold=0.3,
-            device=self.device
-        )
+        try:
+            self.yolo = YOLO(yolo_path)
+            self.detection_model = AutoDetectionModel.from_pretrained(
+                model_type='yolov8',
+                model_path=yolo_path,
+                confidence_threshold=0.3,
+                device=self.device
+            )
+        except Exception as e:
+            print(f"Error initializing YOLO model: {e}")
+            print("Falling back to default YOLOv8n model...")
+            self.yolo = YOLO('yolov8n.pt')
+            self.detection_model = AutoDetectionModel.from_pretrained(
+                model_type='yolov8',
+                model_path='yolov8n.pt',
+                confidence_threshold=0.3,
+                device=self.device
+            )
         
         # Initialize traffic sign detection
         sign_path = os.path.join(self.config['models']['traffic_signs']['local_path'], os.path.basename(traffic_sign_model))
