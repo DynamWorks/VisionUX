@@ -6,19 +6,28 @@ from typing import List, Tuple, Dict, Set
 import time
 from transformers import CLIPProcessor, CLIPModel
 from collections import defaultdict
-from ultralytics import SAM
+from ultralytics import YOLO
+from sahi import AutoDetectionModel
+from sahi.predict import get_sliced_prediction
 
 class ClipVideoAnalyzer:
-    def __init__(self, model_name: str = "openai/clip-vit-base-patch32", 
-                 sam_checkpoint: str = "sam2_h.pth"):
-        """Initialize CLIP model, SAM2, and preprocessing pipeline"""
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32",
+                 yolo_model: str = "yolov8x.pt"):
+        """Initialize CLIP model, YOLO, and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
         # Initialize CLIP
         self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
         
-        # Initialize SAM
-        self.sam = SAM('sam2_b.pt')  # or 'sam_l.pt' for larger model
+        # Initialize YOLO with SAHI
+        self.yolo = YOLO(yolo_model)
+        self.detection_model = AutoDetectionModel.from_pretrained(
+            model_type='yolov8',
+            model_path=yolo_model,
+            confidence_threshold=0.3,
+            device=self.device
+        )
         
         # Initialize object tracker
         self.tracker = cv2.TrackerKCF_create
@@ -45,16 +54,23 @@ class ClipVideoAnalyzer:
         # Convert BGR to RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Get SAM segmentation
-        results = self.sam(frame_rgb, device=self.device)
-        masks = results[0].masks.data  # Get masks tensor
+        # Get YOLO + SAHI predictions
+        result = get_sliced_prediction(
+            frame_rgb,
+            self.detection_model,
+            slice_height=512,
+            slice_width=512,
+            overlap_height_ratio=0.2,
+            overlap_width_ratio=0.2
+        )
         
-        # Process each segment with CLIP
+        # Process each detection with CLIP
         segments_info = []
-        for mask in masks:
-            # Apply mask to get segment
-            mask_np = mask.cpu().numpy()
-            segment = cv2.bitwise_and(frame_rgb, frame_rgb, mask=mask_np.astype(np.uint8))
+        for pred in result.object_prediction_list:
+            bbox = pred.bbox.to_xyxy()
+            # Extract segment
+            x1, y1, x2, y2 = map(int, bbox)
+            segment = frame_rgb[y1:y2, x1:x2]
             segment_pil = Image.fromarray(segment)
         
             # Process segment with CLIP
