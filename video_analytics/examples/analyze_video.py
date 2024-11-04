@@ -74,11 +74,35 @@ def main():
             args.queries,
             args.api_url
         )
+        
+        # Save results
+        output_path = f"analysis_results_{int(time.time())}"
+        with open(f"{output_path}.json", 'w') as f:
+            json.dump(results, f, indent=2)
+            
+        # Create visualizations
+        from ..utils.visualizer import ResultVisualizer
+        visualizer = ResultVisualizer(f"{output_path}.json")
+        
+        # Generate plots and summaries
+        visualizer.plot_detections_over_time()
+        visualizer.plot_detection_types()
+        visualizer.create_summary_csv()
+        
+        # Visualize sample frames
         total_frames = results.get('total_frames', 0)
-        total_detections = sum(len(frame.get('detections', {}).get('segments', [])) 
-                             for frame in results.get('results', []))
+        if total_frames > 0:
+            # Visualize first, middle and last frames
+            frame_indices = [0, total_frames//2, total_frames-1]
+            for idx in frame_indices:
+                visualizer.visualize_frame(idx, args.video_path)
+        
+        print(f"\nAnalysis complete!")
         print(f"Processed {total_frames} frames")
-        print(f"Detected {total_detections} objects across all frames")
+        print(f"Results saved to: {output_path}.json")
+        print(f"Summaries saved to: detection_summary.csv, tracking_summary.csv")
+        print(f"Visualizations saved to: detections_timeline.png, detection_types.png")
+        print(f"Sample frames saved as: frame_*_visualized.jpg")
         
     except Exception as e:
         print(f"Error: {str(e)}")
