@@ -152,13 +152,13 @@ class ResultVisualizer:
                     detections_data.append(frame_data)
                 
                 tracking = detections.get('tracking', {})
-                if tracking:
-                    tracking_data.append({
-                        'timestamp': float(result.get('timestamp', 0)),
-                        'frame_number': int(result.get('frame_number', 0)),
-                        'current_objects': int(tracking.get('current', 0)),
-                        'total_tracked': int(tracking.get('total', 0))
-                    })
+                # Always append tracking data even if empty to maintain frame sequence
+                tracking_data.append({
+                    'timestamp': float(result.get('timestamp', 0)),
+                    'frame_number': int(result.get('frame_number', 0)),
+                    'current_objects': int(tracking.get('current', 0) if tracking else 0),
+                    'total_tracked': int(tracking.get('total', 0) if tracking else 0)
+                })
         
         # Create and save DataFrames
         if detections_data:
