@@ -119,9 +119,12 @@ class ResultVisualizer:
     def create_summary_csv(self):
         """Create summary CSV files for different aspects"""
         # Get results list
-        results_list = self.results.get('results', [])
-        if not results_list:
-            results_list = [self.results] if isinstance(self.results, dict) else self.results
+        if isinstance(self.results, dict) and 'results' in self.results:
+            results_list = self.results['results']
+        elif isinstance(self.results, list):
+            results_list = self.results
+        else:
+            results_list = [self.results] if isinstance(self.results, dict) else []
             
         # Detections summary
         detections_data = []
@@ -129,23 +132,33 @@ class ResultVisualizer:
         
         for result in results_list:
             if isinstance(result, dict):
+                # Handle nested detections structure
                 detections = result.get('detections', {})
-                detections_data.append({
-                    'timestamp': result.get('timestamp', 0),
-                    'frame_number': result.get('frame_number', 0),
+                if not detections and 'segments' in result:
+                    # Handle flat structure
+                    detections = result
+                
+                frame_data = {
+                    'timestamp': float(result.get('timestamp', 0)),
+                    'frame_number': int(result.get('frame_number', 0)),
                     'num_detections': len(detections.get('segments', [])),
                     'num_lanes': len(detections.get('lanes', [])),
                     'num_signs': len(detections.get('signs', [])),
                     'num_text': len(detections.get('text', []))
-                })
+                }
+                
+                # Ensure we have at least one detection
+                if any(v > 0 for k, v in frame_data.items() if k.startswith('num_')):
+                    detections_data.append(frame_data)
                 
                 tracking = detections.get('tracking', {})
-                tracking_data.append({
-                    'timestamp': result.get('timestamp', 0),
-                    'frame_number': result.get('frame_number', 0),
-                    'current_objects': tracking.get('current', 0),
-                    'total_tracked': tracking.get('total', 0)
-                })
+                if tracking:
+                    tracking_data.append({
+                        'timestamp': float(result.get('timestamp', 0)),
+                        'frame_number': int(result.get('frame_number', 0)),
+                        'current_objects': int(tracking.get('current', 0)),
+                        'total_tracked': int(tracking.get('total', 0))
+                    })
         
         # Create and save DataFrames
         if detections_data:
