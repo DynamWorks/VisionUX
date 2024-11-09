@@ -84,31 +84,43 @@ class ResultVisualizer:
         
     def create_summary_csv(self):
         """Create summary CSV files for different aspects"""
+        # Get results list
+        results_list = self.results.get('results', [])
+        if not results_list:
+            results_list = [self.results] if isinstance(self.results, dict) else self.results
+            
         # Detections summary
-        detections_df = pd.DataFrame([
-            {
-                'timestamp': row['timestamp'],
-                'frame_number': row['frame_number'],
-                'num_detections': len(row['detections']['segments']),
-                'num_lanes': len(row['detections']['lanes']),
-                'num_signs': len(row['detections']['signs']),
-                'num_text': len(row['detections']['text'])
-            }
-            for _, row in self.results.iterrows()
-        ])
-        detections_df.to_csv('detection_summary.csv', index=False)
+        detections_data = []
+        tracking_data = []
         
-        # Object tracking summary
-        tracking_df = pd.DataFrame([
-            {
-                'timestamp': row['timestamp'],
-                'frame_number': row['frame_number'],
-                'current_objects': row['detections']['tracking']['current'],
-                'total_tracked': row['detections']['tracking']['total']
-            }
-            for _, row in self.results.iterrows()
-        ])
-        tracking_df.to_csv('tracking_summary.csv', index=False)
+        for result in results_list:
+            if isinstance(result, dict):
+                detections = result.get('detections', {})
+                detections_data.append({
+                    'timestamp': result.get('timestamp', 0),
+                    'frame_number': result.get('frame_number', 0),
+                    'num_detections': len(detections.get('segments', [])),
+                    'num_lanes': len(detections.get('lanes', [])),
+                    'num_signs': len(detections.get('signs', [])),
+                    'num_text': len(detections.get('text', []))
+                })
+                
+                tracking = detections.get('tracking', {})
+                tracking_data.append({
+                    'timestamp': result.get('timestamp', 0),
+                    'frame_number': result.get('frame_number', 0),
+                    'current_objects': tracking.get('current', 0),
+                    'total_tracked': tracking.get('total', 0)
+                })
+        
+        # Create and save DataFrames
+        if detections_data:
+            detections_df = pd.DataFrame(detections_data)
+            detections_df.to_csv('detection_summary.csv', index=False)
+            
+        if tracking_data:
+            tracking_df = pd.DataFrame(tracking_data)
+            tracking_df.to_csv('tracking_summary.csv', index=False)
         
     def visualize_frame(self, frame_number: int, video_path: str):
         """Visualize detections on a specific frame"""
