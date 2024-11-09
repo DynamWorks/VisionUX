@@ -22,7 +22,22 @@ class ResultVisualizer:
     def plot_detections_over_time(self):
         """Plot object detections over time"""
         plt.figure(figsize=(12, 6))
-        self.results.groupby('timestamp')['detections.segments'].apply(len).plot()
+        
+        # Convert results to proper format for plotting
+        if isinstance(self.results, dict):
+            timestamps = []
+            detection_counts = []
+            for result in self.results.get('results', []):
+                timestamps.append(result['timestamp'])
+                detection_counts.append(len(result['detections']['segments']))
+        else:
+            # Handle DataFrame case
+            timestamps = self.results['timestamp'].values
+            detection_counts = self.results['detections'].apply(
+                lambda x: len(x['segments']) if isinstance(x, dict) else 0
+            ).values
+        
+        plt.plot(timestamps, detection_counts)
         plt.title('Object Detections Over Time')
         plt.xlabel('Timestamp (s)')
         plt.ylabel('Number of Detections')
@@ -32,19 +47,38 @@ class ResultVisualizer:
     def plot_detection_types(self):
         """Plot distribution of detection types"""
         detection_types = []
-        for segments in self.results['detections.segments']:
-            for det in segments:
-                detection_types.append(det['class'])
-                
-        counts = pd.Series(detection_types).value_counts()
-        plt.figure(figsize=(10, 6))
-        counts.plot(kind='bar')
-        plt.title('Distribution of Detection Types')
-        plt.xlabel('Class')
-        plt.ylabel('Count')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig('detection_types.png')
+        
+        if isinstance(self.results, dict):
+            results_list = self.results.get('results', [])
+            for result in results_list:
+                segments = result['detections']['segments']
+                for det in segments:
+                    if isinstance(det, dict) and 'class' in det:
+                        detection_types.append(det['class'])
+        else:
+            # Handle DataFrame case
+            for segments in self.results['detections'].apply(
+                lambda x: x['segments'] if isinstance(x, dict) else []
+            ):
+                for det in segments:
+                    if isinstance(det, dict) and 'class' in det:
+                        detection_types.append(det['class'])
+        
+        if detection_types:
+            counts = pd.Series(detection_types).value_counts()
+            plt.figure(figsize=(10, 6))
+            counts.plot(kind='bar')
+            plt.title('Distribution of Detection Types')
+            plt.xlabel('Class')
+            plt.ylabel('Count')
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            plt.savefig('detection_types.png')
+        else:
+            plt.figure(figsize=(10, 6))
+            plt.text(0.5, 0.5, 'No detection data available', 
+                    horizontalalignment='center', verticalalignment='center')
+            plt.savefig('detection_types.png')
         
     def create_summary_csv(self):
         """Create summary CSV files for different aspects"""
