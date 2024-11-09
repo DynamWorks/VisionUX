@@ -15,7 +15,11 @@ class ResultVisualizer:
         import json
         if self.results_path.suffix == '.json':
             with open(self.results_path) as f:
-                return json.load(f)
+                data = json.load(f)
+                # Handle API response format
+                if isinstance(data, dict) and 'results' in data:
+                    return data['results']
+                return data
         elif self.results_path.suffix == '.csv':
             return pd.read_csv(self.results_path)
         else:
@@ -30,12 +34,10 @@ class ResultVisualizer:
         detection_counts = []
         
         # Handle both direct results and nested results format
-        results_list = self.results.get('results', [])
-        if not results_list:
-            if isinstance(self.results, dict):
-                results_list = [self.results]
-            else:
-                results_list = self.results
+        if isinstance(self.results, list):
+            results_list = self.results
+        else:
+            results_list = [self.results] if isinstance(self.results, dict) else []
             
         for result in results_list:
             if isinstance(result, dict):
@@ -96,11 +98,16 @@ class ResultVisualizer:
         for (category, items), ax in zip(detection_types.items(), axes.flat):
             if items:
                 counts = pd.Series(items).value_counts()
-                counts.plot(kind='bar', ax=ax)
-                ax.set_title(f'{category} Distribution')
-                ax.set_xlabel('Class')
-                ax.set_ylabel('Count')
-                ax.tick_params(axis='x', rotation=45)
+                if not counts.empty:
+                    counts.plot(kind='bar', ax=ax)
+                    ax.set_title(f'{category} Distribution')
+                    ax.set_xlabel('Class')
+                    ax.set_ylabel('Count')
+                    ax.tick_params(axis='x', rotation=45)
+                else:
+                    ax.text(0.5, 0.5, f'No {category.lower()} detected',
+                           horizontalalignment='center',
+                           verticalalignment='center')
             else:
                 ax.text(0.5, 0.5, f'No {category.lower()} detected',
                        horizontalalignment='center',
