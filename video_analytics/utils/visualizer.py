@@ -12,8 +12,10 @@ class ResultVisualizer:
         
     def _load_results(self):
         """Load and parse results file"""
+        import json
         if self.results_path.suffix == '.json':
-            return pd.read_json(self.results_path)
+            with open(self.results_path) as f:
+                return json.load(f)
         elif self.results_path.suffix == '.csv':
             return pd.read_csv(self.results_path)
         else:
@@ -24,18 +26,21 @@ class ResultVisualizer:
         plt.figure(figsize=(12, 6))
         
         # Convert results to proper format for plotting
-        if isinstance(self.results, dict):
-            timestamps = []
-            detection_counts = []
-            for result in self.results.get('results', []):
-                timestamps.append(result['timestamp'])
-                detection_counts.append(len(result['detections']['segments']))
-        else:
-            # Handle DataFrame case
-            timestamps = self.results['timestamp'].values
-            detection_counts = self.results['detections'].apply(
-                lambda x: len(x['segments']) if isinstance(x, dict) else 0
-            ).values
+        timestamps = []
+        detection_counts = []
+        
+        results_list = self.results.get('results', [])
+        if not results_list:
+            results_list = [self.results] if isinstance(self.results, dict) else self.results
+            
+        for result in results_list:
+            if isinstance(result, dict):
+                timestamps.append(result.get('timestamp', 0))
+                detections = result.get('detections', {})
+                if isinstance(detections, dict):
+                    detection_counts.append(len(detections.get('segments', [])))
+                else:
+                    detection_counts.append(0)
         
         plt.plot(timestamps, detection_counts)
         plt.title('Object Detections Over Time')
@@ -48,21 +53,18 @@ class ResultVisualizer:
         """Plot distribution of detection types"""
         detection_types = []
         
-        if isinstance(self.results, dict):
-            results_list = self.results.get('results', [])
-            for result in results_list:
-                segments = result['detections']['segments']
-                for det in segments:
-                    if isinstance(det, dict) and 'class' in det:
-                        detection_types.append(det['class'])
-        else:
-            # Handle DataFrame case
-            for segments in self.results['detections'].apply(
-                lambda x: x['segments'] if isinstance(x, dict) else []
-            ):
-                for det in segments:
-                    if isinstance(det, dict) and 'class' in det:
-                        detection_types.append(det['class'])
+        results_list = self.results.get('results', [])
+        if not results_list:
+            results_list = [self.results] if isinstance(self.results, dict) else self.results
+            
+        for result in results_list:
+            if isinstance(result, dict):
+                detections = result.get('detections', {})
+                if isinstance(detections, dict):
+                    segments = detections.get('segments', [])
+                    for det in segments:
+                        if isinstance(det, dict) and 'class' in det:
+                            detection_types.append(det['class'])
         
         if detection_types:
             counts = pd.Series(detection_types).value_counts()
