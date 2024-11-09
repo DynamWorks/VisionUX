@@ -29,16 +29,27 @@ class ResultVisualizer:
         timestamps = []
         detection_counts = []
         
+        # Handle both direct results and nested results format
         results_list = self.results.get('results', [])
         if not results_list:
-            results_list = [self.results] if isinstance(self.results, dict) else self.results
+            if isinstance(self.results, dict):
+                results_list = [self.results]
+            else:
+                results_list = self.results
             
         for result in results_list:
             if isinstance(result, dict):
                 timestamps.append(result.get('timestamp', 0))
                 detections = result.get('detections', {})
                 if isinstance(detections, dict):
-                    detection_counts.append(len(detections.get('segments', [])))
+                    # Sum all types of detections
+                    total_detections = (
+                        len(detections.get('segments', [])) +
+                        len(detections.get('lanes', [])) +
+                        len(detections.get('signs', [])) +
+                        len(detections.get('text', []))
+                    )
+                    detection_counts.append(total_detections)
                 else:
                     detection_counts.append(0)
         
@@ -51,36 +62,52 @@ class ResultVisualizer:
         
     def plot_detection_types(self):
         """Plot distribution of detection types"""
-        detection_types = []
+        detection_types = {
+            'Objects': [],
+            'Lanes': [],
+            'Signs': [],
+            'Text': []
+        }
         
         results_list = self.results.get('results', [])
         if not results_list:
-            results_list = [self.results] if isinstance(self.results, dict) else self.results
+            if isinstance(self.results, dict):
+                results_list = [self.results]
+            else:
+                results_list = self.results
             
         for result in results_list:
             if isinstance(result, dict):
                 detections = result.get('detections', {})
                 if isinstance(detections, dict):
-                    segments = detections.get('segments', [])
-                    for det in segments:
+                    # Collect all types of detections
+                    for det in detections.get('segments', []):
                         if isinstance(det, dict) and 'class' in det:
-                            detection_types.append(det['class'])
+                            detection_types['Objects'].append(det['class'])
+                    
+                    detection_types['Lanes'].extend(['Lane'] * len(detections.get('lanes', [])))
+                    detection_types['Signs'].extend([det.get('class', 'Sign') for det in detections.get('signs', [])])
+                    detection_types['Text'].extend([det.get('text', 'Text') for det in detections.get('text', [])])
         
-        if detection_types:
-            counts = pd.Series(detection_types).value_counts()
-            plt.figure(figsize=(10, 6))
-            counts.plot(kind='bar')
-            plt.title('Distribution of Detection Types')
-            plt.xlabel('Class')
-            plt.ylabel('Count')
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            plt.savefig('detection_types.png')
-        else:
-            plt.figure(figsize=(10, 6))
-            plt.text(0.5, 0.5, 'No detection data available', 
-                    horizontalalignment='center', verticalalignment='center')
-            plt.savefig('detection_types.png')
+        # Create subplot for each detection category
+        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle('Distribution of Detection Types')
+        
+        for (category, items), ax in zip(detection_types.items(), axes.flat):
+            if items:
+                counts = pd.Series(items).value_counts()
+                counts.plot(kind='bar', ax=ax)
+                ax.set_title(f'{category} Distribution')
+                ax.set_xlabel('Class')
+                ax.set_ylabel('Count')
+                ax.tick_params(axis='x', rotation=45)
+            else:
+                ax.text(0.5, 0.5, f'No {category.lower()} detected',
+                       horizontalalignment='center',
+                       verticalalignment='center')
+        
+        plt.tight_layout()
+        plt.savefig('detection_types.png')
         
     def create_summary_csv(self):
         """Create summary CSV files for different aspects"""
