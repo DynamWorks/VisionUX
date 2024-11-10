@@ -6,9 +6,8 @@ import cv2
 import torch
 from PIL import Image
 import numpy as np
-from ..core.analyzer import ClipVideoAnalyzer
+from ..utils.client import VideoAnalyticsClient
 from ..utils.visualizer import ResultVisualizer
-from ..utils.config import Config
 
 def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:5000"):
     """
@@ -18,10 +17,12 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:50
         video_path: Path to video file
         api_url: Base URL of the API server (for future remote processing)
     """
-    # Initialize API client
+    # Initialize API client and check server
     client = VideoAnalyticsClient(api_url)
-    
-    # Predefined categories for analysis
+    if not client.check_server():
+        raise ConnectionError("API server is not running. Start it with: python -m video_analytics.main")
+
+    # Predefined categories for analysis 
     analysis_categories = {
         'scene_type': [
             "indoor scene", "outdoor scene", "urban scene", "rural scene",
@@ -85,19 +86,21 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:50
         }
         
         for category, queries in analysis_categories.items():
-            # Get CLIP embeddings for frame
-            inputs = analyzer.processor(
-                images=Image.fromarray(frame_rgb),
-                text=queries,
-                return_tensors="pt",
-                padding=True
-            ).to(analyzer.device)
+            # Send frame analysis request to API
+            frame_analysis = client.analyze_video(
+                video_path,
+                queries,
+                sample_rate=1,  # Analyze this specific frame
+                max_workers=1
+            )
             
-            with torch.no_grad():
-                outputs = analyzer.clip_model(**inputs)
-                probs = outputs.logits_per_image.softmax(dim=1)[0]
+            if frame_analysis and 'results' in frame_analysis:
+                # Get top matches from results
+                frame_matches = frame_analysis['results'][0]
+                probs = [match.get('confidence', 0) for match in frame_matches.get('detections', {}).get('segments', [])]
                 
-                # Get top 3 matches for each category
+                if probs:
+                    # Get top 3 matches for each category
                 top_k = 3
                 top_probs, top_idx = torch.topk(probs, top_k)
                 
@@ -110,9 +113,9 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:50
                     if float(prob) > 0.1  # Filter low confidence
                 ]
         
-        # Get object detections
-        detections = analyzer.analyze_frame(frame, queries)
-        frame_results['detections'] = detections
+        # Use existing frame analysis results
+        if frame_analysis and 'results' in frame_analysis:
+            frame_results['detections'] = frame_analysis['results'][0].get('detections', {})
         
         results.append(frame_results)
         
