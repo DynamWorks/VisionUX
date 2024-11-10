@@ -40,10 +40,12 @@ def visualize_analysis_results(results_path: str, video_path: str = None):
         print("Generating frame visualizations...")
         results = visualizer.results
         
-        if isinstance(results, dict):
-            total_frames = len(results.get('results', []))
-        else:
+        if isinstance(results, dict) and 'results' in results:
+            total_frames = len(results['results'])
+        elif isinstance(results, list):
             total_frames = len(results)
+        else:
+            total_frames = 0
             
         if total_frames > 0:
             # Visualize start, middle and end frames
