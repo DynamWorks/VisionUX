@@ -226,12 +226,12 @@ class ClipVideoAnalyzer:
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str],
                      confidence_threshold: float = 0.5) -> Dict:
         """Analyze a single frame"""
-        # Validate frame
-        if frame is None or frame.size == 0 or len(frame.shape) != 3:
-            self.logger.warning("Received invalid frame")
-            return self._get_default_result()
-            
         try:
+            # Validate frame
+            if frame is None or frame.size == 0 or len(frame.shape) != 3:
+                self.logger.warning("Received invalid frame")
+                return self._get_default_result()
+                
             # Ensure frame is in BGR format before conversion
             if frame.shape[2] != 3:
                 self.logger.warning("Invalid color channels in frame")
@@ -244,8 +244,16 @@ class ClipVideoAnalyzer:
                 self.logger.warning("Frame conversion failed")
                 return self._get_default_result()
                 
+            # Perform frame analysis
+            result = self._analyze_frame_content(frame_rgb, text_queries, confidence_threshold)
+            if result is None:
+                self.logger.warning("Frame analysis failed")
+                return self._get_default_result()
+                
+            return result
+            
         except Exception as e:
-            self.logger.error(f"Error converting frame: {e}")
+            self.logger.error(f"Error analyzing frame: {e}")
             return self._get_default_result()
             
         return self._analyze_frame_content(frame_rgb, text_queries, confidence_threshold)

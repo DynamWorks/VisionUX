@@ -92,28 +92,26 @@ class VideoProcessor:
                     if future.done():
                         try:
                             frame_results = future.result()
-                            if frame_results is not None:
-                                timestamp = frame_idx / fps
+                            timestamp = frame_idx / fps
+                            
+                            # Always ensure we have a valid result dictionary
+                            if not isinstance(frame_results, dict):
+                                frame_results = self.analyzer._get_default_result()
                                 
-                                # Ensure consistent dictionary format
-                                if isinstance(frame_results, dict):
-                                    frame_results['timestamp'] = timestamp
-                                    frame_results['frame_number'] = frame_idx
-                                else:
-                                    frame_results = {
-                                        'timestamp': timestamp,
-                                        'frame_number': frame_idx,
-                                        'detections': {
-                                            'segments': frame_results if isinstance(frame_results, list) else [],
-                                            'lanes': [],
-                                            'text': [],
-                                            'signs': [],
-                                            'tracking': {}
-                                        }
-                                    }
-                                results.append(frame_results)
-                            else:
-                                self.logger.warning(f"Skipping frame {frame_idx} - no results returned")
+                            frame_results['timestamp'] = timestamp
+                            frame_results['frame_number'] = frame_idx
+                            
+                            # Validate detections structure
+                            if not isinstance(frame_results.get('detections'), dict):
+                                frame_results['detections'] = {
+                                    'segments': [],
+                                    'lanes': [],
+                                    'text': [],
+                                    'signs': [],
+                                    'tracking': {'current': 0, 'total': 0}
+                                }
+                                
+                            results.append(frame_results)
                             
                             processed_count += 1
                             futures.remove((frame_idx, future))
