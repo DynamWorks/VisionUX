@@ -75,6 +75,11 @@ class ObjectDetectionModule(AnalysisModule):
 class ClipVideoAnalyzer:
     """Modular video analyzer supporting multiple analysis types"""
     
+    # Default model names
+    DEFAULT_CLIP_MODEL = "openai/clip-vit-base-patch32"
+    DEFAULT_YOLO_MODEL = "yolov8x.pt"
+    DEFAULT_TRAFFIC_SIGN_MODEL = "yolov8n.pt"
+    
     def __init__(self, config: Optional[dict] = None):
         """Initialize all models and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -86,15 +91,15 @@ class ClipVideoAnalyzer:
         self.config = config or {
             'models': {
                 'clip': {
-                    'name': model_name,
+                    'name': self.DEFAULT_CLIP_MODEL,
                     'local_path': 'video_analytics/models/clip'
                 },
                 'yolo': {
-                    'name': yolo_model,
+                    'name': self.DEFAULT_YOLO_MODEL,
                     'local_path': 'video_analytics/models/yolo'
                 },
                 'traffic_signs': {
-                    'name': traffic_sign_model,
+                    'name': self.DEFAULT_TRAFFIC_SIGN_MODEL,
                     'local_path': 'video_analytics/models/traffic_signs'
                 }
             }
@@ -107,6 +112,7 @@ class ClipVideoAnalyzer:
             self.processor = CLIPProcessor.from_pretrained(model_path)
         except:
             print("Local CLIP model not found, downloading from hub...")
+            model_name = self.config['models']['clip']['name']
             self.clip_model = CLIPModel.from_pretrained(model_name).to(self.device)
             self.processor = CLIPProcessor.from_pretrained(model_name)
             # Save locally
@@ -114,6 +120,7 @@ class ClipVideoAnalyzer:
             self.processor.save_pretrained('video_analytics/models/clip')
         
         # Initialize YOLO with SAHI
+        yolo_model = self.config['models']['yolo']['name']
         yolo_path = os.path.join(self.config['models']['yolo']['local_path'], os.path.basename(yolo_model))
         if not os.path.exists(yolo_path):
             print("Local YOLO model not found, downloading...")
@@ -140,6 +147,7 @@ class ClipVideoAnalyzer:
             )
         
         # Initialize traffic sign detection
+        traffic_sign_model = self.config['models']['traffic_signs']['name']
         sign_path = os.path.join(self.config['models']['traffic_signs']['local_path'], os.path.basename(traffic_sign_model))
         if not os.path.exists(sign_path):
             print("Local traffic sign model not found, downloading...")
