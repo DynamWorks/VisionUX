@@ -77,6 +77,8 @@ def main():
     ], help='Text queries to detect')
     parser.add_argument('--api-url', default="http://localhost:8001",
                        help='API server URL')
+    parser.add_argument('--parallel', type=int, default=4,
+                       help='Number of parallel workers (default: 4)')
     
     args = parser.parse_args()
     
