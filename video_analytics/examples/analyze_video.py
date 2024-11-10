@@ -1,58 +1,59 @@
-import requests
-import json
 import argparse
+import json
 import time
 from pathlib import Path
+from ..utils.client import VideoAnalyticsClient
+from ..utils.visualizer import ResultVisualizer
 
-def analyze_video(video_path: str, text_queries: list, api_url: str = "http://localhost:8001"):
+def analyze_video(video_path: str, text_queries: list, api_url: str = "http://localhost:5000"):
     """
-    Send a video analysis request to the API
+    Analyze a video using the Video Analytics API
     
     Args:
         video_path: Path to the video file
         text_queries: List of text descriptions to detect
         api_url: Base URL of the API server
     """
-    # Ensure video file exists
-    if not Path(video_path).exists():
-        raise FileNotFoundError(f"Video file not found: {video_path}")
-        
-    # Prepare request payload
-    payload = {
-        "video_path": str(Path(video_path).absolute()),
-        "text_queries": text_queries,
-        "sample_rate": 30,  # Process every frame
-        "max_workers": 1   # Number of parallel workers
-    }
-    
-    # Check API health
-    try:
-        health_response = requests.get(f"{api_url}/api/health")
-        health_response.raise_for_status()
-        print("API server is healthy")
-    except Exception as e:
-        raise ConnectionError(f"API server not available: {str(e)}")
+    # Initialize API client
+    client = VideoAnalyticsClient(api_url)
     
     # Send analysis request
-    print(f"Sending analysis request for {video_path}")
+    print(f"Analyzing video: {video_path}")
     try:
-        response = requests.post(
-            f"{api_url}/api/analyze",
-            json=payload
+        results = client.analyze_video(
+            video_path,
+            text_queries,
+            sample_rate=30,  # Process every 30th frame
+            max_workers=4    # Use 4 parallel workers
         )
-        response.raise_for_status()
         
         # Save results
-        results = response.json()
         output_path = f"analysis_results_{int(time.time())}.json"
         with open(output_path, 'w') as f:
             json.dump(results, f, indent=2)
             
         print(f"Analysis complete! Results saved to {output_path}")
+        
+        # Generate visualizations
+        visualizer = ResultVisualizer(output_path)
+        visualizer.plot_detections_over_time()
+        visualizer.plot_detection_types()
+        visualizer.create_summary_csv()
+        
+        print("\nGenerated visualization files:")
+        print("- detections_timeline.png")
+        print("- detection_types.png") 
+        print("- detection_summary.csv")
+        print("- tracking_summary.csv")
+        
         return results
         
+    except ConnectionError as e:
+        print(f"Error: {e}")
+        print("Make sure the API server is running with: python -m video_analytics.main")
+        raise
     except Exception as e:
-        print(f"Error during analysis: {str(e)}")
+        print(f"Error during analysis: {e}")
         raise
 
 def main():

@@ -10,7 +10,7 @@ from ..core.analyzer import ClipVideoAnalyzer
 from ..utils.visualizer import ResultVisualizer
 from ..utils.config import Config
 
-def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:8001"):
+def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:5000"):
     """
     Perform comprehensive CLIP analysis on a video file
     
@@ -18,9 +18,8 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:80
         video_path: Path to video file
         api_url: Base URL of the API server (for future remote processing)
     """
-    # Initialize analyzer with config
-    config = Config()
-    analyzer = ClipVideoAnalyzer(config=config.config)
+    # Initialize API client
+    client = VideoAnalyticsClient(api_url)
     
     # Predefined categories for analysis
     analysis_categories = {
