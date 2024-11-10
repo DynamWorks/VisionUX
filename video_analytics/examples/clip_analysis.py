@@ -101,10 +101,10 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:50
                 
                 if probs:
                     # Get top 3 matches for each category
-                top_k = 3
-                top_probs, top_idx = torch.topk(probs, top_k)
-                
-                frame_results['analysis'][category] = [
+                    top_k = 3
+                    top_probs, top_idx = torch.topk(probs, top_k)
+                    
+                    frame_results['analysis'][category] = [
                     {
                         'description': queries[idx],
                         'confidence': float(prob)
