@@ -250,21 +250,15 @@ class ClipVideoAnalyzer:
                 'tracking': {'current': 0, 'total': 0}
             }
         }
-            
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = {
-            'detections': {
-                'segments': [],
-                'lanes': [],
-                'text': [],
-                'signs': [],
-                'tracking': {'current': 0, 'total': 0}
-            }
-        }
+
+    def _analyze_frame_content(self, frame_rgb: np.ndarray, text_queries: List[str], 
+                             confidence_threshold: float) -> Dict:
+        """Analyze frame content with all enabled analysis types"""
+        results = self._get_default_result()
         
         # Initialize frame dimensions
         if self.frame_height is None:
-            self.frame_height, self.frame_width = frame.shape[:2]
+            self.frame_height, self.frame_width = frame_rgb.shape[:2]
             
         # Use ThreadPoolExecutor for parallel processing when multiple analysis types are requested
         with ThreadPoolExecutor(max_workers=len(self.analysis_types)) as executor:
@@ -278,13 +272,13 @@ class ClipVideoAnalyzer:
                 futures.append(executor.submit(self._analyze_objects, frame_rgb))
                 
             if 'signs' in self.analysis_types:
-                futures.append(executor.submit(self.detect_traffic_signs, frame))
+                futures.append(executor.submit(self.detect_traffic_signs, frame_rgb))
                 
             if 'text' in self.analysis_types:
-                futures.append(executor.submit(self.detect_text, frame))
+                futures.append(executor.submit(self.detect_text, frame_rgb))
                 
             if 'lanes' in self.analysis_types:
-                futures.append(executor.submit(self.detect_lanes, frame))
+                futures.append(executor.submit(self.detect_lanes, frame_rgb))
             
             # Collect results
             for future in futures:
