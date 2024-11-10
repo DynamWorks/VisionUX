@@ -30,7 +30,8 @@ class VideoProcessor:
         self.frame_config = FrameConfig()
 
     def process_video(self, video_path: str, text_queries: List[str],
-                     sample_rate: int = 1, max_workers: int = 4) -> List[Dict]:
+                     sample_rate: int = 1, max_workers: int = 4,
+                     analysis_types: Optional[List[str]] = None) -> List[Dict]:
         """
         Process a video file using the analyzer
         

@@ -80,12 +80,20 @@ class ClipVideoAnalyzer:
     DEFAULT_YOLO_MODEL = "yolov8x.pt"
     DEFAULT_TRAFFIC_SIGN_MODEL = "yolov8n.pt"
     
-    def __init__(self, config: Optional[dict] = None):
-        """Initialize all models and preprocessing pipeline"""
+    def __init__(self, config: Optional[dict] = None, analysis_types: Optional[List[str]] = None):
+        """
+        Initialize models based on requested analysis types
+        
+        Args:
+            config: Configuration dictionary
+            analysis_types: List of analysis types to enable ('clip', 'object', 'signs', 'text', 'lanes')
+                          If None, only CLIP analysis will be enabled
+        """
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.frame_height = None
         self.frame_width = None
         self.sahi_params = None
+        self.analysis_types = analysis_types or ['clip']
         
         # Initialize default config if none provided
         self.config = config or {
@@ -217,56 +225,87 @@ class ClipVideoAnalyzer:
                      confidence_threshold: float = 0.5) -> Dict:
         """Analyze a single frame"""
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = {}
         
-        # Analyze first frame resolution and set SAHI parameters
+        # Initialize frame dimensions
         if self.frame_height is None:
             self.frame_height, self.frame_width = frame.shape[:2]
-            self._set_sahi_params()
             
-            # Get initial scene understanding
-            inputs = self.processor(
-                text=["This is a scene of", "This shows a view of"],
-                images=Image.fromarray(frame_rgb),
-                return_tensors="pt",
-                padding=True
-            ).to(self.device)
+        # Use ThreadPoolExecutor for parallel processing when multiple analysis types are requested
+        with ThreadPoolExecutor(max_workers=len(self.analysis_types)) as executor:
+            futures = []
             
-            with torch.no_grad():
-                outputs = self.clip_model(**inputs)
-                scene_probs = outputs.logits_per_image.softmax(dim=1)
-                print(f"Initial scene analysis score: {scene_probs.max().item():.2f}")
-                print(f"Frame resolution: {self.frame_width}x{self.frame_height}")
+            # Submit analysis tasks based on requested types
+            if 'clip' in self.analysis_types:
+                futures.append(executor.submit(self._analyze_clip, frame_rgb, text_queries))
+                
+            if 'object' in self.analysis_types:
+                futures.append(executor.submit(self._analyze_objects, frame_rgb))
+                
+            if 'signs' in self.analysis_types:
+                futures.append(executor.submit(self.detect_traffic_signs, frame))
+                
+            if 'text' in self.analysis_types:
+                futures.append(executor.submit(self.detect_text, frame))
+                
+            if 'lanes' in self.analysis_types:
+                futures.append(executor.submit(self.detect_lanes, frame))
+            
+            # Collect results
+            for future in futures:
+                try:
+                    result = future.result()
+                    results.update(result)
+                except Exception as e:
+                    logging.error(f"Analysis error: {e}")
         
-        # Get predictions with optimized SAHI parameters
+    def _analyze_clip(self, frame_rgb: np.ndarray, text_queries: List[str]) -> Dict:
+        """Perform CLIP analysis on full frame"""
+        inputs = self.processor(
+            text=text_queries,
+            images=Image.fromarray(frame_rgb),
+            return_tensors="pt",
+            padding=True
+        ).to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.clip_model(**inputs)
+            probs = outputs.logits_per_image.softmax(dim=1)
+            
+        return {
+            'clip_analysis': [
+                {
+                    'query': text_queries[i],
+                    'confidence': float(prob)
+                }
+                for i, prob in enumerate(probs[0])
+            ]
+        }
+        
+    def _analyze_objects(self, frame_rgb: np.ndarray) -> Dict:
+        """Perform object detection with YOLO"""
+        if not hasattr(self, 'detection_model'):
+            return {'segments': []}
+            
         result = get_sliced_prediction(
             frame_rgb,
             self.detection_model,
-            **self.sahi_params
+            slice_height=self.frame_height,
+            slice_width=self.frame_width,
+            overlap_height_ratio=0,
+            overlap_width_ratio=0
         )
         
-        # Process detections with CLIP
-        segments_info = []
-        for pred in result.object_prediction_list:
-            bbox = pred.bbox.to_xyxy()
-            x1, y1, x2, y2 = map(int, bbox)
-            segment = frame_rgb[y1:y2, x1:x2]
-            
-            inputs = self.processor(
-                text=text_queries,
-                images=Image.fromarray(segment),
-                return_tensors="pt",
-                padding=True
-            ).to(self.device)
-            
-            with torch.no_grad():
-                outputs = self.clip_model(**inputs)
-                probs = outputs.logits_per_image.softmax(dim=1)
-            
-            segments_info.append({
-                'bbox': tuple(map(int, bbox)),
-                'class': text_queries[probs.argmax().item()],
-                'confidence': float(probs.max())
-            })
+        return {
+            'segments': [
+                {
+                    'bbox': pred.bbox.to_xyxy(),
+                    'class': pred.category.name,
+                    'confidence': float(pred.score.value)
+                }
+                for pred in result.object_prediction_list
+            ]
+        }
         
         # Update tracking
         current_objects = self._update_tracking(frame, result)
