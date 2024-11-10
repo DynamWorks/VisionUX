@@ -1,5 +1,6 @@
 dataclasses-json==0.6.4
 easyocr==1.7.1
+flake8==7.0.0
 flask==3.0.0
 matplotlib==3.8.2
 opencv-contrib-python==4.9.0.80
