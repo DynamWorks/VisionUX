@@ -5,12 +5,29 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from ..core.analyzer import ClipVideoAnalyzer
 
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+import cv2
+import numpy as np
+from .agents import AnalysisOrchestrator
+
+@dataclass
+class FrameConfig:
+    """Configuration for frame processing"""
+    sample_rate: int = 1
+    batch_size: int = 4
+    slice_height: int = 384
+    slice_width: int = 384
+    overlap_ratio: float = 0.2
+
 class VideoProcessor:
+    """Advanced video frame processor with configurable processing"""
+    
     def __init__(self, analyzer: ClipVideoAnalyzer = None):
-        """Initialize the video processor with an optional analyzer"""
         self.analyzer = analyzer or ClipVideoAnalyzer()
-        self.processing_queue = ProcessingQueue()
+        self.orchestrator = AnalysisOrchestrator()
         self.logger = logging.getLogger(__name__)
+        self.frame_config = FrameConfig()
 
     def process_video(self, video_path: str, text_queries: List[str],
                      sample_rate: int = 1, max_workers: int = 4) -> List[Dict]:

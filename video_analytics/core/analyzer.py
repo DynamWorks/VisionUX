@@ -11,10 +11,71 @@ from sahi.predict import get_sliced_prediction
 import easyocr
 from collections import defaultdict
 
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
+
+class AnalysisModule(ABC):
+    """Base class for analysis modules"""
+    
+    @abstractmethod
+    def analyze(self, frame: np.ndarray, **kwargs) -> Dict:
+        """Analyze a single frame"""
+        pass
+
+class ClipModule(AnalysisModule):
+    """CLIP-based analysis module"""
+    
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model = CLIPModel.from_pretrained(model_name).to(self.device)
+        self.processor = CLIPProcessor.from_pretrained(model_name)
+        
+    def analyze(self, frame: np.ndarray, text_queries: List[str], **kwargs) -> Dict:
+        inputs = self.processor(
+            text=text_queries,
+            images=Image.fromarray(frame),
+            return_tensors="pt",
+            padding=True
+        ).to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            probs = outputs.logits_per_image.softmax(dim=1)
+            
+        return {
+            'matches': [
+                {
+                    'query': text_queries[i],
+                    'confidence': float(prob)
+                }
+                for i, prob in enumerate(probs[0])
+            ]
+        }
+
+class ObjectDetectionModule(AnalysisModule):
+    """YOLO-based object detection module"""
+    
+    def __init__(self, model_path: str = "yolov8x.pt"):
+        self.model = YOLO(model_path)
+        
+    def analyze(self, frame: np.ndarray, **kwargs) -> Dict:
+        results = self.model(frame)[0]
+        return {
+            'detections': [
+                {
+                    'class': results.names[int(cls)],
+                    'confidence': float(conf),
+                    'bbox': (int(x1), int(y1), int(x2), int(y2))
+                }
+                for x1, y1, x2, y2, conf, cls in results.boxes.data
+            ]
+        }
+
 class ClipVideoAnalyzer:
-    def __init__(self, config: dict = None, model_name: str = "openai/clip-vit-base-patch32",
-                 yolo_model: str = "yolov8x.pt",
-                 traffic_sign_model: str = "yolov8n.pt"):
+    """Modular video analyzer supporting multiple analysis types"""
+    
+    def __init__(self, config: Optional[dict] = None):
         """Initialize all models and preprocessing pipeline"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.frame_height = None
