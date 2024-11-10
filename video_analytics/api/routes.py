@@ -51,32 +51,31 @@ def analyze_video():
         # Format results for API response
         formatted_results = []
         for frame_result in results:
-            # Handle both dict and list result formats
-            if isinstance(frame_result, dict):
-                formatted_results.append({
-                    'frame_number': frame_result.get('frame_number'),
-                    'timestamp': frame_result.get('timestamp'),
-                    'detections': {
-                        'segments': frame_result.get('segments', []),
-                        'lanes': frame_result.get('lanes', []),
-                        'text': frame_result.get('text', []),
-                        'signs': frame_result.get('signs', []),
-                        'tracking': frame_result.get('tracking', {})
-                    }
-                })
-            else:
-                # Handle list format
-                formatted_results.append({
-                    'frame_number': len(formatted_results),
-                    'timestamp': len(formatted_results) / 30.0,  # Assume 30fps if not provided
-                    'detections': {
-                        'segments': frame_result if isinstance(frame_result, list) else [],
-                        'lanes': [],
-                        'text': [],
-                        'signs': [],
-                        'tracking': {}
-                    }
-                })
+            if not isinstance(frame_result, dict):
+                logger.warning(f"Unexpected result format: {type(frame_result)}")
+                continue
+                
+            detections = frame_result.get('detections', {})
+            if not isinstance(detections, dict):
+                detections = {
+                    'segments': detections if isinstance(detections, list) else [],
+                    'lanes': [],
+                    'text': [],
+                    'signs': [],
+                    'tracking': {}
+                }
+                
+            formatted_results.append({
+                'frame_number': frame_result.get('frame_number', 0),
+                'timestamp': frame_result.get('timestamp', 0.0),
+                'detections': {
+                    'segments': detections.get('segments', []),
+                    'lanes': detections.get('lanes', []),
+                    'text': detections.get('text', []),
+                    'signs': detections.get('signs', []),
+                    'tracking': detections.get('tracking', {})
+                }
+            })
 
         return jsonify({
             'status': 'success',

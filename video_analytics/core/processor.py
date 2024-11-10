@@ -85,8 +85,22 @@ class VideoProcessor:
                             frame_results = future.result()
                             timestamp = frame_idx / fps
                             
-                            frame_results['timestamp'] = timestamp
-                            frame_results['frame_number'] = frame_idx
+                            # Ensure consistent dictionary format
+                            if isinstance(frame_results, dict):
+                                frame_results['timestamp'] = timestamp
+                                frame_results['frame_number'] = frame_idx
+                            else:
+                                frame_results = {
+                                    'timestamp': timestamp,
+                                    'frame_number': frame_idx,
+                                    'detections': {
+                                        'segments': frame_results if isinstance(frame_results, list) else [],
+                                        'lanes': [],
+                                        'text': [],
+                                        'signs': [],
+                                        'tracking': {}
+                                    }
+                                }
                             results.append(frame_results)
                             
                             processed_count += 1
