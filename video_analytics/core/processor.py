@@ -83,25 +83,28 @@ class VideoProcessor:
                     if future.done():
                         try:
                             frame_results = future.result()
-                            timestamp = frame_idx / fps
-                            
-                            # Ensure consistent dictionary format
-                            if isinstance(frame_results, dict):
-                                frame_results['timestamp'] = timestamp
-                                frame_results['frame_number'] = frame_idx
-                            else:
-                                frame_results = {
-                                    'timestamp': timestamp,
-                                    'frame_number': frame_idx,
-                                    'detections': {
-                                        'segments': frame_results if isinstance(frame_results, list) else [],
-                                        'lanes': [],
-                                        'text': [],
-                                        'signs': [],
-                                        'tracking': {}
+                            if frame_results is not None:
+                                timestamp = frame_idx / fps
+                                
+                                # Ensure consistent dictionary format
+                                if isinstance(frame_results, dict):
+                                    frame_results['timestamp'] = timestamp
+                                    frame_results['frame_number'] = frame_idx
+                                else:
+                                    frame_results = {
+                                        'timestamp': timestamp,
+                                        'frame_number': frame_idx,
+                                        'detections': {
+                                            'segments': frame_results if isinstance(frame_results, list) else [],
+                                            'lanes': [],
+                                            'text': [],
+                                            'signs': [],
+                                            'tracking': {}
+                                        }
                                     }
-                                }
-                            results.append(frame_results)
+                                results.append(frame_results)
+                            else:
+                                self.logger.warning(f"Skipping frame {frame_idx} - no results returned")
                             
                             processed_count += 1
                             futures.remove((frame_idx, future))

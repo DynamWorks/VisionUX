@@ -226,8 +226,28 @@ class ClipVideoAnalyzer:
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str],
                      confidence_threshold: float = 0.5) -> Dict:
         """Analyze a single frame"""
+        if frame is None:
+            logging.warning("Received empty frame")
+            return {
+                'detections': {
+                    'segments': [],
+                    'lanes': [],
+                    'text': [],
+                    'signs': [],
+                    'tracking': {'current': 0, 'total': 0}
+                }
+            }
+            
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = {}
+        results = {
+            'detections': {
+                'segments': [],
+                'lanes': [],
+                'text': [],
+                'signs': [],
+                'tracking': {'current': 0, 'total': 0}
+            }
+        }
         
         # Initialize frame dimensions
         if self.frame_height is None:
