@@ -64,16 +64,24 @@ class VideoProcessor:
 
             while True:
                 ret, frame = cap.read()
-                if not ret:
+                if not ret or frame is None:
                     break
 
                 frame_count += 1
                 if frame_count % sample_rate != 0:
                     continue
 
+                # Create a copy of the frame to prevent modification during processing
+                frame_copy = frame.copy()
+                
+                # Validate frame dimensions and content
+                if frame_copy.size == 0 or len(frame_copy.shape) != 3:
+                    self.logger.warning(f"Invalid frame at position {frame_count}")
+                    continue
+
                 future = executor.submit(
                     self.analyzer.analyze_frame,
-                    frame,
+                    frame_copy,
                     text_queries
                 )
                 futures.append((frame_count, future))
