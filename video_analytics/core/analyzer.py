@@ -276,37 +276,53 @@ class ClipVideoAnalyzer:
         """Analyze frame content with all enabled analysis types"""
         results = self._get_default_result()
         
-        # Initialize frame dimensions
-        if self.frame_height is None:
-            self.frame_height, self.frame_width = frame_rgb.shape[:2]
+        try:
+            # Validate frame dimensions and content
+            if frame_rgb is None or frame_rgb.size == 0:
+                self.logger.error("Invalid frame content")
+                return results
+                
+            if len(frame_rgb.shape) != 3:
+                self.logger.error(f"Invalid frame shape: {frame_rgb.shape}")
+                return results
+                
+            # Initialize frame dimensions
+            if self.frame_height is None:
+                self.frame_height, self.frame_width = frame_rgb.shape[:2]
+                
+            # Use ThreadPoolExecutor for parallel processing when multiple analysis types are requested
+            with ThreadPoolExecutor(max_workers=len(self.analysis_types)) as executor:
+                futures = []
+                analysis_tasks = {
+                    'clip': (self._analyze_clip, [frame_rgb, text_queries]),
+                    'object': (self._analyze_objects, [frame_rgb]),
+                    'signs': (self.detect_traffic_signs, [frame_rgb]),
+                    'text': (self.detect_text, [frame_rgb]),
+                    'lanes': (self.detect_lanes, [frame_rgb])
+                }
+                
+                # Submit analysis tasks based on requested types
+                for analysis_type in self.analysis_types:
+                    if analysis_type in analysis_tasks:
+                        func, args = analysis_tasks[analysis_type]
+                        futures.append((analysis_type, executor.submit(func, *args)))
+                
+                # Collect results
+                for analysis_type, future in futures:
+                    try:
+                        result = future.result()
+                        if result is not None:
+                            results.update(result)
+                        else:
+                            self.logger.warning(f"{analysis_type} analysis returned None")
+                    except Exception as e:
+                        self.logger.error(f"Error in {analysis_type} analysis: {str(e)}")
+                        
+            return results
             
-        # Use ThreadPoolExecutor for parallel processing when multiple analysis types are requested
-        with ThreadPoolExecutor(max_workers=len(self.analysis_types)) as executor:
-            futures = []
-            
-            # Submit analysis tasks based on requested types
-            if 'clip' in self.analysis_types:
-                futures.append(executor.submit(self._analyze_clip, frame_rgb, text_queries))
-                
-            if 'object' in self.analysis_types:
-                futures.append(executor.submit(self._analyze_objects, frame_rgb))
-                
-            if 'signs' in self.analysis_types:
-                futures.append(executor.submit(self.detect_traffic_signs, frame_rgb))
-                
-            if 'text' in self.analysis_types:
-                futures.append(executor.submit(self.detect_text, frame_rgb))
-                
-            if 'lanes' in self.analysis_types:
-                futures.append(executor.submit(self.detect_lanes, frame_rgb))
-            
-            # Collect results
-            for future in futures:
-                try:
-                    result = future.result()
-                    results.update(result)
-                except Exception as e:
-                    logging.error(f"Analysis error: {e}")
+        except Exception as e:
+            self.logger.error(f"Frame analysis failed: {str(e)}")
+            return results
         
     def _analyze_clip(self, frame_rgb: np.ndarray, text_queries: List[str]) -> Dict:
         """Perform CLIP analysis on full frame"""
