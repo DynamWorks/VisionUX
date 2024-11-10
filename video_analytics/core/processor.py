@@ -118,11 +118,26 @@ class VideoProcessor:
             for frame_idx, future in futures:
                 try:
                     frame_results = future.result()
-                    timestamp = frame_idx / fps
-                    
-                    frame_results['timestamp'] = timestamp
-                    frame_results['frame_number'] = frame_idx
-                    results.append(frame_results)
+                    if frame_results is not None:
+                        timestamp = frame_idx / fps
+                        
+                        # Create default structure if None
+                        if not isinstance(frame_results, dict):
+                            frame_results = {
+                                'detections': {
+                                    'segments': [],
+                                    'lanes': [],
+                                    'text': [],
+                                    'signs': [],
+                                    'tracking': {'current': 0, 'total': 0}
+                                }
+                            }
+                            
+                        frame_results['timestamp'] = timestamp
+                        frame_results['frame_number'] = frame_idx
+                        results.append(frame_results)
+                    else:
+                        self.logger.warning(f"Skipping frame {frame_idx} - received None result")
                     
                     processed_count += 1
                     self._log_progress(processed_count, total_frames)

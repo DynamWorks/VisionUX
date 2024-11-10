@@ -226,17 +226,30 @@ class ClipVideoAnalyzer:
     def analyze_frame(self, frame: np.ndarray, text_queries: List[str],
                      confidence_threshold: float = 0.5) -> Dict:
         """Analyze a single frame"""
-        if frame is None:
-            logging.warning("Received empty frame")
-            return {
-                'detections': {
-                    'segments': [],
-                    'lanes': [],
-                    'text': [],
-                    'signs': [],
-                    'tracking': {'current': 0, 'total': 0}
-                }
+        # Return default structure for invalid frames
+        if frame is None or frame.size == 0:
+            self.logger.warning("Received invalid frame")
+            return self._get_default_result()
+            
+        try:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            self.logger.error(f"Error converting frame: {e}")
+            return self._get_default_result()
+            
+        return self._analyze_frame_content(frame_rgb, text_queries, confidence_threshold)
+        
+    def _get_default_result(self) -> Dict:
+        """Get default result structure"""
+        return {
+            'detections': {
+                'segments': [],
+                'lanes': [],
+                'text': [],
+                'signs': [],
+                'tracking': {'current': 0, 'total': 0}
             }
+        }
             
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = {
