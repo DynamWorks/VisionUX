@@ -73,6 +73,7 @@ class VideoProcessor:
 
                 # Create a copy of the frame to prevent modification during processing
                 frame_copy = frame.copy()
+                #from nose.tools import set_trace; set_trace()
                 
                 # Validate frame dimensions and content
                 if frame_copy.size == 0 or len(frame_copy.shape) != 3:
