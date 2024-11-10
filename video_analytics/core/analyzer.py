@@ -1,9 +1,11 @@
 import os
 import torch
+import logging
 from PIL import Image
 import cv2
 import numpy as np
 from typing import List, Dict
+from concurrent.futures import ThreadPoolExecutor
 from transformers import CLIPProcessor, CLIPModel
 from ultralytics import YOLO
 from sahi import AutoDetectionModel
@@ -296,25 +298,23 @@ class ClipVideoAnalyzer:
             overlap_width_ratio=0
         )
         
-        return {
-            'segments': [
-                {
-                    'bbox': pred.bbox.to_xyxy(),
-                    'class': pred.category.name,
-                    'confidence': float(pred.score.value)
-                }
-                for pred in result.object_prediction_list
-            ]
-        }
+        segments = [
+            {
+                'bbox': pred.bbox.to_xyxy(),
+                'class': pred.category.name,
+                'confidence': float(pred.score.value)
+            }
+            for pred in result.object_prediction_list
+        ]
         
         # Update tracking
-        current_objects = self._update_tracking(frame, result)
+        current_objects = self._update_tracking(frame_rgb, result)
         
         return {
-            'segments': segments_info,
-            'lanes': self.detect_lanes(frame),
-            'text': self.detect_text(frame),
-            'signs': self.detect_traffic_signs(frame),
+            'segments': segments,
+            'lanes': self.detect_lanes(frame_rgb),
+            'text': self.detect_text(frame_rgb),
+            'signs': self.detect_traffic_signs(frame_rgb),
             'tracking': {
                 'current': len(current_objects),
                 'total': len(self.object_ids)
