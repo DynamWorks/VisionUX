@@ -7,7 +7,12 @@ from ..utils.visualizer import ResultVisualizer
 
 def analyze_video(video_path: str, text_queries: list, api_url: str = "http://localhost:5000"):
     """
-    Analyze a video using the Video Analytics API
+    Basic video analysis using object detection and tracking.
+    Provides general-purpose analysis based on user-provided queries.
+    Focuses on:
+    - Object detection and tracking
+    - Basic scene analysis
+    - Visualization of results
     
     Args:
         video_path: Path to the video file

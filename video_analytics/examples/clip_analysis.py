@@ -11,7 +11,13 @@ from ..utils.visualizer import ResultVisualizer
 
 def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:5000"):
     """
-    Perform comprehensive CLIP analysis on a video file
+    Perform comprehensive CLIP-based semantic analysis on a video file.
+    Focuses on scene understanding across multiple predefined categories:
+    - Scene type (indoor/outdoor, urban/rural, etc)
+    - Weather conditions
+    - Traffic conditions
+    - Road features
+    - Activities/events
     
     Args:
         video_path: Path to video file
