@@ -14,6 +14,12 @@ def analyze_video(video_path: str, text_queries: list, api_url: str = "http://lo
     - Basic scene analysis
     - Visualization of results
     
+    This function:
+    1. Sends a single API request with user-provided text queries
+    2. Processes all frames in one batch
+    3. Creates general visualizations (timeline, types, frames)
+    4. Outputs basic CSV summaries
+    
     Args:
         video_path: Path to the video file
         text_queries: List of text descriptions to detect

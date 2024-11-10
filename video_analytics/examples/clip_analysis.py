@@ -19,6 +19,13 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:50
     - Road features
     - Activities/events
     
+    This function:
+    1. Makes multiple API calls, one for each category
+    2. Processes frames category by category
+    3. Aggregates results across categories
+    4. Creates detailed category-specific analysis
+    5. Outputs comprehensive JSON with semantic understanding
+    
     Args:
         video_path: Path to video file
         api_url: Base URL of the API server (for future remote processing)
