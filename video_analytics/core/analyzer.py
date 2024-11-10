@@ -91,6 +91,7 @@ class ClipVideoAnalyzer:
             analysis_types: List of analysis types to enable ('clip', 'object', 'signs', 'text', 'lanes')
                           If None, only CLIP analysis will be enabled
         """
+        self.logger = logging.getLogger(__name__)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.frame_height = None
         self.frame_width = None
