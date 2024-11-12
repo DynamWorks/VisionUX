@@ -6,7 +6,7 @@ from typing import Optional, Dict, List
 class VILAService:
     """Service for running VILA model inference"""
     
-    def __init__(self, model_name: str = "Efficient-Large-Model/VILA1.5-3b", use_cpu: bool = True):
+    def __init__(self, model_name: str = "facebook/opt-350m", use_cpu: bool = True):
         self.model_name = model_name
         self.model = None
         self.tokenizer = None
@@ -19,8 +19,12 @@ class VILAService:
         try:
             logging.info(f"Loading VILA model: {self.model_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModel.from_pretrained(self.model_name)
-            self.model.to(self.device)
+            self.model = AutoModel.from_pretrained(
+                self.model_name,
+                torch_dtype=torch.float32,
+                device_map=self.device,
+                trust_remote_code=True
+            )
             logging.info("VILA model loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load VILA model: {str(e)}")
