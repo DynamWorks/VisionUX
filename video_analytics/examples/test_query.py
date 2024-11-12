@@ -9,6 +9,7 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
     
     Args:
         query: Text query to search for
+        video_path: Path to video file
         api_url: Base URL of the API server
         max_results: Maximum number of results to return
         
@@ -18,8 +19,29 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
     # Ensure API URL is properly formatted
     api_url = api_url.rstrip('/')
     
-    # Prepare request payload
-    payload = {
+    # First analyze the video
+    print("\nAnalyzing video first...")
+    analyze_payload = {
+        "video_path": video_path,
+        "text_queries": [query],  # Use the query as one of the detection targets
+        "sample_rate": 30,  # Process every 30th frame for speed
+        "max_workers": 4
+    }
+    
+    try:
+        response = requests.post(
+            f"{api_url}/api/analyze",
+            json=analyze_payload
+        )
+        response.raise_for_status()
+        print("Video analysis complete!")
+    except Exception as e:
+        print(f"Error analyzing video: {str(e)}")
+        return {}
+    
+    # Now query the analyzed frames
+    print("\nQuerying analysis results...")
+    query_payload = {
         "query": query,
         "max_results": max_results,
         "video_path": video_path
