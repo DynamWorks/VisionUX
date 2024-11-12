@@ -3,7 +3,7 @@ import requests
 import json
 from typing import List, Dict
 
-def test_query(query: str, api_url: str = "http://localhost:8001", max_results: int = 5) -> Dict:
+def test_query(query: str, video_path: str, api_url: str = "http://localhost:8001", max_results: int = 5) -> Dict:
     """
     Test the query API endpoint
     
@@ -22,7 +22,7 @@ def test_query(query: str, api_url: str = "http://localhost:8001", max_results: 
     payload = {
         "query": query,
         "max_results": max_results,
-        "video_path": None  # Will be set by command line argument
+        "video_path": video_path
     }
     
     try:
@@ -80,9 +80,9 @@ def main():
     try:
         test_query(
             query=args.query,
+            video_path=args.video_path,
             api_url=args.api_url,
-            max_results=args.max_results,
-            video_path=args.video_path
+            max_results=args.max_results
         )
     except Exception as e:
         print(f"Error: {str(e)}")
