@@ -33,7 +33,7 @@ def analyze_video_with_clip(video_path: str, api_url: str = "http://localhost:50
     # Initialize API client and check server
     client = VideoAnalyticsClient(api_url)
     if not client.check_server():
-        raise ConnectionError("API server is not running. Start it with: python -m video_analytics.main")
+        raise ConnectionError("API server is not running. Start it with: streamlit run video_analytics/frontend/app.py")
 
     # Predefined categories for analysis 
     analysis_categories = {
