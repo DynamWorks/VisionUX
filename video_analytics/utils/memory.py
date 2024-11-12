@@ -104,8 +104,8 @@ class FrameMemory:
         frames_list = list(self.frames)
         
         for idx in sorted_indices:
-            # Convert numpy int to Python int for comparison
-            idx_int = int(idx)
+            # Convert numpy int64 to Python int safely
+            idx_int = idx.item() if hasattr(idx, 'item') else int(idx)
             if 0 <= idx_int < len(frames_list):
                 frame_result = frames_list[idx_int]
             
