@@ -149,10 +149,6 @@ def start():
 
 if __name__ == "__main__":
     start()
-    # Initialize Rerun
-    if not init_rerun():
-        st.warning("Continuing without Rerun visualization...")
-        
     st.title("Video Analytics Dashboard")
     
     # Sidebar for controls
