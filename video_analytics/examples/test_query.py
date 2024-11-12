@@ -51,7 +51,7 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
         # Send query request
         response = requests.post(
             f"{api_url}/api/query",
-            json=payload
+            json=query_payload
         )
         response.raise_for_status()
         
