@@ -3,7 +3,7 @@ import requests
 import json
 from typing import List, Dict
 
-def test_query(query: str, api_url: str = "http://localhost:5000", max_results: int = 5) -> Dict:
+def test_query(query: str, api_url: str = "http://localhost:8001", max_results: int = 5) -> Dict:
     """
     Test the query API endpoint
     
@@ -67,7 +67,7 @@ def main():
     parser = argparse.ArgumentParser(description='Test Video Analytics Query API')
     parser.add_argument('--query', default="Show me cars",
                        help='Query string to search for')
-    parser.add_argument('--api-url', default="http://localhost:5000",
+    parser.add_argument('--api-url', default="http://localhost:8001",
                        help='API server URL')
     parser.add_argument('--max-results', type=int, default=5,
                        help='Maximum number of results to return')
