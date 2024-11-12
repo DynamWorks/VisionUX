@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from .api.routes import api
+from video_analytics.api.routes import api
 from .utils.config import Config
 import logging
 import sys
