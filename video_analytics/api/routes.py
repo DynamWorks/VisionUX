@@ -111,14 +111,15 @@ def query_frames():
     Expected JSON payload:
     {
         "query": "What vehicles were seen?",
-        "max_results": 5
+        "max_results": 5,
+        "video_path": "path/to/video.mp4"
     }
     """
     try:
         data = request.get_json()
         
-        if not data or 'query' not in data:
-            return jsonify({'error': 'Missing query parameter'}), 400
+        if not data or 'query' not in data or 'video_path' not in data:
+            return jsonify({'error': 'Missing required parameters (query and video_path)'}), 400
             
         query = data['query']
         max_results = data.get('max_results', 5)

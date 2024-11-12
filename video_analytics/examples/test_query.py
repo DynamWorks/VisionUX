@@ -21,7 +21,8 @@ def test_query(query: str, api_url: str = "http://localhost:8001", max_results: 
     # Prepare request payload
     payload = {
         "query": query,
-        "max_results": max_results
+        "max_results": max_results,
+        "video_path": None  # Will be set by command line argument
     }
     
     try:
@@ -71,6 +72,8 @@ def main():
                        help='API server URL')
     parser.add_argument('--max-results', type=int, default=5,
                        help='Maximum number of results to return')
+    parser.add_argument('--video-path', required=True,
+                       help='Path to the video file to query')
     
     args = parser.parse_args()
     
@@ -78,7 +81,8 @@ def main():
         test_query(
             query=args.query,
             api_url=args.api_url,
-            max_results=args.max_results
+            max_results=args.max_results,
+            video_path=args.video_path
         )
     except Exception as e:
         print(f"Error: {str(e)}")
