@@ -64,6 +64,26 @@ def analyze_video():
                 }
                 yield f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
 
+        # Create generator for streaming results
+        def frame_callback(result):
+            # Store in frame memory
+            frame_memory.add_frame(result)
+            
+            # Format and yield result
+            formatted_result = {
+                'frame_number': result.get('frame_number', 0),
+                'timestamp': result.get('timestamp', 0.0),
+                'detections': result.get('detections', {
+                    'segments': [],
+                    'lanes': [],
+                    'text': [],
+                    'signs': [],
+                    'tracking': {}
+                }),
+                'memory_size': len(frame_memory.frames)
+            }
+            yield f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
+
         results = processor.process_video(
             video_path=video_path,
             text_queries=text_queries,

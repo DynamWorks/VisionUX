@@ -6,7 +6,7 @@ from queue import Queue
 from ..core.analyzer import ClipVideoAnalyzer
 
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 import cv2
 import numpy as np
 from .agents import AnalysisOrchestrator
