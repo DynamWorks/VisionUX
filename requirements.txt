@@ -19,7 +19,7 @@ torchvision==0.20.0
 transformers==4.45.1
 ultralytics==8.0.196
 sahi==0.11.14
-nvidia-vila==1.0.0
+vila-vl==1.5.3
 vllm==0.2.7
 
 # Visualization
