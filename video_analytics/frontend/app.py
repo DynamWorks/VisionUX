@@ -114,10 +114,11 @@ def process_video(video_path, query, chat_mode=False):
         # Cleanup
         temp_path.unlink()
 
+# Set page config as first Streamlit command
+st.set_page_config(page_title="Video Analytics Dashboard")
+
 def main():
     """Main application entry point"""
-    st.set_page_config(page_title="Video Analytics Dashboard")
-    
     # Initialize Rerun
     if not init_rerun():
         st.warning("Continuing without Rerun visualization...")
