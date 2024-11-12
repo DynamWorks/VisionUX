@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 import torch
 import logging
 from typing import Optional, Dict, List
@@ -19,12 +19,8 @@ class VILAService:
         try:
             logging.info(f"Loading VILA model: {self.model_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                torch_dtype=torch.float32,
-                device_map=self.device,
-                trust_remote_code=True
-            )
+            self.model = AutoModel.from_pretrained(self.model_name)
+            self.model.to(self.device)
             logging.info("VILA model loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load VILA model: {str(e)}")
