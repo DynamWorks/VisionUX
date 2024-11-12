@@ -1,10 +1,12 @@
 import argparse
 import requests
 import json
-from typing import List, Dict
+import sseclient
+from typing import List, Dict, Generator
 
 def test_query(query: str, video_path: str, api_url: str = "http://localhost:8001", 
-               max_results: int = 5, threshold: float = 0.2, filters: Dict = None) -> Dict:
+               max_results: int = 5, threshold: float = 0.2, filters: Dict = None,
+               stream: bool = True) -> Generator[Dict, None, None]:
     """
     Test the query API endpoint with advanced filtering
     
@@ -25,7 +27,7 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
     # Ensure API URL is properly formatted
     api_url = api_url.rstrip('/')
     
-    # First analyze the video
+    # First analyze the video with streaming support
     print("\nAnalyzing video first...")
     analyze_payload = {
         "video_path": video_path,
@@ -35,15 +37,34 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
     }
     
     try:
-        response = requests.post(
-            f"{api_url}/api/analyze",
-            json=analyze_payload
-        )
-        response.raise_for_status()
-        print("Video analysis complete!")
+        if stream:
+            response = requests.post(
+                f"{api_url}/api/analyze",
+                json=analyze_payload,
+                stream=True
+            )
+            response.raise_for_status()
+            
+            client = sseclient.SSEClient(response)
+            for event in client.events():
+                try:
+                    frame_result = json.loads(event.data)
+                    yield frame_result
+                except json.JSONDecodeError:
+                    continue
+                    
+            print("Video analysis complete!")
+        else:
+            response = requests.post(
+                f"{api_url}/api/analyze",
+                json=analyze_payload
+            )
+            response.raise_for_status()
+            print("Video analysis complete!")
+            
     except Exception as e:
         print(f"Error analyzing video: {str(e)}")
-        return {}
+        return
     
     # Now query the analyzed frames
     print("\nQuerying analysis results...")
