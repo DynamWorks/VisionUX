@@ -31,7 +31,8 @@ class VideoProcessor:
 
     def process_video(self, video_path: str, text_queries: List[str],
                      sample_rate: int = 1, max_workers: int = 4,
-                     analysis_types: Optional[List[str]] = None) -> List[Dict]:
+                     analysis_types: Optional[List[str]] = None,
+                     callback: Callable[[Dict], None] = None) -> List[Dict]:
         """
         Process a video file using the analyzer
         
@@ -73,6 +74,37 @@ class VideoProcessor:
 
                 # Create a copy of the frame to prevent modification during processing
                 frame_copy = frame.copy()
+                
+                # Process frame immediately and get result
+                frame_result = self.analyzer.analyze_frame(frame_copy, text_queries)
+                
+                # Add frame metadata
+                timestamp = frame_count / fps
+                frame_result['timestamp'] = timestamp
+                frame_result['frame_number'] = frame_count
+                
+                # Validate and structure result
+                if not isinstance(frame_result, dict):
+                    frame_result = self.analyzer._get_default_result()
+                
+                if not isinstance(frame_result.get('detections'), dict):
+                    frame_result['detections'] = {
+                        'segments': [],
+                        'lanes': [],
+                        'text': [],
+                        'signs': [],
+                        'tracking': {'current': 0, 'total': 0}
+                    }
+                
+                # Store result
+                results.append(frame_result)
+                
+                # Call callback with result if provided
+                if callback:
+                    callback(frame_result)
+                
+                # Log progress
+                self._log_progress(len(results), total_frames)
                 #from nose.tools import set_trace; set_trace()
                 
                 # Validate frame dimensions and content

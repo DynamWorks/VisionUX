@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from ..core.processor import VideoProcessor
 from ..core.analyzer import ClipVideoAnalyzer
 from ..utils.memory import FrameMemory
@@ -43,11 +43,33 @@ def analyze_video():
         
         logger.info(f"Processing video: {video_path}")
         
+        # Create generator for streaming results
+        def generate_results():
+            def frame_callback(result):
+                # Store in frame memory
+                frame_memory.add_frame(result)
+                
+                # Format and yield result
+                formatted_result = {
+                    'frame_number': result.get('frame_number', 0),
+                    'timestamp': result.get('timestamp', 0.0),
+                    'detections': result.get('detections', {
+                        'segments': [],
+                        'lanes': [],
+                        'text': [],
+                        'signs': [],
+                        'tracking': {}
+                    }),
+                    'memory_size': len(frame_memory.frames)
+                }
+                yield f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
+
         results = processor.process_video(
             video_path=video_path,
             text_queries=text_queries,
             sample_rate=sample_rate,
-            max_workers=max_workers
+            max_workers=max_workers,
+            callback=frame_callback
         )
         
         # Format results and store in memory
@@ -82,11 +104,10 @@ def analyze_video():
                 }
             })
 
-        return jsonify({
-            'status': 'success',
-            'total_frames': len(formatted_results),
-            'results': formatted_results
-        })
+        return Response(
+            generate_results(),
+            mimetype='text/event-stream'
+        )
         
     except Exception as e:
         logger.error(f"Error processing video: {str(e)}")
