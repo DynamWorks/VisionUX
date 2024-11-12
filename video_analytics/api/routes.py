@@ -133,12 +133,17 @@ def query_frames():
         filters = data.get('filters', {})
         
         try:
+            # Initialize VILA processor
+            from ..core.vila import VILAProcessor
+            vila = VILAProcessor()
+            
             # Search frame memory with filters
             results = frame_memory.search(
                 query=query,
                 max_results=max_results,
                 threshold=threshold
             )
+            
             if not results:
                 logger.warning(f"No results found for query: {query}")
                 return jsonify({
@@ -146,6 +151,16 @@ def query_frames():
                     'query': query,
                     'results': []
                 })
+                
+            # Enhance results with VILA analysis
+            enhanced_results = []
+            for result in results:
+                # Add VILA scene understanding
+                vila_analysis = vila.analyze_scene(result)
+                result['vila_analysis'] = vila_analysis
+                enhanced_results.append(result)
+                
+            results = enhanced_results
         except Exception as e:
             logger.error(f"Frame memory search error: {str(e)}", exc_info=True)
             return jsonify({

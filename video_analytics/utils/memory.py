@@ -116,7 +116,8 @@ class FrameMemory:
                 'timestamp': frame_result.get('timestamp'),
                 'similarity': float(similarities[idx]),
                 'detections': frame_result.get('detections', {}),
-                'description': self._create_frame_description(frame_result)
+                'description': self._create_frame_description(frame_result),
+                'vila_analysis': frame_result.get('vila_analysis', {})
             }
             
             # Add scene analysis if available
