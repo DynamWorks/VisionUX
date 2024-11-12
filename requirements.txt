@@ -13,4 +13,4 @@ sahi==0.11.14
 torch==2.4.1
 transformers==4.45.1
 ultralytics==8.0.196
-vila @ git+https://github.com/microsoft/VILA.git
+vila-model==1.5.3

@@ -3,7 +3,7 @@ from typing import List, Dict
 from collections import deque
 import torch
 from transformers import AutoProcessor, AutoModel
-from vila import VILAModel, VILAProcessor
+from transformers import AutoModelForVisionText2Text, AutoProcessor
 
 class FrameMemory:
     """Store and query video frame analysis results"""
@@ -15,8 +15,8 @@ class FrameMemory:
         
         # Initialize VILA for semantic search
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = VILAModel.from_pretrained("microsoft/VILA-1.5-3b").to(self.device)
-        self.processor = VILAProcessor.from_pretrained("microsoft/VILA-1.5-3b")
+        self.model = AutoModelForVisionText2Text.from_pretrained("microsoft/VILA-1.5-3b").to(self.device)
+        self.processor = AutoProcessor.from_pretrained("microsoft/VILA-1.5-3b")
         
         # Store frame embeddings
         self.embeddings = []
