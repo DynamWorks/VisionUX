@@ -1,31 +1,29 @@
-from vllm import LLM, SamplingParams
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 import logging
 from typing import Optional, Dict, List
 
 class VILAService:
     """Service for running VILA model inference"""
     
-    def __init__(self, model_name: str = "vila-vl/VILA1.5-3b", use_cpu: bool = True):
+    def __init__(self, model_name: str = "Efficient-Large-Model/VILA1.5-3b", use_cpu: bool = True):
         self.model_name = model_name
-        self.llm = None
+        self.model = None
+        self.tokenizer = None
         self.use_cpu = use_cpu
-        self.sampling_params = SamplingParams(
-            temperature=0.7,
-            top_p=0.95,
-            max_tokens=512
-        )
+        self.device = "cpu" if use_cpu else "cuda"
         self._initialize_model()
         
     def _initialize_model(self):
         """Initialize the VILA model"""
         try:
             logging.info(f"Loading VILA model: {self.model_name}")
-            self.llm = LLM(
-                model=self.model_name,
-                trust_remote_code=True,
-                dtype="float32",  # Use float32 for CPU
-                gpu_memory_utilization=0.0 if self.use_cpu else 0.7,
-                tensor_parallel_size=1  # Single device for CPU
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                torch_dtype=torch.float32,
+                device_map=self.device,
+                trust_remote_code=True
             )
             logging.info("VILA model loaded successfully")
         except Exception as e:
@@ -61,9 +59,17 @@ Focus on answering the user's specific question while incorporating relevant det
 
         try:
             # Generate response
-            outputs = self.llm.generate(full_prompt, self.sampling_params)
-            response = outputs[0].outputs[0].text.strip()
-            return response
+            inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.device)
+            outputs = self.model.generate(
+                inputs.input_ids,
+                max_length=512,
+                temperature=0.7,
+                top_p=0.95,
+                do_sample=True,
+                pad_token_id=self.tokenizer.eos_token_id
+            )
+            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            return response.strip()
             
         except Exception as e:
             logging.error(f"VILA inference failed: {str(e)}")
