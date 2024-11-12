@@ -184,14 +184,19 @@ def main():
         if args.activity:
             filters['activity'] = args.activity
             
-        test_query(
+        for result in test_query(
             query=args.query,
             video_path=args.video_path,
             api_url=args.api_url,
             max_results=args.max_results,
             threshold=args.threshold,
-            filters=filters if filters else None
-        )
+            filters=filters if filters else None,
+            stream=True
+        ):
+            # Print frame results in real-time
+            print(f"\rFrame {result.get('frame_number', 0)}: "
+                  f"{len(result.get('detections', {}).get('segments', []))} detections", 
+                  end='')
     except Exception as e:
         print(f"Error: {str(e)}")
         exit(1)
