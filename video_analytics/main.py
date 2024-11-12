@@ -129,7 +129,27 @@ def main():
         # Start frontend if enabled
         if not args.no_frontend:
             frontend_port = args.frontend_port or app.config.get('frontend', {}).get('port', 8501)
-            frontend_app.start(port=frontend_port)
+            import streamlit.web.bootstrap as bootstrap
+            import sys
+            
+            # Prepare Streamlit args
+            streamlit_args = [
+                "streamlit",
+                "run",
+                str(Path(__file__).parent / "frontend" / "app.py"),
+                "--server.port",
+                str(frontend_port),
+                "--server.address",
+                app.config['api']['host']
+            ]
+            
+            # Start Streamlit in a separate thread
+            def run_streamlit():
+                sys.argv = streamlit_args
+                bootstrap.run(str(Path(__file__).parent / "frontend" / "app.py"), '', args=[], flag_options={})
+            
+            frontend_thread = threading.Thread(target=run_streamlit, daemon=True)
+            frontend_thread.start()
             logging.info(f"Frontend started on port {frontend_port}")
 
         # Start backend if enabled  

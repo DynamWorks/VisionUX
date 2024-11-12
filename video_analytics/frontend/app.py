@@ -29,10 +29,13 @@ def is_ready():
     """Check if frontend is ready"""
     return True
 
-def start(port=8501):
+def start():
     """Start the frontend server"""
     st.set_page_config(page_title="Video Analytics Dashboard")
     main()
+
+if __name__ == "__main__":
+    start()
 
 def main():
     # Initialize Rerun
