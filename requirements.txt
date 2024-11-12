@@ -1,18 +1,37 @@
+# Core dependencies
 dataclasses-json==0.6.4
-easyocr==1.7.1
-flake8==7.0.0
 flask==3.0.0
-matplotlib==3.8.2
-opencv-contrib-python==4.9.0.80
+numpy>=1.24.0
 pandas==2.2.3
-Pillow==10.2.0
-pytesseract==0.3.10
 python-statemachine==2.1.2
 pyyaml==6.0.1
-sahi==0.11.14
+
+# Video and Image Processing
+opencv-contrib-python==4.9.0.80
+Pillow==10.2.0
+pytesseract==0.3.10
+easyocr==1.7.1
+
+# Machine Learning
 torch==2.4.1
+torchvision==0.17.1
 transformers==4.45.1
 ultralytics==8.0.196
-sseclient-py==1.7.2
+sahi==0.11.14
+
+# Visualization
+matplotlib==3.8.2
+plotly==5.18.0
 rerun-sdk==0.9.0
 streamlit==1.27.2
+
+# Development and Testing
+flake8==7.0.0
+pytest==8.0.0
+black==24.1.1
+isort==5.13.2
+
+# API and Streaming
+sseclient-py==1.7.2
+requests>=2.31.0
+websockets==12.0
