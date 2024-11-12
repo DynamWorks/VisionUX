@@ -44,6 +44,14 @@ def main():
             if analyze_button:
                 process_video(video_path, query)
 
+def check_server_status(url: str = "http://localhost:8001") -> bool:
+    """Check if the API server is running"""
+    try:
+        response = requests.get(f"{url}/api/health")
+        return response.status_code == 200
+    except:
+        return False
+
 def process_video(video_path, query):
     # Create processing columns
     col1, col2 = st.columns(2)
@@ -55,15 +63,22 @@ def process_video(video_path, query):
     with col2:
         st.header("Analysis Results")
         results_placeholder = st.empty()
-        
+
+    # Check server status first
+    if not check_server_status():
+        st.error("API server is not running. Please start it with:")
+        st.code("python video_analytics/main.py")
+        return
+
     # Save uploaded video temporarily
     temp_path = Path("temp_video.mp4")
     temp_path.write_bytes(video_path.read())
     
     # Start video processing
     try:
-        # Send analysis request
-        response = requests.post(
+        with st.spinner("Analyzing video..."):
+            # Send analysis request
+            response = requests.post(
             "http://localhost:8001/api/analyze",
             json={
                 "video_path": str(temp_path),

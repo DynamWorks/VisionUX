@@ -26,6 +26,11 @@ def create_app(config_path: str = None) -> Flask:
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
+    # Add health check endpoint
+    @app.route('/api/health')
+    def health_check():
+        return {'status': 'ok'}, 200
+
     # Register blueprints
     app.register_blueprint(api, url_prefix='/api')
     
