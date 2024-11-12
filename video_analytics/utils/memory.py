@@ -2,7 +2,8 @@ import numpy as np
 from typing import List, Dict
 from collections import deque
 import torch
-from transformers import CLIPProcessor, CLIPModel
+from transformers import AutoProcessor, AutoModel
+from vila import VILAModel, VILAProcessor
 
 class FrameMemory:
     """Store and query video frame analysis results"""
@@ -12,10 +13,10 @@ class FrameMemory:
         self.max_frames = max_frames
         self.frames = deque(maxlen=max_frames)
         
-        # Initialize CLIP for semantic search
+        # Initialize VILA for semantic search
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
-        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        self.model = VILAModel.from_pretrained("microsoft/VILA-1.5-3b").to(self.device)
+        self.processor = VILAProcessor.from_pretrained("microsoft/VILA-1.5-3b")
         
         # Store frame embeddings
         self.embeddings = []
@@ -48,14 +49,17 @@ class FrameMemory:
             return []
             
         # Generate query embedding
+        # Process query with VILA
         inputs = self.processor(
             text=[query],
             return_tensors="pt",
-            padding=True
+            padding=True,
+            truncation=True,
+            max_length=512
         ).to(self.device)
         
         with torch.no_grad():
-            query_embedding = self.model.get_text_features(**inputs)
+            query_embedding = self.model.get_text_embeddings(**inputs)
             
         # Calculate similarities
         similarities = []
@@ -79,31 +83,52 @@ class FrameMemory:
         return results
         
     def _create_frame_description(self, frame_result: Dict) -> str:
-        """Create text description of frame content"""
-        parts = []
-        
+        """Create detailed text description of frame content using VILA's understanding"""
         detections = frame_result.get('detections', {})
         
-        # Add object detections
+        # Gather scene elements
         objects = [d['class'] for d in detections.get('segments', [])]
-        if objects:
-            parts.append(f"Objects detected: {', '.join(objects)}")
-            
-        # Add traffic signs
         signs = [d['class'] for d in detections.get('signs', [])]
-        if signs:
-            parts.append(f"Traffic signs: {', '.join(signs)}")
-            
-        # Add text detections
         texts = [d['text'] for d in detections.get('text', [])]
+        has_lanes = bool(detections.get('lanes'))
+        
+        # Create structured description
+        description = "In this frame, "
+        
+        # Object descriptions
+        if objects:
+            obj_counts = {}
+            for obj in objects:
+                obj_counts[obj] = obj_counts.get(obj, 0) + 1
+            obj_desc = ", ".join([f"{count} {obj}{'s' if count > 1 else ''}" 
+                                for obj, count in obj_counts.items()])
+            description += f"I observe {obj_desc}. "
+        
+        # Traffic signs
+        if signs:
+            description += f"There are traffic signs including {', '.join(signs)}. "
+        
+        # Lane information
+        if has_lanes:
+            description += "The frame shows clear lane markings on the road. "
+        
+        # Text information
         if texts:
-            parts.append(f"Text detected: {', '.join(texts)}")
+            description += f"Text is visible reading: {', '.join(texts)}. "
             
-        # Add lane info
-        if detections.get('lanes'):
-            parts.append(f"Lane markings detected")
+        # Add tracking information
+        tracking = detections.get('tracking', {})
+        if tracking:
+            current = tracking.get('current', 0)
+            total = tracking.get('total', 0)
+            if current > 0:
+                description += f"Currently tracking {current} objects "
+                if total > current:
+                    description += f"out of {total} total detected. "
+                else:
+                    description += ". "
+                    
+        if description == "In this frame, ":
+            description = "This frame appears to be empty or contains no notable elements."
             
-        if not parts:
-            parts.append("Empty frame")
-            
-        return " ".join(parts)
+        return description.strip()
