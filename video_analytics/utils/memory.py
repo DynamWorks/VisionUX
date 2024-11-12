@@ -70,9 +70,14 @@ class FrameMemory:
         with torch.no_grad():
             query_embedding = self.model.get_text_features(**inputs)
             
-        # Calculate similarities with batched processing
-        all_embeddings = torch.stack(self.embeddings).to(self.device)
-        query_emb = query_embedding.to(self.device)
+        # Handle empty embeddings list
+        if not self.embeddings:
+            return []
+            
+        try:
+            # Calculate similarities with batched processing
+            all_embeddings = torch.stack(self.embeddings).to(self.device)
+            query_emb = query_embedding.to(self.device)
         
         # Compute similarities in one batch operation
         similarities = torch.nn.functional.cosine_similarity(
@@ -81,7 +86,7 @@ class FrameMemory:
         )
         
         # Convert to numpy for filtering
-        similarities = similarities.cpu().numpy()
+        similarities = similarities.detach().cpu().numpy()
         
         # Filter by threshold and get top matches
         valid_indices = np.where(similarities >= threshold)[0]

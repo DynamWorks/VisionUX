@@ -132,12 +132,26 @@ def query_frames():
         threshold = data.get('threshold', 0.2)
         filters = data.get('filters', {})
         
-        # Search frame memory with filters
-        results = frame_memory.search(
-            query=query,
-            max_results=max_results,
-            threshold=threshold
-        )
+        try:
+            # Search frame memory with filters
+            results = frame_memory.search(
+                query=query,
+                max_results=max_results,
+                threshold=threshold
+            )
+            if not results:
+                logger.warning(f"No results found for query: {query}")
+                return jsonify({
+                    'status': 'success',
+                    'query': query,
+                    'results': []
+                })
+        except Exception as e:
+            logger.error(f"Frame memory search error: {str(e)}", exc_info=True)
+            return jsonify({
+                'status': 'error',
+                'message': f"Search failed: {str(e)}"
+            }), 500
         
         # Apply additional filters
         if filters:
