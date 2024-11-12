@@ -8,4 +8,7 @@ def is_ready():
 
 def start(port=8502):
     """Start the backend server"""
-    app.run(port=port)
+    try:
+        app.run(host='localhost', port=port, debug=False)
+    except Exception as e:
+        raise RuntimeError(f"Failed to start backend server: {e}")
