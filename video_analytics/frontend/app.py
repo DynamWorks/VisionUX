@@ -82,12 +82,16 @@ def process_video(video_path, query):
             if not ret:
                 break
                 
-            # Display frame
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            video_placeholder.image(frame_rgb)
-            
-            # Log frame to Rerun
-            rr.log("video/frame", rr.Image(frame_rgb))
+            try:
+                # Display frame
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                video_placeholder.image(frame_rgb)
+                
+                # Log frame to Rerun
+                rr.log("video/frame", rr.Image(frame_rgb))
+            except Exception as e:
+                st.warning(f"Could not display frame: {str(e)}")
+                continue
             
             # Get analysis results
             try:
@@ -99,13 +103,17 @@ def process_video(video_path, query):
                         results_placeholder.json(result)
                         
                         # Log detections to Rerun
-                        for det in result.get('detections', {}).get('segments', []):
-                            bbox = det.get('bbox', [0,0,0,0])
-                            rr.log("detections", 
-                                  rr.Boxes2D(
-                                      boxes=[[bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1]]],
-                                      labels=[f"{det.get('class', '')}: {det.get('confidence', 0):.2f}"]
-                                  ))
+                        try:
+                            for det in result.get('detections', {}).get('segments', []):
+                                bbox = det.get('bbox', [0,0,0,0])
+                                rr.log("detections", 
+                                      rr.Boxes2D(
+                                          boxes=[[bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1]]],
+                                          labels=[f"{det.get('class', '')}: {det.get('confidence', 0):.2f}"]
+                                      ))
+                        except Exception as e:
+                            st.warning(f"Could not log detection: {str(e)}")
+                            continue
                             
                         time.sleep(0.03)  # Control display rate
                         
