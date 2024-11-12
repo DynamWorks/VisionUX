@@ -103,11 +103,12 @@ class FrameMemory:
         results = []
         frames_list = list(self.frames)
         
+        # Convert indices to Python integers before iteration
+        sorted_indices = [int(idx) for idx in sorted_indices]
+        
         for idx in sorted_indices:
-            # Convert numpy int64 to Python int safely
-            idx_int = idx.item() if hasattr(idx, 'item') else int(idx)
-            if 0 <= idx_int < len(frames_list):
-                frame_result = frames_list[idx_int]
+            if 0 <= idx < len(frames_list):
+                frame_result = frames_list[idx]
             
             # Extract relevant frame info
             frame_info = {
