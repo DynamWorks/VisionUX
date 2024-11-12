@@ -107,7 +107,7 @@ class FrameMemory:
         # Convert each index individually to handle numpy scalars
         final_indices = [int(idx.item()) for idx in final_indices]
         
-        for idx in sorted_indices:
+        for idx in final_indices:
             if 0 <= idx < len(frames_list):
                 frame_result = frames_list[idx]
             
