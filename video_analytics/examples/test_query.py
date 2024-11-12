@@ -85,6 +85,27 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
                 for det_type, dets in detections.items():
                     if dets:
                         print(f"- {det_type}: {len(dets)} items")
+            
+            # Print VILA analysis
+            vila_analysis = match.get('vila_analysis', {})
+            if vila_analysis:
+                print("\nScene Analysis:")
+                print(f"- Scene Type: {vila_analysis.get('scene_type', 'unknown')}")
+                print(f"- Activities: {', '.join(vila_analysis.get('activities', []))}")
+                
+                # Print infrastructure details
+                infra = vila_analysis.get('infrastructure', {})
+                if infra:
+                    print(f"- Infrastructure: {infra.get('infrastructure_type', 'unknown')}")
+                    if infra.get('traffic_signs'):
+                        print(f"  - Signs: {', '.join(infra['traffic_signs'])}")
+                    
+                # Print object analysis
+                objects = vila_analysis.get('objects', {})
+                if objects:
+                    print(f"- Objects: {objects.get('total_objects', 0)} total")
+                    if objects.get('primary_objects'):
+                        print(f"  - Primary: {', '.join(objects['primary_objects'])}")
             print()
             
         return results
@@ -117,6 +138,12 @@ def main():
                        help='Object types to filter for (e.g., car truck)')
     parser.add_argument('--min-confidence', type=float,
                        help='Minimum detection confidence (0-1)')
+    parser.add_argument('--scene-type', type=str,
+                       help='Filter by scene type (e.g., highway, intersection, street)')
+    parser.add_argument('--infrastructure', type=str,
+                       help='Filter by infrastructure type (e.g., major_road, controlled_road)')
+    parser.add_argument('--activity', type=str,
+                       help='Filter by activity type (e.g., moving_traffic, pedestrian_activity)')
     
     args = parser.parse_args()
     
@@ -129,6 +156,12 @@ def main():
             filters['object_types'] = args.object_types
         if args.min_confidence is not None:
             filters['min_confidence'] = args.min_confidence
+        if args.scene_type:
+            filters['scene_type'] = args.scene_type
+        if args.infrastructure:
+            filters['infrastructure'] = args.infrastructure
+        if args.activity:
+            filters['activity'] = args.activity
             
         test_query(
             query=args.query,
