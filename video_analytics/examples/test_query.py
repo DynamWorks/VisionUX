@@ -3,15 +3,21 @@ import requests
 import json
 from typing import List, Dict
 
-def test_query(query: str, video_path: str, api_url: str = "http://localhost:8001", max_results: int = 5) -> Dict:
+def test_query(query: str, video_path: str, api_url: str = "http://localhost:8001", 
+               max_results: int = 5, threshold: float = 0.2, filters: Dict = None) -> Dict:
     """
-    Test the query API endpoint
+    Test the query API endpoint with advanced filtering
     
     Args:
         query: Text query to search for
         video_path: Path to video file
         api_url: Base URL of the API server
         max_results: Maximum number of results to return
+        threshold: Minimum similarity threshold
+        filters: Optional filters dictionary with keys:
+                - time_range: [start_time, end_time] in seconds
+                - object_types: List of object classes to filter for
+                - min_confidence: Minimum detection confidence
         
     Returns:
         Query results dictionary
@@ -44,8 +50,13 @@ def test_query(query: str, video_path: str, api_url: str = "http://localhost:800
     query_payload = {
         "query": query,
         "max_results": max_results,
-        "video_path": video_path
+        "video_path": video_path,
+        "threshold": threshold
     }
+    
+    # Add optional filters if provided
+    if filters:
+        query_payload["filters"] = filters
     
     try:
         # Send query request
@@ -96,15 +107,36 @@ def main():
                        help='Maximum number of results to return')
     parser.add_argument('--video-path', required=True,
                        help='Path to the video file to query')
+    parser.add_argument('--threshold', type=float, default=0.2,
+                       help='Minimum similarity threshold (0-1)')
+    parser.add_argument('--time-start', type=float,
+                       help='Start time in seconds for filtering')
+    parser.add_argument('--time-end', type=float,
+                       help='End time in seconds for filtering')
+    parser.add_argument('--object-types', nargs='+',
+                       help='Object types to filter for (e.g., car truck)')
+    parser.add_argument('--min-confidence', type=float,
+                       help='Minimum detection confidence (0-1)')
     
     args = parser.parse_args()
     
     try:
+        # Build filters dictionary from args
+        filters = {}
+        if args.time_start is not None and args.time_end is not None:
+            filters['time_range'] = [args.time_start, args.time_end]
+        if args.object_types:
+            filters['object_types'] = args.object_types
+        if args.min_confidence is not None:
+            filters['min_confidence'] = args.min_confidence
+            
         test_query(
             query=args.query,
             video_path=args.video_path,
             api_url=args.api_url,
-            max_results=args.max_results
+            max_results=args.max_results,
+            threshold=args.threshold,
+            filters=filters if filters else None
         )
     except Exception as e:
         print(f"Error: {str(e)}")
