@@ -59,13 +59,16 @@ class FrameMemory:
         ).to(self.device)
         
         with torch.no_grad():
-            query_embedding = self.model.get_text_embeddings(**inputs)
+            query_embedding = self.model.get_text_features(**inputs)
             
         # Calculate similarities
         similarities = []
         for emb in self.embeddings:
-            sim = torch.nn.functional.cosine_similarity(query_embedding, emb)
-            similarities.append(float(sim))
+            # Ensure tensors are on same device and properly shaped
+            query_emb = query_embedding.to(self.device)
+            frame_emb = emb.to(self.device)
+            sim = torch.nn.functional.cosine_similarity(query_emb, frame_emb)
+            similarities.append(float(sim[0]))  # Convert single-item tensor to float
             
         # Get top matches
         top_indices = np.argsort(similarities)[-max_results:][::-1]
