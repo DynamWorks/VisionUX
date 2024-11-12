@@ -94,13 +94,18 @@ class FrameMemory:
         
         # Filter by threshold and get top matches
         valid_indices = np.where(similarities >= threshold)[0]
-        top_indices = valid_indices[np.argsort(similarities[valid_indices])[-max_results:][::-1]]
+        if len(valid_indices) == 0:
+            return []
+            
+        # Sort similarities and get top matches
+        sorted_indices = valid_indices[np.argsort(similarities[valid_indices])[-max_results:][::-1]]
         
         results = []
         frames_list = list(self.frames)
         
-        for idx in top_indices:
-            frame_result = frames_list[idx]
+        for idx in sorted_indices:
+            if 0 <= idx < len(frames_list):
+                frame_result = frames_list[idx]
             
             # Extract relevant frame info
             frame_info = {
