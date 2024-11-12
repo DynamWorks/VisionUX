@@ -9,11 +9,27 @@ from PIL import Image
 import io
 import time
 
-# Initialize Rerun
-rr.init("video_analytics/frontend")
-rr.connect()
+def init_rerun():
+    """Initialize and connect to Rerun"""
+    try:
+        rr.init("video_analytics/frontend", spawn=True)
+        rr.connect()
+    except Exception as e:
+        st.error(f"Failed to connect to Rerun: {e}")
+        st.info("Starting Rerun viewer...")
+        time.sleep(2)  # Give time for viewer to start
+        try:
+            rr.connect()
+        except Exception as e:
+            st.error(f"Could not connect to Rerun after retry: {e}")
+            return False
+    return True
 
 def main():
+    # Initialize Rerun
+    if not init_rerun():
+        st.warning("Continuing without Rerun visualization...")
+        
     st.title("Video Analytics Dashboard")
     
     # Sidebar for controls
