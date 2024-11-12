@@ -12,6 +12,14 @@ import time
 # Set page config as first Streamlit command
 st.set_page_config(page_title="Video Analytics Dashboard")
 
+def check_server_status(url: str = "http://localhost:8001") -> bool:
+    """Check if the API server is running"""
+    try:
+        response = requests.get(f"{url}/api/health")
+        return response.status_code == 200
+    except:
+        return False
+
 def process_video(video_path, query, chat_mode=False):
     # Create processing columns
     col1, col2 = st.columns(2)
