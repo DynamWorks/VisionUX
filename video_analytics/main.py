@@ -1,5 +1,7 @@
 from flask import Flask, jsonify
 from video_analytics.api.routes import api
+from video_analytics.frontend import app as frontend_app
+from video_analytics.backend import app as backend_app
 from .utils.config import Config
 import logging
 import sys
@@ -67,7 +69,17 @@ def create_app(config_path: Optional[str] = None) -> Flask:
         def health_check():
             return jsonify({
                 'status': 'ok',
-                'version': '1.0.0'
+                'version': '1.0.0',
+                'services': {
+                    'frontend': frontend_app.is_ready(),
+                    'backend': backend_app.is_ready(),
+                    'api': True
+                },
+                'config': {
+                    'host': app.config['api']['host'],
+                    'port': app.config['api']['port'],
+                    'debug': app.config['api']['debug']
+                }
             }), 200
 
         # Register blueprints
@@ -87,8 +99,12 @@ def main():
     parser = argparse.ArgumentParser(description='Video Analytics API Server')
     parser.add_argument('--config', type=str, help='Path to config file')
     parser.add_argument('--host', type=str, help='Host to run server on')
-    parser.add_argument('--port', type=int, help='Port to run server on')
+    parser.add_argument('--port', type=int, help='Port to run server on') 
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    parser.add_argument('--frontend-port', type=int, help='Port for frontend server')
+    parser.add_argument('--backend-port', type=int, help='Port for backend server')
+    parser.add_argument('--no-frontend', action='store_true', help='Disable frontend')
+    parser.add_argument('--no-backend', action='store_true', help='Disable backend')
     parser.add_argument('--log-level', type=str, default='INFO',
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                        help='Logging level')
@@ -110,6 +126,19 @@ def main():
         
         logging.info(f"Starting server on {app.config['api']['host']}:{app.config['api']['port']}")
         
+        # Start frontend if enabled
+        if not args.no_frontend:
+            frontend_port = args.frontend_port or app.config.get('frontend', {}).get('port', 8501)
+            frontend_app.start(port=frontend_port)
+            logging.info(f"Frontend started on port {frontend_port}")
+
+        # Start backend if enabled  
+        if not args.no_backend:
+            backend_port = args.backend_port or app.config.get('backend', {}).get('port', 8502)
+            backend_app.start(port=backend_port)
+            logging.info(f"Backend started on port {backend_port}")
+
+        # Start main API server
         app.run(
             host=app.config['api']['host'],
             port=app.config['api']['port'],
