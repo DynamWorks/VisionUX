@@ -100,7 +100,8 @@ def process_video(video_path, query, chat_mode=False):
                     "prompt": query if chat_mode else None,
                     "text_queries": [query] if not chat_mode else None,
                     "sample_rate": 30,
-                    "max_workers": 4
+                    "max_workers": 4,
+                    "use_vila": chat_mode  # Enable VILA for chat mode
                 },
                 stream=True
             )
