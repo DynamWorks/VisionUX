@@ -106,13 +106,19 @@ def health_check():
 @api.route('/query', methods=['POST'])
 def query_frames():
     """
-    Query past video frame analysis results
+    Query past video frame analysis results with advanced filtering
     
     Expected JSON payload:
     {
         "query": "What vehicles were seen?",
         "max_results": 5,
-        "video_path": "path/to/video.mp4"
+        "video_path": "path/to/video.mp4",
+        "threshold": 0.2,
+        "filters": {
+            "time_range": [0, 100],
+            "object_types": ["car", "truck"],
+            "min_confidence": 0.5
+        }
     }
     """
     try:
@@ -123,13 +129,47 @@ def query_frames():
             
         query = data['query']
         max_results = data.get('max_results', 5)
+        threshold = data.get('threshold', 0.2)
+        filters = data.get('filters', {})
         
-        # Search frame memory
-        results = frame_memory.search(query, max_results)
+        # Search frame memory with filters
+        results = frame_memory.search(
+            query=query,
+            max_results=max_results,
+            threshold=threshold
+        )
+        
+        # Apply additional filters
+        if filters:
+            filtered_results = []
+            for result in results:
+                # Time range filter
+                if 'time_range' in filters:
+                    t_start, t_end = filters['time_range']
+                    if not (t_start <= result['timestamp'] <= t_end):
+                        continue
+                
+                # Object type filter
+                if 'object_types' in filters:
+                    objects = [det['class'] for det in result['detections'].get('segments', [])]
+                    if not any(obj in filters['object_types'] for obj in objects):
+                        continue
+                
+                # Confidence filter
+                if 'min_confidence' in filters:
+                    min_conf = filters['min_confidence']
+                    detections = result['detections'].get('segments', [])
+                    if not any(det['confidence'] >= min_conf for det in detections):
+                        continue
+                
+                filtered_results.append(result)
+            
+            results = filtered_results[:max_results]
         
         return jsonify({
             'status': 'success',
             'query': query,
+            'filters_applied': bool(filters),
             'results': results
         })
         

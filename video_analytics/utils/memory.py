@@ -43,13 +43,22 @@ class FrameMemory:
         if len(self.embeddings) > self.max_frames:
             self.embeddings.pop(0)
             
-    def search(self, query: str, max_results: int = 5) -> List[Dict]:
-        """Search frame memory using semantic similarity"""
+    def search(self, query: str, max_results: int = 5, threshold: float = 0.2) -> List[Dict]:
+        """
+        Search frame memory using semantic similarity with filtering
+        
+        Args:
+            query: Text query to search for
+            max_results: Maximum number of results to return
+            threshold: Minimum similarity threshold
+            
+        Returns:
+            List of matching frame results
+        """
         if not self.frames:
             return []
             
         # Generate query embedding
-        # Process query with VILA
         inputs = self.processor(
             text=[query],
             return_tensors="pt",
@@ -61,27 +70,43 @@ class FrameMemory:
         with torch.no_grad():
             query_embedding = self.model.get_text_features(**inputs)
             
-        # Calculate similarities
-        similarities = []
-        for emb in self.embeddings:
-            # Ensure tensors are on same device and properly shaped
-            query_emb = query_embedding.to(self.device)
-            frame_emb = emb.to(self.device)
-            sim = torch.nn.functional.cosine_similarity(query_emb, frame_emb)
-            similarities.append(float(sim[0]))  # Convert single-item tensor to float
-            
-        # Get top matches
-        top_indices = np.argsort(similarities)[-max_results:][::-1]
+        # Calculate similarities with batched processing
+        all_embeddings = torch.stack(self.embeddings).to(self.device)
+        query_emb = query_embedding.to(self.device)
+        
+        # Compute similarities in one batch operation
+        similarities = torch.nn.functional.cosine_similarity(
+            query_emb.expand(all_embeddings.shape[0], -1),
+            all_embeddings
+        )
+        
+        # Convert to numpy for filtering
+        similarities = similarities.cpu().numpy()
+        
+        # Filter by threshold and get top matches
+        valid_indices = np.where(similarities >= threshold)[0]
+        top_indices = valid_indices[np.argsort(similarities[valid_indices])[-max_results:][::-1]]
         
         results = []
+        frames_list = list(self.frames)
+        
         for idx in top_indices:
-            frame_result = list(self.frames)[idx]
-            results.append({
+            frame_result = frames_list[idx]
+            
+            # Extract relevant frame info
+            frame_info = {
                 'frame_number': frame_result.get('frame_number'),
                 'timestamp': frame_result.get('timestamp'),
-                'similarity': similarities[idx],
-                'detections': frame_result.get('detections', {})
-            })
+                'similarity': float(similarities[idx]),
+                'detections': frame_result.get('detections', {}),
+                'description': self._create_frame_description(frame_result)
+            }
+            
+            # Add scene analysis if available
+            if 'analysis' in frame_result:
+                frame_info['analysis'] = frame_result['analysis']
+                
+            results.append(frame_info)
             
         return results
         
