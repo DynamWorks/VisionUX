@@ -23,3 +23,11 @@ class BackendApp:
             self.server.start()
 
 app = BackendApp()
+
+def is_ready():
+    """Check if backend is ready"""
+    return app.is_ready()
+
+def start(port=8502):
+    """Start the backend server"""
+    app.start(port=port)
