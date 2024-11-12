@@ -38,11 +38,25 @@ def main():
         video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
         
         if video_path:
-            query = st.text_input("Enter query", "Show me cars and people")
-            analyze_button = st.button("Analyze Video")
-            
-            if analyze_button:
-                process_video(video_path, query)
+            # Initialize chat history
+            if "messages" not in st.session_state:
+                st.session_state.messages = []
+
+            # Display chat messages
+            st.header("Chat Analysis")
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            # Chat input
+            if prompt := st.chat_input("Ask about the video..."):
+                # Add user message to chat history
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+
+                # Process video with chat prompt
+                process_video(video_path, prompt, chat_mode=True)
 
 def check_server_status(url: str = "http://localhost:8001") -> bool:
     """Check if the API server is running"""
@@ -52,7 +66,7 @@ def check_server_status(url: str = "http://localhost:8001") -> bool:
     except:
         return False
 
-def process_video(video_path, query):
+def process_video(video_path, query, chat_mode=False):
     # Create processing columns
     col1, col2 = st.columns(2)
     
@@ -78,16 +92,18 @@ def process_video(video_path, query):
     try:
         with st.spinner("Analyzing video..."):
             # Send analysis request
+            endpoint = "/api/chat" if chat_mode else "/api/analyze"
             response = requests.post(
-            "http://localhost:8001/api/analyze",
-            json={
-                "video_path": str(temp_path),
-                "text_queries": [query],
-                "sample_rate": 30,
-                "max_workers": 4
-            },
-            stream=True
-        )
+                f"http://localhost:8001{endpoint}",
+                json={
+                    "video_path": str(temp_path),
+                    "prompt": query if chat_mode else None,
+                    "text_queries": [query] if not chat_mode else None,
+                    "sample_rate": 30,
+                    "max_workers": 4
+                },
+                stream=True
+            )
         
         # Process streaming results
         cap = cv2.VideoCapture(str(temp_path))
@@ -114,8 +130,18 @@ def process_video(video_path, query):
                     if line:
                         result = json.loads(line.decode().replace('data: ', ''))
                         
-                        # Display results
-                        results_placeholder.json(result)
+                        if chat_mode:
+                            # Add assistant response to chat
+                            if "response" in result:
+                                with st.chat_message("assistant"):
+                                    st.markdown(result["response"])
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": result["response"]
+                                })
+                        else:
+                            # Display analysis results
+                            results_placeholder.json(result)
                         
                         # Log detections to Rerun
                         try:
