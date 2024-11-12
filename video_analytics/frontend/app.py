@@ -71,7 +71,7 @@ def process_video(video_path, query):
             video_placeholder.image(frame_rgb)
             
             # Log frame to Rerun
-            rr.log_image("video/frame", frame_rgb)
+            rr.log("video/frame", rr.Image(frame_rgb))
             
             # Get analysis results
             try:
@@ -85,10 +85,11 @@ def process_video(video_path, query):
                         # Log detections to Rerun
                         for det in result.get('detections', {}).get('segments', []):
                             bbox = det.get('bbox', [0,0,0,0])
-                            rr.log_rect("detections", 
-                                      pos=[bbox[0], bbox[1]], 
-                                      size=[bbox[2]-bbox[0], bbox[3]-bbox[1]],
-                                      text=f"{det.get('class', '')}: {det.get('confidence', 0):.2f}")
+                            rr.log("detections", 
+                                  rr.Boxes2D(
+                                      boxes=[[bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1]]],
+                                      labels=[f"{det.get('class', '')}: {det.get('confidence', 0):.2f}"]
+                                  ))
                             
                         time.sleep(0.03)  # Control display rate
                         
