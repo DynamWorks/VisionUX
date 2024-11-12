@@ -64,7 +64,7 @@ def process_video(video_path, query):
     try:
         # Send analysis request
         response = requests.post(
-            "http://localhost:5000/api/analyze",
+            "http://localhost:8001/api/analyze",
             json={
                 "video_path": str(temp_path),
                 "text_queries": [query],

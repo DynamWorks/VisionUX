@@ -61,7 +61,7 @@ def analyze_video(video_path: str, text_queries: list, api_url: str = "http://lo
         
     except ConnectionError as e:
         print(f"Error: {e}")
-        print("Make sure the API server is running with: python -m video_analytics.main")
+        print("Make sure the API server is running with: streamlit run video_analytics/frontend/app.py")
         raise
     except Exception as e:
         print(f"Error during analysis: {e}")
