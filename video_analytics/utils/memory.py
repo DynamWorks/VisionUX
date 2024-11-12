@@ -104,8 +104,10 @@ class FrameMemory:
         frames_list = list(self.frames)
         
         for idx in sorted_indices:
-            if 0 <= idx < len(frames_list):
-                frame_result = frames_list[idx]
+            # Convert numpy int to Python int for comparison
+            idx_int = int(idx)
+            if 0 <= idx_int < len(frames_list):
+                frame_result = frames_list[idx_int]
             
             # Extract relevant frame info
             frame_info = {
