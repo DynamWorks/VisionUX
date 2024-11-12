@@ -9,6 +9,14 @@ from PIL import Image
 import io
 import time
 
+def main():
+    """Main application entry point"""
+    st.set_page_config(page_title="Video Analytics Dashboard")
+    
+    # Initialize Rerun
+    if not init_rerun():
+        st.warning("Continuing without Rerun visualization...")
+
 def init_rerun():
     """Initialize and connect to Rerun"""
     try:
@@ -31,13 +39,10 @@ def is_ready():
 
 def start():
     """Start the frontend server"""
-    st.set_page_config(page_title="Video Analytics Dashboard")
     main()
 
 if __name__ == "__main__":
     start()
-
-def main():
     # Initialize Rerun
     if not init_rerun():
         st.warning("Continuing without Rerun visualization...")
