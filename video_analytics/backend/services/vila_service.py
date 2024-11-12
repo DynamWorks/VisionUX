@@ -5,9 +5,10 @@ from typing import Optional, Dict, List
 class VILAService:
     """Service for running VILA model inference"""
     
-    def __init__(self, model_name: str = "Efficient-Large-Model/VILA1.5-3b"):
+    def __init__(self, model_name: str = "Efficient-Large-Model/VILA1.5-3b", use_cpu: bool = True):
         self.model_name = model_name
         self.llm = None
+        self.use_cpu = use_cpu
         self.sampling_params = SamplingParams(
             temperature=0.7,
             top_p=0.95,
@@ -19,7 +20,13 @@ class VILAService:
         """Initialize the VILA model"""
         try:
             logging.info(f"Loading VILA model: {self.model_name}")
-            self.llm = LLM(model=self.model_name)
+            self.llm = LLM(
+                model=self.model_name,
+                trust_remote_code=True,
+                dtype="float32",  # Use float32 for CPU
+                gpu_memory_utilization=0.0 if self.use_cpu else 0.7,
+                tensor_parallel_size=1  # Single device for CPU
+            )
             logging.info("VILA model loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load VILA model: {str(e)}")
