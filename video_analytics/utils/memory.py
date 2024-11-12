@@ -13,10 +13,10 @@ class FrameMemory:
         self.max_frames = max_frames
         self.frames = deque(maxlen=max_frames)
         
-        # Initialize VILA for semantic search
+        # Initialize CLIP for semantic search
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = AutoModel.from_pretrained("Efficient-Large-Model/VILA1.5-3b").to(self.device)
-        self.processor = AutoProcessor.from_pretrained("Efficient-Large-Model/VILA1.5-3b")
+        self.model = AutoModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
+        self.processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch32")
         
         # Store frame embeddings
         self.embeddings = []
