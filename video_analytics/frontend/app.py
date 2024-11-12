@@ -9,14 +9,6 @@ from PIL import Image
 import io
 import time
 
-def check_server_status(url: str = "http://localhost:8001") -> bool:
-    """Check if the API server is running"""
-    try:
-        response = requests.get(f"{url}/api/health")
-        return response.status_code == 200
-    except:
-        return False
-
 # Set page config as first Streamlit command
 st.set_page_config(page_title="Video Analytics Dashboard")
 
