@@ -5,6 +5,7 @@ from video_analytics.backend.app import app as backend_app
 from video_analytics.utils.config import Config
 import logging
 import sys
+import threading
 from pathlib import Path
 from typing import Optional
 
