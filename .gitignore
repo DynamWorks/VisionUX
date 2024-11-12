@@ -5,3 +5,4 @@
 *.jpg
 *labels/
 output_csv/
+weights/
