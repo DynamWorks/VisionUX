@@ -84,9 +84,12 @@ class FrameMemory:
                 query_emb.expand(all_embeddings.shape[0], -1),
                 all_embeddings
             )
-        
-        # Convert to numpy for filtering
-        similarities = similarities.detach().cpu().numpy()
+            
+            # Convert to numpy for filtering
+            similarities = similarities.detach().cpu().numpy()
+        except Exception as e:
+            logging.error(f"Error computing similarities: {str(e)}")
+            return []
         
         # Filter by threshold and get top matches
         valid_indices = np.where(similarities >= threshold)[0]
