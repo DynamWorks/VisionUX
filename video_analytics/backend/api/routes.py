@@ -250,6 +250,66 @@ def query_frames():
             'message': str(e)
         }), 500
 
+@api.route('/chat', methods=['POST'])
+def chat_analysis():
+    """
+    Endpoint for chat-based video analysis
+    
+    Expected JSON payload:
+    {
+        "video_path": "path/to/video.mp4",
+        "prompt": "What's happening in this video?",
+        "sample_rate": 30,
+        "max_workers": 4,
+        "use_vila": true
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'video_path' not in data or 'prompt' not in data:
+            return jsonify({'error': 'Missing required parameters (video_path and prompt)'}), 400
+            
+        video_path = data['video_path']
+        prompt = data['prompt']
+        sample_rate = data.get('sample_rate', 30)
+        max_workers = data.get('max_workers', 4)
+        
+        logger.info(f"Processing video chat analysis: {video_path}")
+        
+        # Initialize VILA processor for chat
+        from ..core.vila import VILAProcessor
+        vila = VILAProcessor()
+        
+        def generate_chat_response():
+            # Process video frames
+            for result in processor.process_video(
+                video_path=video_path,
+                sample_rate=sample_rate,
+                max_workers=max_workers
+            ):
+                # Add VILA analysis
+                vila_analysis = vila.analyze_scene(result)
+                result['vila_analysis'] = vila_analysis
+                
+                # Generate chat response
+                response = vila.generate_response(prompt, result)
+                result['response'] = response
+                
+                yield f"data: {json.dumps(result)}\n\n"
+        
+        return Response(
+            generate_chat_response(),
+            mimetype='text/event-stream'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error processing chat analysis: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 @api.errorhandler(Exception)
 def handle_error(error):
     """Global error handler"""
