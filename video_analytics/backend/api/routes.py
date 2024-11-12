@@ -283,9 +283,10 @@ def chat_analysis():
         vila = VILAProcessor()
         
         def generate_chat_response():
-            # Process video frames
+            # Process video frames with empty text queries for chat mode
             for result in processor.process_video(
                 video_path=video_path,
+                text_queries=[],  # Empty list since we're using VILA for chat
                 sample_rate=sample_rate,
                 max_workers=max_workers
             ):
