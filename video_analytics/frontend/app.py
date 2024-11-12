@@ -46,7 +46,7 @@ def process_video(video_path, query, chat_mode=False):
     try:
         with st.spinner("Analyzing video..."):
             # Send analysis request
-            endpoint = "/api/chat" if chat_mode else "/api/analyze"
+            endpoint = "/api/v1/chat" if chat_mode else "/api/v1/analyze"
             response = requests.post(
                 f"http://localhost:8001{endpoint}",
                 json={

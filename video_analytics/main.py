@@ -84,7 +84,7 @@ def create_app(config_path: Optional[str] = None) -> Flask:
             }), 200
 
         # Register blueprints
-        app.register_blueprint(api, url_prefix='/api')
+        app.register_blueprint(api, url_prefix='/api/v1')
         
         logging.info(f"Application created successfully with config: {config_path}")
         return app
