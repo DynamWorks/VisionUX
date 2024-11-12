@@ -155,27 +155,27 @@ if __name__ == "__main__":
     with st.sidebar:
         st.header("Controls")
         video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
-        
-        if video_path:
-            # Initialize chat history
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
 
-            # Display chat messages
-            st.header("Chat Analysis")
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+    if video_path:
+        # Initialize chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-            # Chat input
-            if prompt := st.chat_input("Ask about the video..."):
-                # Add user message to chat history
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+        # Display chat messages
+        st.header("Chat Analysis")
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-                # Process video with chat prompt
-                process_video(video_path, prompt, chat_mode=True)
+        # Chat input (outside sidebar)
+        if prompt := st.chat_input("Ask about the video..."):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Process video with chat prompt
+            process_video(video_path, prompt, chat_mode=True)
 
 def check_server_status(url: str = "http://localhost:8001") -> bool:
     """Check if the API server is running"""
