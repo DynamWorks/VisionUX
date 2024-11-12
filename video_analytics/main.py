@@ -104,7 +104,7 @@ def main():
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('--frontend-port', type=int, help='Port for frontend server')
     parser.add_argument('--backend-port', type=int, help='Port for backend server')
-    parser.add_argument('--no-frontend', action='store_true', help='Disable frontend')
+    parser.add_argument('--with-frontend', action='store_true', help='Enable frontend')
     parser.add_argument('--no-backend', action='store_true', help='Disable backend')
     parser.add_argument('--log-level', type=str, default='INFO',
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
@@ -127,8 +127,8 @@ def main():
         
         logging.info(f"Starting server on {app.config['api']['host']}:{app.config['api']['port']}")
         
-        # Start frontend if enabled
-        if not args.no_frontend:
+        # Start frontend if requested
+        if args.with_frontend:
             frontend_port = args.frontend_port or app.config.get('frontend', {}).get('port', 8501)
             import streamlit.web.bootstrap as bootstrap
             import sys
