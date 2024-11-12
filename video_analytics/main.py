@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from video_analytics.backend.api.routes import api
 from video_analytics.frontend import app as frontend_app
-from video_analytics.backend import app as backend_app
+from video_analytics.backend.app import app as backend_app
 from .utils.config import Config
 import logging
 import sys
