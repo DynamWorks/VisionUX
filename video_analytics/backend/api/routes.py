@@ -291,11 +291,12 @@ def chat_analysis():
                 max_workers=max_workers
             ):
                 # Add VILA analysis
-                vila_analysis = vila.analyze_scene(result)
-                result['vila_analysis'] = vila_analysis
+                # Use VILA service for analysis and response
+                from ..services.vila_service import VILAService
+                vila_service = VILAService()
                 
-                # Generate chat response
-                response = vila.generate_response(prompt, result)
+                # Generate response using VILA service
+                response = vila_service.analyze_frame(result, prompt)
                 result['response'] = response
                 
                 yield f"data: {json.dumps(result)}\n\n"
