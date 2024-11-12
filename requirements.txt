@@ -15,7 +15,7 @@ pytesseract==0.3.10
 
 # Machine Learning
 torch==2.4.1
-torchvision==0.17.1
+torchvision==0.17.2
 transformers==4.45.1
 ultralytics==8.0.196
 sahi==0.11.14
