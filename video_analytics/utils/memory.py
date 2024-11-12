@@ -98,13 +98,14 @@ class FrameMemory:
             return []
             
         # Sort similarities and get top matches
-        sorted_indices = valid_indices[np.argsort(similarities[valid_indices])[-max_results:][::-1]]
+        sorted_idx = np.argsort(similarities[valid_indices])[-max_results:][::-1]
+        final_indices = valid_indices[sorted_idx]
         
         results = []
         frames_list = list(self.frames)
         
-        # Convert indices to Python integers before iteration
-        sorted_indices = [int(idx) for idx in sorted_indices]
+        # Convert each index individually to handle numpy scalars
+        final_indices = [int(idx.item()) for idx in final_indices]
         
         for idx in sorted_indices:
             if 0 <= idx < len(frames_list):
