@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..core.processor import VideoProcessor
 from ..core.analyzer import ClipVideoAnalyzer
+from ..utils.memory import FrameMemory
 import logging
 
 # Configure logging
@@ -10,10 +11,11 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 api = Blueprint('api', __name__)
 
-# Initialize processor with config
+# Initialize processor and memory store with config
 from ..utils.config import Config
 config = Config()
 processor = VideoProcessor(analyzer=ClipVideoAnalyzer(config=config.config))
+frame_memory = FrameMemory()
 
 @api.route('/analyze', methods=['POST'])
 def analyze_video():
@@ -48,12 +50,15 @@ def analyze_video():
             max_workers=max_workers
         )
         
-        # Format results for API response
+        # Format results and store in memory
         formatted_results = []
         for frame_result in results:
             if not isinstance(frame_result, dict):
                 logger.warning(f"Unexpected result format: {type(frame_result)}")
                 continue
+                
+            # Store in frame memory
+            frame_memory.add_frame(frame_result)
                 
             detections = frame_result.get('detections', {})
             if not isinstance(detections, dict):
@@ -97,6 +102,42 @@ def health_check():
         'status': 'healthy',
         'service': 'video-analytics-api'
     })
+
+@api.route('/query', methods=['POST'])
+def query_frames():
+    """
+    Query past video frame analysis results
+    
+    Expected JSON payload:
+    {
+        "query": "What vehicles were seen?",
+        "max_results": 5
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'query' not in data:
+            return jsonify({'error': 'Missing query parameter'}), 400
+            
+        query = data['query']
+        max_results = data.get('max_results', 5)
+        
+        # Search frame memory
+        results = frame_memory.search(query, max_results)
+        
+        return jsonify({
+            'status': 'success',
+            'query': query,
+            'results': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing query: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @api.errorhandler(Exception)
 def handle_error(error):
