@@ -2,6 +2,7 @@ from transformers import AutoModel, AutoTokenizer
 import torch
 import logging
 from typing import Optional, Dict, List
+from pathlib import Path
 
 class VILAService:
     """Service for running VILA model inference"""
@@ -12,22 +13,38 @@ class VILAService:
         self.tokenizer = None
         self.use_cpu = use_cpu
         self.device = "cpu" if use_cpu else "cuda"
+        self.local_model_path = Path("video_analytics/models/llava")
         self._initialize_model()
         
     def _initialize_model(self):
         """Initialize the VILA model"""
         try:
-            logging.info(f"Loading VILA model: {self.model_name}")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            local_path = self.local_model_path / self.model_name.split('/')[-1]
+            
+            if local_path.exists():
+                logging.info(f"Loading VILA model from local path: {local_path}")
+                model_path = str(local_path)
+            else:
+                logging.info(f"Downloading VILA model: {self.model_name}")
+                model_path = self.model_name
+                
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
             from transformers import LlavaForConditionalGeneration, LlavaProcessor
             
-            self.processor = LlavaProcessor.from_pretrained(self.model_name)
+            self.processor = LlavaProcessor.from_pretrained(model_path)
             self.model = LlavaForConditionalGeneration.from_pretrained(
-                self.model_name,
+                model_path,
                 torch_dtype=torch.float16 if not self.use_cpu else torch.float32,
                 device_map="auto" if not self.use_cpu else "cpu",
                 trust_remote_code=True
             )
+            
+            # Save model locally if downloaded
+            if not local_path.exists():
+                logging.info(f"Saving model to: {local_path}")
+                self.model.save_pretrained(local_path)
+                self.processor.save_pretrained(local_path)
+                self.tokenizer.save_pretrained(local_path)
             logging.info("VILA model loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load VILA model: {str(e)}")
