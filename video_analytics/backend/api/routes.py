@@ -175,12 +175,15 @@ def analyze_scene():
             data['frame'],
             context=f"Stream type: {stream_type}. {context if context else ''}"
         )
-        except Exception as e:
-            logger.error(f"Frame memory search error: {str(e)}", exc_info=True)
-            return jsonify({
-                'status': 'error',
-                'message': f"Search failed: {str(e)}"
-            }), 500
+        
+        return jsonify(analysis)
+        
+    except Exception as e:
+        logger.error(f"Scene analysis failed: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': f"Analysis failed: {str(e)}"
+        }), 500
         
         # Apply additional filters
         if filters:
