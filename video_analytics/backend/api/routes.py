@@ -145,64 +145,36 @@ def health_check():
         'service': 'video-analytics-api'
     })
 
-@api.route('/query', methods=['POST'])
-def query_frames():
+@api.route('/analyze_scene', methods=['POST'])
+def analyze_scene():
     """
-    Query past video frame analysis results with advanced filtering
+    Analyze scene and suggest computer vision applications
     
     Expected JSON payload:
     {
-        "query": "What vehicles were seen?",
-        "max_results": 5,
-        "video_path": "path/to/video.mp4",
-        "threshold": 0.2,
-        "filters": {
-            "time_range": [0, 100],
-            "object_types": ["car", "truck"],
-            "min_confidence": 0.5
-        }
+        "frame": base64 encoded image,
+        "context": "Optional context about the video stream",
+        "stream_type": "webcam|traffic|moving_camera"
     }
     """
     try:
         data = request.get_json()
         
-        if not data or 'query' not in data or 'video_path' not in data:
-            return jsonify({'error': 'Missing required parameters (query and video_path)'}), 400
+        if not data or 'frame' not in data:
+            return jsonify({'error': 'Missing frame data'}), 400
             
-        query = data['query']
-        max_results = data.get('max_results', 5)
-        threshold = data.get('threshold', 0.2)
-        filters = data.get('filters', {})
+        # Initialize scene analysis service
+        from ..services.scene_service import SceneAnalysisService
+        scene_service = SceneAnalysisService()
         
-        try:
-            # Initialize VILA processor
-            from ..core.vila import VILAProcessor
-            vila = VILAProcessor()
-            
-            # Search frame memory with filters
-            results = frame_memory.search(
-                query=query,
-                max_results=max_results,
-                threshold=threshold
-            )
-            
-            if not results:
-                logger.warning(f"No results found for query: {query}")
-                return jsonify({
-                    'status': 'success',
-                    'query': query,
-                    'results': []
-                })
-                
-            # Enhance results with VILA analysis
-            enhanced_results = []
-            for result in results:
-                # Add VILA scene understanding
-                vila_analysis = vila.analyze_scene(result)
-                result['vila_analysis'] = vila_analysis
-                enhanced_results.append(result)
-                
-            results = enhanced_results
+        # Analyze scene
+        context = data.get('context')
+        stream_type = data.get('stream_type', 'unknown')
+        
+        analysis = scene_service.analyze_scene(
+            data['frame'],
+            context=f"Stream type: {stream_type}. {context if context else ''}"
+        )
         except Exception as e:
             logger.error(f"Frame memory search error: {str(e)}", exc_info=True)
             return jsonify({

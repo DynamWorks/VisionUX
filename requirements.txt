@@ -1,42 +1,23 @@
 # Core dependencies
-dataclasses-json==0.6.4
 flask==3.0.0
 numpy>=1.24.0
-pandas==2.2.3
-bottleneck>=1.3.6
-numexpr>=2.8.1
-python-statemachine==2.1.2
-pyyaml==6.0.1
-
-# Video and Image Processing
 opencv-contrib-python==4.9.0.80
 Pillow==10.2.0
-pytesseract==0.3.10
+pyyaml==6.0.1
 
-# Machine Learning
-torch==2.5.0
-torchvision==0.20.0
-transformers[torch]==4.46.2
-accelerate==0.27.2
-bitsandbytes==0.42.0
-sentencepiece==0.2.0
-protobuf==4.25.3
-ultralytics==8.0.196
-sahi==0.11.14
+# Machine Learning & Vision
+ultralytics==8.0.196  # YOLOv8
+mediapipe==0.10.9
+segment-anything==1.0  # SAM2
+
+# API and Vision Services
+openai==1.12.0
+requests>=2.31.0
 
 # Visualization
-matplotlib==3.8.2
-plotly==5.18.0
-rerun-sdk==0.9.0
 streamlit==1.27.2
+matplotlib==3.8.2
 
-# Development and Testing
-flake8==7.0.0
+# Development
 pytest==8.0.0
 black==24.1.1
-isort==5.13.2
-
-# API and Streaming
-sseclient-py==1.7.2
-requests>=2.31.0
-websockets==12.0
