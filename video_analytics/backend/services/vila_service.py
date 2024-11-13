@@ -24,8 +24,8 @@ class VILAService:
             self.processor = LlavaProcessor.from_pretrained(self.model_name)
             self.model = LlavaForConditionalGeneration.from_pretrained(
                 self.model_name,
-                torch_dtype=torch.float16 if not use_cpu else torch.float32,
-                device_map="auto" if not use_cpu else "cpu",
+                torch_dtype=torch.float16 if not self.use_cpu else torch.float32,
+                device_map="auto" if not self.use_cpu else "cpu",
                 trust_remote_code=True
             )
             logging.info("VILA model loaded successfully")
