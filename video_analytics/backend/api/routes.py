@@ -160,21 +160,38 @@ def analyze_scene():
     try:
         data = request.get_json()
         
-        if not data or 'image_path' not in data:
-            return jsonify({'error': 'Missing image_path'}), 400
+        if not data:
+            return jsonify({'error': 'Missing request data'}), 400
+            
+        if 'image_path' not in data:
+            return jsonify({'error': 'Missing image_path in request'}), 400
+            
+        if not isinstance(data['image_path'], str):
+            return jsonify({'error': 'image_path must be a string'}), 400
+            
+        # Validate image path exists
+        from pathlib import Path
+        if not Path(data['image_path']).exists():
+            return jsonify({'error': f"Image file not found: {data['image_path']}"}), 400
             
         # Initialize scene analysis service
         from ..services.scene_service import SceneAnalysisService
         scene_service = SceneAnalysisService()
         
         # Analyze scene
-        context = data.get('context')
+        context = data.get('context', '')
         stream_type = data.get('stream_type', 'unknown')
         
-        analysis = scene_service.analyze_scene(
-            data['image_path'],
-            context=f"Stream type: {stream_type}. {context if context else ''}"
-        )
+        try:
+            analysis = scene_service.analyze_scene(
+                data['image_path'],
+                context=f"Stream type: {stream_type}. {context}"
+            )
+            return jsonify(analysis)
+        except Exception as e:
+            return jsonify({
+                'error': f"Scene analysis failed: {str(e)}"
+            }), 500
         
         return jsonify(analysis)
         

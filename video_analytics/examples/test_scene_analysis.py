@@ -21,12 +21,33 @@ def test_scene_analysis(image_path: str, api_url: str = "http://localhost:8001",
     }
     
     try:
+        # Validate image path
+        if not Path(image_path).exists():
+            print(f"Error: Image file not found: {image_path}")
+            return
+            
+        # Ensure absolute path
+        abs_image_path = str(Path(image_path).resolve())
+        
+        # Update payload with absolute path
+        payload = {
+            "image_path": abs_image_path,
+            "context": context,
+            "stream_type": "test"
+        }
+        
         # Send request to API
+        print(f"\nSending request to {api_url}/api/v1/analyze_scene")
+        print(f"Payload: {json.dumps(payload, indent=2)}")
+        
         response = requests.post(
             f"{api_url}/api/v1/analyze_scene",
             json=payload
         )
-        response.raise_for_status()
+        
+        if response.status_code != 200:
+            print(f"\nError {response.status_code}: {response.text}")
+            return
         
         # Print results
         results = response.json()
