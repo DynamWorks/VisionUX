@@ -152,7 +152,7 @@ def analyze_scene():
     
     Expected JSON payload:
     {
-        "frame": base64 encoded image,
+        "image_path": "path/to/image.jpg",
         "context": "Optional context about the video stream",
         "stream_type": "webcam|traffic|moving_camera"
     }
@@ -160,8 +160,8 @@ def analyze_scene():
     try:
         data = request.get_json()
         
-        if not data or 'frame' not in data:
-            return jsonify({'error': 'Missing frame data'}), 400
+        if not data or 'image_path' not in data:
+            return jsonify({'error': 'Missing image_path'}), 400
             
         # Initialize scene analysis service
         from ..services.scene_service import SceneAnalysisService
@@ -172,7 +172,7 @@ def analyze_scene():
         stream_type = data.get('stream_type', 'unknown')
         
         analysis = scene_service.analyze_scene(
-            data['frame'],
+            data['image_path'],
             context=f"Stream type: {stream_type}. {context if context else ''}"
         )
         

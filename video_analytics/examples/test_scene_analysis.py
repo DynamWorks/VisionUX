@@ -13,13 +13,9 @@ def test_scene_analysis(image_path: str, api_url: str = "http://localhost:8001",
         api_url: Base URL of the API server
         context: Optional context about the scene
     """
-    # Read and encode image
-    with open(image_path, "rb") as f:
-        image_data = base64.b64encode(f.read()).decode('utf-8')
-    
     # Prepare request payload
     payload = {
-        "frame": image_data,
+        "image_path": image_path,
         "context": context,
         "stream_type": "test"
     }
