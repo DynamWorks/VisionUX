@@ -47,7 +47,7 @@ def test_scene_analysis(image_path: str, api_url: str = "http://localhost:8001",
                 print(f"- {step}")
                 
         # Save results to file
-        output_path = Path(image_path).stem + "_analysis.json"
+        output_path = "scene_analysis.json"
         with open(output_path, 'w') as f:
             json.dump(results, f, indent=2)
             
