@@ -47,6 +47,10 @@ def analyze_video():
         # Create generator for streaming results
         def generate_results():
             def frame_callback(result):
+                if not result:
+                    logger.warning("Empty frame result received")
+                    return
+                    
                 # Store in frame memory
                 frame_memory.add_frame(result)
                 
@@ -63,34 +67,18 @@ def analyze_video():
                     }),
                     'memory_size': len(frame_memory.frames)
                 }
-                yield f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
+                return f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
 
-        # Create generator for streaming results
-        def frame_callback(result):
-            # Store in frame memory
-            frame_memory.add_frame(result)
-            
-            # Format and yield result
-            formatted_result = {
-                'frame_number': result.get('frame_number', 0),
-                'timestamp': result.get('timestamp', 0.0),
-                'detections': result.get('detections', {
-                    'segments': [],
-                    'lanes': [],
-                    'text': [],
-                    'signs': [],
-                    'tracking': {}
-                }),
-                'memory_size': len(frame_memory.frames)
-            }
-            yield f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
+            return frame_callback
 
+        # Create callback and start processing
+        callback = generate_results()
         results = processor.process_video(
             video_path=video_path,
             text_queries=text_queries,
             sample_rate=sample_rate,
             max_workers=max_workers,
-            callback=frame_callback
+            callback=callback
         )
         
         # Format results and store in memory
