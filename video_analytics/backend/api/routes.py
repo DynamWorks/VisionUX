@@ -171,7 +171,8 @@ def analyze_scene():
             
         # Validate image path exists
         from pathlib import Path
-        if not Path(data['image_path']).exists():
+        image_path = Path(data['image_path'])
+        if not image_path.exists():
             return jsonify({'error': f"Image file not found: {data['image_path']}"}), 400
             
         # Initialize scene analysis service
@@ -183,8 +184,14 @@ def analyze_scene():
         stream_type = data.get('stream_type', 'unknown')
         
         try:
+            # Read image file
+            import cv2
+            image = cv2.imread(str(image_path))
+            if image is None:
+                return jsonify({'error': f"Failed to read image: {data['image_path']}"}), 400
+                
             analysis = scene_service.analyze_scene(
-                data['image_path'],
+                image,  # Pass the actual image data
                 context=f"Stream type: {stream_type}. {context}"
             )
             return jsonify(analysis)
