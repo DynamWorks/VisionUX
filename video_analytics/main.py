@@ -1,4 +1,6 @@
 from flask import Flask, jsonify
+import streamlit.web.bootstrap as bootstrap
+import multiprocessing
 from video_analytics.backend.api.routes import api
 from video_analytics.frontend import app as frontend_app
 from video_analytics.backend.app import app as backend_app
@@ -9,6 +11,27 @@ import threading
 import multiprocessing
 from pathlib import Path
 from typing import Optional
+
+def start_frontend(frontend_port: int, host: str) -> multiprocessing.Process:
+    """Start Streamlit frontend in a separate process"""
+    streamlit_args = [
+        "streamlit",
+        "run",
+        str(Path(__file__).parent / "frontend" / "app.py"),
+        "--server.port",
+        str(frontend_port),
+        "--server.address",
+        host
+    ]
+    
+    def run_streamlit():
+        import sys
+        sys.argv = streamlit_args
+        bootstrap.run(str(Path(__file__).parent / "frontend" / "app.py"), '', args=[], flag_options={})
+    
+    process = multiprocessing.Process(target=run_streamlit)
+    process.start()
+    return process
 
 def setup_logging(log_level: str = "INFO") -> None:
     """Configure application logging
@@ -131,28 +154,10 @@ def main():
         # Start frontend if requested
         if args.with_frontend:
             frontend_port = args.frontend_port or app.config.get('frontend', {}).get('port', 8501)
-            import streamlit.web.bootstrap as bootstrap
-            import sys
-            
-            # Prepare Streamlit args
-            streamlit_args = [
-                "streamlit",
-                "run",
-                str(Path(__file__).parent / "frontend" / "app.py"),
-                "--server.port",
-                str(frontend_port),
-                "--server.address",
-                app.config['api']['host']
-            ]
-            
-            # Start Streamlit in a separate process
-            import multiprocessing
-            def run_streamlit():
-                sys.argv = streamlit_args
-                bootstrap.run(str(Path(__file__).parent / "frontend" / "app.py"), '', args=[], flag_options={})
-            
-            frontend_process = multiprocessing.Process(target=run_streamlit)
-            frontend_process.start()
+            frontend_process = start_frontend(
+                frontend_port=frontend_port,
+                host=app.config['api']['host']
+            )
             logging.info(f"Frontend started on port {frontend_port}")
 
         # Start backend if enabled  
