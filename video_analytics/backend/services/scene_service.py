@@ -86,7 +86,9 @@ Additional context: {context if context else 'None provided'}"""
                             {"type": "text", "text": "Analyze this scene and suggest relevant computer vision applications."},
                             {
                                 "type": "image_url",
-                                "image_url": f"data:image/jpeg;base64,{base64_image}"
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
                             }
                         ]
                     }
