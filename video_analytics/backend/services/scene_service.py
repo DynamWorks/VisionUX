@@ -84,7 +84,12 @@ Additional context: {context if context else 'None provided'}"""
                         "role": "user",
                         "content": [
                             {"type": "text", "text": "Analyze this scene and suggest relevant computer vision applications."},
-                            {"type": "image_url", "url": f"data:image/jpeg;base64,{base64_image}"}
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            }
                         ]
                     }
                 ],
