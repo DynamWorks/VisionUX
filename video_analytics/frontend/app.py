@@ -76,12 +76,18 @@ def process_video(video_path, query, chat_mode=False):
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 video_placeholder.image(frame_rgb)
                 
-                # Log frame and results to Rerun
+                # Log frame to Rerun
                 rr.log("video/frame", rr.Image(frame_rgb))
                 
-                # Draw pipeline results
-                if "agent_results" in result:
-                    for agent_result in result["agent_results"]:
+                # Get analysis results
+                try:
+                    for line in response.iter_lines():
+                        if line:
+                            result = json.loads(line.decode().replace('data: ', ''))
+                            
+                            # Draw pipeline results
+                            if "agent_results" in result:
+                                for agent_result in result["agent_results"]:
                         if agent_result.pipeline_name == "object_detection":
                             boxes = agent_result.result.get("boxes", [])
                             names = agent_result.result.get("names", {})
