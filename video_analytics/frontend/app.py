@@ -88,10 +88,10 @@ def process_video(video_path, query, chat_mode=False):
                             # Draw pipeline results
                             if "agent_results" in result:
                                 for agent_result in result["agent_results"]:
-                        if agent_result.pipeline_name == "object_detection":
-                            boxes = agent_result.result.get("boxes", [])
-                            names = agent_result.result.get("names", {})
-                            rr.log("detections",
+                                    if agent_result.pipeline_name == "object_detection":
+                                        boxes = agent_result.result.get("boxes", [])
+                                        names = agent_result.result.get("names", {})
+                                        rr.log("detections",
                                   rr.Boxes2D(
                                       boxes=[[b[0], b[1], b[2]-b[0], b[3]-b[1]] for b in boxes],
                                       labels=[f"{names[int(b[5])]}: {b[4]:.2f}" for b in boxes]
