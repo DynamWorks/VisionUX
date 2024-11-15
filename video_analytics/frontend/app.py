@@ -177,6 +177,33 @@ if __name__ == "__main__":
         video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
 
     if video_path:
+        # Perform initial scene analysis
+        with st.spinner("Analyzing scene..."):
+            try:
+                response = requests.post(
+                    "http://localhost:8001/api/v1/analyze_scene",
+                    json={
+                        "image_path": str(video_path.name),
+                        "context": "Video upload analysis",
+                        "stream_type": "uploaded_video"
+                    }
+                )
+                if response.status_code == 200:
+                    scene_analysis = response.json()
+                    
+                    # Display scene analysis results
+                    st.subheader("Scene Analysis")
+                    st.json(scene_analysis.get('scene_analysis', {}))
+                    
+                    # Display suggested pipeline
+                    st.subheader("Suggested Processing Pipeline")
+                    for step in scene_analysis.get('suggested_pipeline', []):
+                        st.write(f"- {step}")
+                else:
+                    st.warning("Scene analysis failed. Continuing with basic processing.")
+            except Exception as e:
+                st.error(f"Scene analysis error: {str(e)}")
+
         # Initialize chat history
         if "messages" not in st.session_state:
             st.session_state.messages = []
