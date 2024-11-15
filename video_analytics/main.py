@@ -6,6 +6,7 @@ from video_analytics.utils.config import Config
 import logging
 import sys
 import threading
+import multiprocessing
 from pathlib import Path
 from typing import Optional
 
@@ -144,13 +145,14 @@ def main():
                 app.config['api']['host']
             ]
             
-            # Start Streamlit in a separate thread
+            # Start Streamlit in a separate process
+            import multiprocessing
             def run_streamlit():
                 sys.argv = streamlit_args
                 bootstrap.run(str(Path(__file__).parent / "frontend" / "app.py"), '', args=[], flag_options={})
             
-            frontend_thread = threading.Thread(target=run_streamlit, daemon=True)
-            frontend_thread.start()
+            frontend_process = multiprocessing.Process(target=run_streamlit)
+            frontend_process.start()
             logging.info(f"Frontend started on port {frontend_port}")
 
         # Start backend if enabled  
