@@ -21,6 +21,7 @@ def check_server_status(url: str = "http://localhost:8001") -> bool:
         return False
 
 def process_video(video_path, query, chat_mode=False):
+    """Process video with analysis and visualization"""
     # Create processing columns
     col1, col2 = st.columns(2)
     
@@ -42,12 +43,9 @@ def process_video(video_path, query, chat_mode=False):
     temp_path = Path("temp_video.mp4")
     temp_path.write_bytes(video_path.read())
     
-    # Start video processing
     try:
+        # Start video processing
         with st.spinner("Analyzing video..."):
-            if not check_server_status():
-                st.error("API server is not running. Please start it first.")
-                return
             # Send analysis request
             endpoint = "/api/v1/chat" if chat_mode else "/api/v1/analyze"
             response = requests.post(
@@ -58,32 +56,43 @@ def process_video(video_path, query, chat_mode=False):
                     "text_queries": [query] if not chat_mode else None,
                     "sample_rate": 30,
                     "max_workers": 4,
-                    "use_vila": chat_mode  # Enable VILA for chat mode
+                    "use_vila": chat_mode
                 },
                 stream=True
             )
-        
-        # Process streaming results
-        cap = cv2.VideoCapture(str(temp_path))
-        
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-                
-            try:
-                # Display frame
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                video_placeholder.image(frame_rgb)
-                
-                # Log frame to Rerun
-                rr.log("video/frame", rr.Image(frame_rgb))
-                
-                # Get analysis results
+            
+            # Process streaming results
+            cap = cv2.VideoCapture(str(temp_path))
+            
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                    
                 try:
+                    # Display frame
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    video_placeholder.image(frame_rgb)
+                    
+                    # Log frame to Rerun
+                    rr.log("video/frame", rr.Image(frame_rgb))
+                    
+                    # Process analysis results
                     for line in response.iter_lines():
                         if line:
                             result = json.loads(line.decode().replace('data: ', ''))
+                            
+                            # Handle chat mode
+                            if chat_mode and "response" in result:
+                                with st.chat_message("assistant"):
+                                    st.markdown(result["response"])
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": result["response"]
+                                })
+                            else:
+                                # Display analysis results
+                                results_placeholder.json(result)
                             
                             # Draw pipeline results
                             if "agent_results" in result:
@@ -92,42 +101,19 @@ def process_video(video_path, query, chat_mode=False):
                                         boxes = agent_result.result.get("boxes", [])
                                         names = agent_result.result.get("names", {})
                                         rr.log("detections",
-                                  rr.Boxes2D(
-                                      boxes=[[b[0], b[1], b[2]-b[0], b[3]-b[1]] for b in boxes],
-                                      labels=[f"{names[int(b[5])]}: {b[4]:.2f}" for b in boxes]
-                                  ))
-                        elif agent_result.pipeline_name == "face_analysis":
-                            landmarks = agent_result.result.get("landmarks", [])
-                            rr.log("faces",
-                                  rr.Points2D(
-                                      points=[[l[0], l[1]] for l in landmarks],
-                                      labels=["face"] * len(landmarks)
-                                  ))
-            except Exception as e:
-                st.warning(f"Could not display frame: {str(e)}")
-                continue
-            
-            # Get analysis results
-            try:
-                for line in response.iter_lines():
-                    if line:
-                        result = json.loads(line.decode().replace('data: ', ''))
-                        
-                        if chat_mode:
-                            # Add assistant response to chat
-                            if "response" in result:
-                                with st.chat_message("assistant"):
-                                    st.markdown(result["response"])
-                                st.session_state.messages.append({
-                                    "role": "assistant",
-                                    "content": result["response"]
-                                })
-                        else:
-                            # Display analysis results
-                            results_placeholder.json(result)
-                        
-                        # Log detections to Rerun
-                        try:
+                                              rr.Boxes2D(
+                                                  boxes=[[b[0], b[1], b[2]-b[0], b[3]-b[1]] for b in boxes],
+                                                  labels=[f"{names[int(b[5])]}: {b[4]:.2f}" for b in boxes]
+                                              ))
+                                    elif agent_result.pipeline_name == "face_analysis":
+                                        landmarks = agent_result.result.get("landmarks", [])
+                                        rr.log("faces",
+                                              rr.Points2D(
+                                                  points=[[l[0], l[1]] for l in landmarks],
+                                                  labels=["face"] * len(landmarks)
+                                              ))
+                            
+                            # Log additional detections
                             for det in result.get('detections', {}).get('segments', []):
                                 bbox = det.get('bbox', [0,0,0,0])
                                 rr.log("detections", 
@@ -135,23 +121,21 @@ def process_video(video_path, query, chat_mode=False):
                                           boxes=[[bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1]]],
                                           labels=[f"{det.get('class', '')}: {det.get('confidence', 0):.2f}"]
                                       ))
-                        except Exception as e:
-                            st.warning(f"Could not log detection: {str(e)}")
-                            continue
+                                
+                            time.sleep(0.03)  # Control display rate
                             
-                        time.sleep(0.03)  # Control display rate
-                        
-            except Exception as e:
-                st.error(f"Error processing results: {str(e)}")
-                break
-                
-        cap.release()
-        
+                except Exception as e:
+                    st.warning(f"Frame processing error: {str(e)}")
+                    continue
+                    
+            cap.release()
+            
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Video processing error: {str(e)}")
     finally:
         # Cleanup
-        temp_path.unlink()
+        if temp_path.exists():
+            temp_path.unlink()
 
 def main():
     """Main application entry point"""
