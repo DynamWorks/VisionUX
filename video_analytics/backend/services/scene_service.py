@@ -74,7 +74,7 @@ Additional context: {context if context else 'None provided'}"""
 
             # Call GPT-4V API
             response = self.client.chat.completions.create(
-                model="gpt-4-vision-preview-v2",
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
