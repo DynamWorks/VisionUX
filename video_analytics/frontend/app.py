@@ -45,6 +45,9 @@ def process_video(video_path, query, chat_mode=False):
     # Start video processing
     try:
         with st.spinner("Analyzing video..."):
+            if not check_server_status():
+                st.error("API server is not running. Please start it first.")
+                return
             # Send analysis request
             endpoint = "/api/v1/chat" if chat_mode else "/api/v1/analyze"
             response = requests.post(

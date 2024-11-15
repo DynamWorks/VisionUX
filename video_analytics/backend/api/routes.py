@@ -67,7 +67,7 @@ def analyze_video():
                     }),
                     'memory_size': len(frame_memory.frames)
                 }
-                return f"data: {jsonify(formatted_result).get_data(as_text=True)}\n\n"
+                yield f"data: {json.dumps(formatted_result)}\n\n"
 
             return frame_callback
 
