@@ -76,8 +76,27 @@ def process_video(video_path, query, chat_mode=False):
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 video_placeholder.image(frame_rgb)
                 
-                # Log frame to Rerun
+                # Log frame and results to Rerun
                 rr.log("video/frame", rr.Image(frame_rgb))
+                
+                # Draw pipeline results
+                if "agent_results" in result:
+                    for agent_result in result["agent_results"]:
+                        if agent_result.pipeline_name == "object_detection":
+                            boxes = agent_result.result.get("boxes", [])
+                            names = agent_result.result.get("names", {})
+                            rr.log("detections",
+                                  rr.Boxes2D(
+                                      boxes=[[b[0], b[1], b[2]-b[0], b[3]-b[1]] for b in boxes],
+                                      labels=[f"{names[int(b[5])]}: {b[4]:.2f}" for b in boxes]
+                                  ))
+                        elif agent_result.pipeline_name == "face_analysis":
+                            landmarks = agent_result.result.get("landmarks", [])
+                            rr.log("faces",
+                                  rr.Points2D(
+                                      points=[[l[0], l[1]] for l in landmarks],
+                                      labels=["face"] * len(landmarks)
+                                  ))
             except Exception as e:
                 st.warning(f"Could not display frame: {str(e)}")
                 continue
