@@ -74,7 +74,7 @@ Additional context: {context if context else 'None provided'}"""
 
             # Call GPT-4V API
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4-vision-preview",
                 messages=[
                     {
                         "role": "system",
@@ -83,14 +83,8 @@ Additional context: {context if context else 'None provided'}"""
                     {
                         "role": "user",
                         "content": [
-                            {
-                                "type": "image",
-                                "image_url": f"data:image/jpeg;base64,{base64_image}"
-                            },
-                            {
-                                "type": "text",
-                                "text": "Analyze this scene and suggest relevant computer vision applications."
-                            }
+                            {"type": "text", "text": "Analyze this scene and suggest relevant computer vision applications."},
+                            {"type": "image_url", "url": f"data:image/jpeg;base64,{base64_image}"}
                         ]
                     }
                 ],
