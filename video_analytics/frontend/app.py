@@ -193,18 +193,27 @@ def main():
     st.markdown("""
         <style>
         .main-container {
-            padding: 0.5rem;
+            padding: 1.5rem;
             background-color: #f8f9fa;
             border-radius: 10px;
-            width: calc(100vw - 1rem);
-            max-width: calc(100vw - 1rem);
-            margin: 0.5rem;
+            width: calc(100vw - 3rem);
+            max-width: calc(100vw - 3rem);
+            margin: 1.5rem;
             box-sizing: border-box;
         }
-        /* Remove default Streamlit padding */
+        /* Adjust Streamlit container padding */
         .block-container {
-            padding: 0 !important;
+            padding: 1rem !important;
             max-width: 100% !important;
+        }
+        /* Add padding to all Streamlit elements */
+        .element-container {
+            padding: 0.5rem 0;
+        }
+        /* Add spacing between widgets */
+        .stButton, .stSelectbox, .stTextInput, .stTextArea, 
+        .stNumberInput, .stFileUploader {
+            margin: 0.5rem 0;
         }
         /* Remove title padding */
         .stTitle {
