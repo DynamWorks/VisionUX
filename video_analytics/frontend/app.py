@@ -155,12 +155,15 @@ def init_rerun():
     """Initialize and connect to Rerun"""
     try:
         # Initialize Rerun with web viewer
-        rr.init("video_analytics/frontend", spawn=True, web_viewer_port=RERUN_PORT)
+        rr.init("video_analytics/frontend", spawn=True)
         rr.connect()
+        
+        # Get the viewer URL from Rerun
+        viewer_url = "http://localhost:6006"  # Default Rerun web viewer port
         
         # Add iframe to display Rerun viewer
         st.components.v1.iframe(
-            f"http://localhost:{RERUN_PORT}",
+            viewer_url,
             height=600,
             scrolling=True
         )
