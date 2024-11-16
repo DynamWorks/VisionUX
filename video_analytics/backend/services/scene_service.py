@@ -104,9 +104,11 @@ Additional context: {context if context else 'None provided'}"""
             analysis = response.choices[0].message.content
             
             # Parse response into structured format
-            # (You would implement more sophisticated parsing here)
             structured_response = {
-                'scene_analysis': analysis,
+                'scene_analysis': {
+                    'description': analysis,
+                    'type': 'scene_analysis'
+                },
                 'available_functions': self.available_functions,
                 'suggested_pipeline': self._suggest_pipeline(analysis)
             }
