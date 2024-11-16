@@ -215,10 +215,10 @@ if __name__ == "__main__":
             
             # Perform initial scene analysis
             with st.spinner("Analyzing scene..."):
-            try:
-                # Convert uploaded file to bytes and read with OpenCV
-                file_bytes = video_path.read()
-                temp_video = "temp_video.mp4"
+                try:
+                    # Convert uploaded file to bytes and read with OpenCV
+                    file_bytes = video_path.read()
+                    temp_video = "temp_video.mp4"
                 
                 with open(temp_video, "wb") as f:
                     f.write(file_bytes)
