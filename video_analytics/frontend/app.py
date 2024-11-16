@@ -222,10 +222,10 @@ if __name__ == "__main__":
                 
                     with open(temp_video, "wb") as f:
                         f.write(file_bytes)
-                
-                # Read first 8 frames
-                frames = []
-                cap = cv2.VideoCapture(temp_video)
+                    
+                    # Read first 8 frames
+                    frames = []
+                    cap = cv2.VideoCapture(temp_video)
                 for _ in range(8):
                     ret, frame = cap.read()
                     if not ret:
