@@ -254,21 +254,19 @@ if __name__ == "__main__":
                 temp_image = "temp_scene_frame.jpg"
                 cv2.imwrite(temp_image, first_frame)
 
-                response = requests.post(
-                    "http://localhost:8001/api/v1/analyze_scene",
-                    json={
-                        "image_path": temp_image,
-                        "context": "Video upload analysis",
-                        "stream_type": "uploaded_video"
-                    }
-                )
+                try:
+                    response = requests.post(
+                        "http://localhost:8001/api/v1/analyze_scene",
+                        json={
+                            "image_path": temp_image,
+                            "context": "Video upload analysis",
+                            "stream_type": "uploaded_video"
+                        }
+                    )
 
-                # Clean up temporary image file
-                Path(temp_image).unlink()
+                    if response.status_code != 200:
+                        raise ValueError(f"Scene analysis failed with status {response.status_code}: {response.text}")
 
-                if response.status_code != 200:
-                    raise ValueError(f"Scene analysis failed with status {response.status_code}: {response.text}")
-                if response.status_code == 200:
                     scene_analysis = response.json()
                     
                     # Display scene analysis results
@@ -279,17 +277,13 @@ if __name__ == "__main__":
                     st.subheader("Suggested Processing Pipeline")
                     for step in scene_analysis.get('suggested_pipeline', []):
                         st.write(f"- {step}")
-                else:
+
+                except Exception as e:
                     st.warning("Scene analysis failed. Continuing with basic processing.")
-            except Exception as e:
-                st.error(f"Scene analysis error: {str(e)}")
-                logging.error(f"Scene analysis failed: {str(e)}", exc_info=True)
-                
-                # Cleanup temp file
-                try:
-                    Path(temp_video).unlink(missing_ok=True)
-                except Exception as cleanup_error:
-                    logging.error(f"Failed to cleanup temp file: {cleanup_error}")
+                    logging.warning(f"Scene analysis failed: {str(e)}")
+                finally:
+                    # Clean up temporary image file
+                    Path(temp_image).unlink(missing_ok=True)
 
     # Right column - Chat Interface
     with right_col:
