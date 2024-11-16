@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
 from ..core.processor import VideoProcessor
@@ -212,15 +213,12 @@ def analyze_scene():
 @api.route('/chat', methods=['POST'])
 def chat_analysis():
     """
-    Endpoint for chat-based video analysis
+    Endpoint for chat-based video analysis with RAG and swarm execution
     
     Expected JSON payload:
     {
         "video_path": "path/to/video.mp4",
         "prompt": "What's happening in this video?",
-        "sample_rate": 30,
-        "max_workers": 4,
-        "use_vila": true
     }
     """
     try:
@@ -231,38 +229,17 @@ def chat_analysis():
             
         video_path = data['video_path']
         prompt = data['prompt']
-        sample_rate = data.get('sample_rate', 30)
-        max_workers = data.get('max_workers', 4)
         
-        logger.info(f"Processing video chat analysis: {video_path}")
+        logger.info(f"Processing chat analysis with RAG: {prompt}")
         
-        # Initialize VILA processor for chat
-        from ..core.vila import VILAProcessor
-        vila = VILAProcessor()
+        # Initialize chat service
+        from ..services.chat_service import ChatService
+        chat_service = ChatService()
         
-        def generate_chat_response():
-            # Process video frames using the chat prompt as text query
-            for result in processor.process_video(
-                video_path=video_path,
-                text_queries=[prompt],  # Use chat prompt as detection query
-                sample_rate=sample_rate,
-                max_workers=max_workers
-            ):
-                # Add VILA analysis
-                # Use VILA service for analysis and response
-                from ..services.vila_service import VILAService
-                vila_service = VILAService()
-                
-                # Generate response using VILA service
-                response = vila_service.analyze_frame(result, prompt)
-                result['response'] = response
-                
-                yield f"data: {json.dumps(result)}\n\n"
+        # Process chat query
+        response = chat_service.process_chat(prompt, video_path)
         
-        return Response(
-            generate_chat_response(),
-            mimetype='text/event-stream'
-        )
+        return jsonify(response)
         
     except Exception as e:
         logger.error(f"Error processing chat analysis: {str(e)}")
