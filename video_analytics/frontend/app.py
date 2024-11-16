@@ -193,14 +193,24 @@ if __name__ == "__main__":
         # Perform initial scene analysis
         with st.spinner("Analyzing scene..."):
             try:
-                # Save first frame for scene analysis
-                temp_frame_path = "temp_frame.jpg"
-                cap = cv2.VideoCapture(str(video_path))
+                # Convert uploaded file to bytes and read with OpenCV
+                file_bytes = video_path.read()
+                temp_video = "temp_video.mp4"
+                
+                with open(temp_video, "wb") as f:
+                    f.write(file_bytes)
+                
+                cap = cv2.VideoCapture(temp_video)
                 ret, frame = cap.read()
                 if not ret:
                     raise ValueError("Could not read video file")
+                    
+                temp_frame_path = "temp_frame.jpg"
                 cv2.imwrite(temp_frame_path, frame)
                 cap.release()
+                
+                # Clean up temp video file
+                Path(temp_video).unlink()
 
                 response = requests.post(
                     "http://localhost:8001/api/v1/analyze_scene",
