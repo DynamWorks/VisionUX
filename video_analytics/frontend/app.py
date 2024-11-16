@@ -194,12 +194,18 @@ def main():
             padding: 1rem;
             background-color: #f8f9fa;
             border-radius: 10px;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+            box-sizing: border-box;
         }
         .control-panel {
             background-color: white;
             padding: 1rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: calc(100vh - 100px);
+            overflow-y: auto;
         }
         .viewer-panel {
             background-color: white;
@@ -207,20 +213,49 @@ def main():
             border-radius: 8px;
             margin: 1rem 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: calc(100vh - 100px);
+            overflow-y: auto;
         }
         .chat-panel {
             background-color: white;
             padding: 1rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            height: calc(100vh - 200px);
+            height: calc(100vh - 100px);
             overflow-y: auto;
+        }
+        /* Make columns responsive */
+        @media (max-width: 768px) {
+            .stColumns {
+                flex-direction: column;
+            }
+            .control-panel, .viewer-panel, .chat-panel {
+                height: auto;
+                min-height: 300px;
+                margin-bottom: 1rem;
+            }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Create three columns with better proportions
-    left_col, center_col, right_col = st.columns([1.2, 2, 1.2])
+    # Create responsive columns
+    left_col, center_col, right_col = st.columns([1, 2, 1])
     
     # Left column - Controls and Upload
     with left_col:
