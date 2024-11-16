@@ -285,7 +285,7 @@ if __name__ == "__main__":
                     # Clean up temporary image file
                     Path(temp_image).unlink(missing_ok=True)
 
-    # Right column - Chat Interface
+    # Right column - Chat History
     with right_col:
         st.header("Analysis Chat")
         
@@ -300,7 +300,8 @@ if __name__ == "__main__":
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # Chat input at bottom of right column
+    # Chat input below columns
+    if video_path:  # Only show chat input if video is uploaded
         if prompt := st.chat_input("Ask about the video...", key="chat_input"):
             # Add user message to chat history
             st.session_state.messages.append({"role": "user", "content": prompt})
