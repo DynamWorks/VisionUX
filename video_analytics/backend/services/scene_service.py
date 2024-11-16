@@ -64,18 +64,24 @@ class SceneAnalysisService:
             Dictionary containing scene analysis and suggested use cases
         """
         try:
-            # Encode multiple frames for API
-            content = [{"type": "text", "text": "Analyze these frames from a video and suggest relevant computer vision applications. Note any changes or patterns between frames."}]
+            # Prepare content array with text and images
+            content = [
+                {
+                    "type": "text",
+                    "text": "Analyze these frames from a video and suggest relevant computer vision applications. Note any changes or patterns between frames."
+                }
+            ]
             
-            # Add encoded frames (up to 8)
-            for frame in frames[:8]:
-                base64_image = self._encode_image(frame)
-                content.append({
+            # Add all frames at once in the content array
+            content.extend([
+                {
                     "type": "image_url",
                     "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}"
+                        "url": f"data:image/jpeg;base64,{self._encode_image(frame)}"
                     }
-                })
+                }
+                for frame in frames[:8]  # Still limit to 8 frames
+            ])
             
             # Prepare system message with available functions
             system_msg = f"""Analyze the video frames and identify:
