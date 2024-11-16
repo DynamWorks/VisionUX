@@ -195,21 +195,18 @@ def main():
     st.markdown("""
         <style>
         .main-container {
-            padding: 0.5rem;
+            padding: 1rem;
             background-color: #f8f9fa;
             border-radius: 10px;
-            width: 100vw;
-            max-width: 100vw;
-            margin: 0;
+            width: calc(100vw - 2rem);
+            max-width: calc(100vw - 2rem);
+            margin: 0 1rem;
             box-sizing: border-box;
-            position: absolute;
-            left: 0;
-            right: 0;
         }
-        /* Hide default Streamlit padding */
+        /* Adjust Streamlit container padding */
         .block-container {
-            padding: 0 !important;
-            max-width: 100vw !important;
+            padding: 1rem !important;
+            max-width: calc(100vw - 2rem) !important;
         }
         .stApp {
             margin: 0 auto;
@@ -219,7 +216,8 @@ def main():
             padding: 1rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            height: calc(100vh - 80px);
+            height: calc(100vh - 100px);
+            margin: 0.5rem;
             overflow-y: auto;
         }
         .viewer-panel {
