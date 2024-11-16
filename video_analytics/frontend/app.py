@@ -226,18 +226,20 @@ if __name__ == "__main__":
                     # Read first 8 frames
                     frames = []
                     cap = cv2.VideoCapture(temp_video)
-                for _ in range(8):
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    frames.append(frame)
-                cap.release()
+                    try:
+                        for _ in range(8):
+                            ret, frame = cap.read()
+                            if not ret:
+                                break
+                            frames.append(frame)
+                    finally:
+                        cap.release()
                 
-                if not frames:
-                    raise ValueError("Could not read video file")
-                
-                # Clean up temp video file
-                Path(temp_video).unlink()
+                    if not frames:
+                        raise ValueError("Could not read video file")
+                finally:
+                    # Clean up temp video file
+                    Path(temp_video).unlink(missing_ok=True)
 
                 # Convert frames to base64 for API request
                 encoded_frames = []
