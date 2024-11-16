@@ -217,14 +217,25 @@ if __name__ == "__main__":
                 Path(temp_video).unlink()
 
                 # Convert frames to base64 for API request
+                encoded_frames = []
+                for frame in frames:
+                    success, buffer = cv2.imencode('.jpg', frame)
+                    if not success:
+                        raise ValueError("Failed to encode frame")
+                    encoded_frames.append(base64.b64encode(buffer).decode('utf-8'))
+
                 response = requests.post(
                     "http://localhost:8001/api/v1/analyze_scene",
                     json={
-                        "frames": [cv2.imencode('.jpg', frame)[1].tobytes().decode('latin1') for frame in frames],
+                        "frames": encoded_frames,
                         "context": "Video upload analysis",
-                        "stream_type": "uploaded_video"
+                        "stream_type": "uploaded_video",
+                        "frame_count": len(frames)
                     }
                 )
+
+                if response.status_code != 200:
+                    raise ValueError(f"Scene analysis failed with status {response.status_code}: {response.text}")
                 if response.status_code == 200:
                     scene_analysis = response.json()
                     

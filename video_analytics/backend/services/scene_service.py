@@ -72,16 +72,32 @@ class SceneAnalysisService:
                 }
             ]
             
+            # Validate and add frames
+            if not frames:
+                raise ValueError("No frames provided for analysis")
+                
             # Add all frames at once in the content array
-            content.extend([
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{self._encode_image(frame)}"
-                    }
-                }
-                for frame in frames[:8]  # Still limit to 8 frames
-            ])
+            for frame in frames[:8]:  # Still limit to 8 frames
+                try:
+                    if isinstance(frame, str):
+                        # Frame is already base64 encoded
+                        encoded_frame = frame
+                    else:
+                        # Frame needs encoding
+                        encoded_frame = self._encode_image(frame)
+                        
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{encoded_frame}"
+                        }
+                    })
+                except Exception as e:
+                    logging.error(f"Failed to encode frame: {str(e)}")
+                    continue
+                    
+            if len(content) <= 1:  # Only has the text prompt
+                raise ValueError("No valid frames could be encoded for analysis")
             
             # Prepare system message with available functions
             system_msg = f"""Analyze the video frames and identify:
