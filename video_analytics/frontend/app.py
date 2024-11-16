@@ -146,12 +146,6 @@ def process_video(video_path, query, chat_mode=False):
         if temp_path.exists():
             temp_path.unlink()
 
-def main():
-    """Main application entry point"""
-    # Initialize Rerun
-    if not init_rerun():
-        st.warning("Continuing without Rerun visualization...")
-
 def init_rerun():
     """Initialize and connect to Rerun"""
     try:
