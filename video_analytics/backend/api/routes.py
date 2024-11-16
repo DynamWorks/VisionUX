@@ -37,12 +37,22 @@ def analyze_video():
         if not data or 'video_path' not in data:
             return jsonify({'error': 'Missing video_path parameter'}), 400
             
+        # Get video data and save to tmp_content/uploads
         video_path = data['video_path']
+        content_manager = ContentManager()
+        
+        # If video_path is a file object or base64 string, save it
+        if 'video_data' in data:
+            video_path = content_manager.save_upload(
+                data['video_data'].encode() if isinstance(data['video_data'], str) else data['video_data'],
+                Path(video_path).name
+            )
+            
         text_queries = data.get('text_queries', [])
         sample_rate = data.get('sample_rate', 1)
         max_workers = data.get('max_workers', 4)
         
-        logger.info(f"Processing video: {video_path}")
+        logger.info(f"Processing video from: {video_path}")
         
         # Create generator for streaming results
         def generate_results():

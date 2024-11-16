@@ -25,12 +25,25 @@ class ContentManager:
 
     def save_upload(self, file_data: bytes, filename: str) -> str:
         """Save uploaded file and return path"""
-        timestamp = int(time.time())
-        safe_filename = f"{timestamp}_{filename}"
-        file_path = self.uploads_dir / safe_filename
+        # Create uploads directory if it doesn't exist
+        self.uploads_dir.mkdir(parents=True, exist_ok=True)
         
+        # Clean filename and add timestamp
+        safe_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
+        timestamp = int(time.time())
+        safe_filename = f"{timestamp}_{safe_filename}"
+        
+        # Save file
+        file_path = self.uploads_dir / safe_filename
         with open(file_path, "wb") as f:
+            if isinstance(file_data, str):
+                # Handle base64 encoded data
+                import base64
+                file_data = base64.b64decode(file_data)
             f.write(file_data)
+            
+        logger = logging.getLogger(__name__)
+        logger.info(f"Saved uploaded file to: {file_path}")
             
         return str(file_path)
 
