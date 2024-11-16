@@ -225,15 +225,22 @@ if __name__ == "__main__":
                         raise ValueError("Failed to encode frame")
                     encoded_frames.append(base64.b64encode(buffer).decode('utf-8'))
 
+                # Save first frame as temporary image for scene analysis
+                first_frame = frames[0]
+                temp_image = "temp_scene_frame.jpg"
+                cv2.imwrite(temp_image, first_frame)
+
                 response = requests.post(
                     "http://localhost:8001/api/v1/analyze_scene",
                     json={
-                        "frames": encoded_frames,
+                        "image_path": temp_image,
                         "context": "Video upload analysis",
-                        "stream_type": "uploaded_video",
-                        "frame_count": len(frames)
+                        "stream_type": "uploaded_video"
                     }
                 )
+
+                # Clean up temporary image file
+                Path(temp_image).unlink()
 
                 if response.status_code != 200:
                     raise ValueError(f"Scene analysis failed with status {response.status_code}: {response.text}")

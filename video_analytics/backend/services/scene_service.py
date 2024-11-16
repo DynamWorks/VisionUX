@@ -48,17 +48,16 @@ class SceneAnalysisService:
         else:
             raise ValueError("Unsupported image format")
 
-    def analyze_scene(self, frames: List[np.ndarray], context: Optional[str] = None,
-                     frame_numbers: Optional[List[int]] = None,
-                     timestamps: Optional[List[float]] = None) -> Dict:
+    def analyze_scene(self, image_input, context: Optional[str] = None) -> Dict:
         """
-        Analyze multiple frames using GPT-4V and suggest use cases
+        Analyze scene using GPT-4V and suggest use cases
         
         Args:
-            frames: List of frames to analyze
+            image_input: Can be either:
+                - A path to an image file (str)
+                - A single frame (np.ndarray)
+                - A list of frames (List[np.ndarray])
             context: Optional context about the video stream
-            frame_numbers: Optional list of frame numbers
-            timestamps: Optional list of timestamps
             
         Returns:
             Dictionary containing scene analysis and suggested use cases
@@ -72,12 +71,27 @@ class SceneAnalysisService:
                 }
             ]
             
-            # Validate and add frames
-            if not frames:
-                raise ValueError("No frames provided for analysis")
-                
-            # Add all frames at once in the content array
-            for frame in frames[:8]:  # Still limit to 8 frames
+            # Handle different input types
+            frames_to_process = []
+            if isinstance(image_input, str):
+                # Input is an image path
+                if not Path(image_input).exists():
+                    raise ValueError(f"Image file not found: {image_input}")
+                frames_to_process = [cv2.imread(image_input)]
+            elif isinstance(image_input, np.ndarray):
+                # Input is a single frame
+                frames_to_process = [image_input]
+            elif isinstance(image_input, list):
+                # Input is a list of frames
+                frames_to_process = image_input[:8]  # Limit to 8 frames
+            else:
+                raise ValueError("Invalid image input type")
+
+            if not frames_to_process:
+                raise ValueError("No valid frames to analyze")
+
+            # Process all frames
+            for frame in frames_to_process:
                 try:
                     if isinstance(frame, str):
                         # Frame is already base64 encoded
