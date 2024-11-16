@@ -153,30 +153,22 @@ def process_video(video_path, query, chat_mode=False):
 def init_rerun():
     """Initialize and connect to Rerun"""
     try:
-        # Initialize Rerun with web viewer
-        rr.init("video_analytics/frontend", spawn=True)
+        # Initialize Rerun without spawning web viewer
+        rr.init("video_analytics/frontend", spawn=False)
         rr.connect()
         
-        # Configure Rerun viewer URL
-        RERUN_VERSION = rr.__version__  # Get current Rerun version
-        RRD_URL = "ws://localhost:9000"  # WebSocket URL for Rerun data
+        # Configure Rerun to use local viewer
+        rr.set_global_settings(
+            serve_ui=True,  # Enable local UI server
+            serve_port=9000,  # Use specified port
+            serve_host="localhost"  # Only allow local connections
+        )
         
-        # Create viewer iframe URL
-        viewer_url = f"https://app.rerun.io/version/{RERUN_VERSION}/index.html?url={RRD_URL}"
-        
-        # Add iframe to display Rerun viewer
-        st.components.v1.html(
-            f"""
-            <iframe 
-                src="{viewer_url}"
-                width="100%"
-                height="600px"
-                frameborder="0"
-                style="border: 1px solid #ddd; border-radius: 4px;"
-                allow="accelerometer; camera; gyroscope; microphone"
-            ></iframe>
-            """,
-            height=620  # Slightly larger than iframe to account for borders
+        # Create embedded viewer
+        rr.native_viewer(
+            width=800,
+            height=600,
+            container=st.empty()  # Embed in Streamlit
         )
         return True
     except Exception as e:
