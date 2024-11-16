@@ -183,12 +183,8 @@ def is_ready():
     """Check if frontend is ready"""
     return True
 
-def start():
-    """Start the frontend server"""
-    main()
-
-if __name__ == "__main__":
-    start()
+def main():
+    """Main application entry point"""
     st.title("Video Analytics Dashboard")
     
     # Create three columns for the main layout
@@ -318,5 +314,9 @@ if __name__ == "__main__":
             process_video(video_path, prompt, chat_mode=True)
 
 
-if __name__ == "__main__":
+def start():
+    """Start the frontend server"""
     main()
+
+if __name__ == "__main__":
+    start()
