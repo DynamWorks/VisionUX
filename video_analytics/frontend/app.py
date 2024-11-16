@@ -214,32 +214,7 @@ def main():
         .stApp {
             margin: 0 auto;
         }
-        .control-panel {
-            background-color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            height: calc(100vh - 100px);
-            margin: 0.5rem;
-            overflow-y: auto;
-        }
-        .viewer-panel {
-            background-color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            height: calc(100vh - 100px);
-            overflow-y: auto;
-        }
-        .chat-panel {
-            background-color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            height: calc(100vh - 100px);
-            overflow-y: auto;
-        }
+        /* Panel styling removed as it was unused */
         /* Make columns responsive */
         @media (max-width: 768px) {
             .stColumns {
