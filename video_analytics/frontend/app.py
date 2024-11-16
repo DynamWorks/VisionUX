@@ -9,9 +9,13 @@ from PIL import Image
 import io
 import time
 import logging
+import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+# Configure Rerun
+RERUN_PORT = 9000  # Port for Rerun web viewer
 
 # Set page config as first Streamlit command
 st.set_page_config(page_title="Video Analytics Dashboard")
@@ -150,18 +154,20 @@ def main():
 def init_rerun():
     """Initialize and connect to Rerun"""
     try:
-        rr.init("video_analytics/frontend", spawn=True)
+        # Initialize Rerun with web viewer
+        rr.init("video_analytics/frontend", spawn=True, web_viewer_port=RERUN_PORT)
         rr.connect()
+        
+        # Add iframe to display Rerun viewer
+        st.components.v1.iframe(
+            f"http://localhost:{RERUN_PORT}",
+            height=600,
+            scrolling=True
+        )
+        return True
     except Exception as e:
-        st.error(f"Failed to connect to Rerun: {e}")
-        st.info("Starting Rerun viewer...")
-        time.sleep(2)  # Give time for viewer to start
-        try:
-            rr.connect()
-        except Exception as e:
-            st.error(f"Could not connect to Rerun after retry: {e}")
-            return False
-    return True
+        st.error(f"Failed to initialize Rerun viewer: {e}")
+        return False
 
 def is_ready():
     """Check if frontend is ready"""
