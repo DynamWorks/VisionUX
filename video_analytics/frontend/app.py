@@ -244,7 +244,7 @@ if __name__ == "__main__":
                 
                 # Cleanup temp file
                 try:
-                    Path(temp_frame_path).unlink(missing_ok=True)
+                    Path(temp_video).unlink(missing_ok=True)
                 except Exception as cleanup_error:
                     logging.error(f"Failed to cleanup temp file: {cleanup_error}")
 
