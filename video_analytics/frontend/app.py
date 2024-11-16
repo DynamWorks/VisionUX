@@ -10,6 +10,7 @@ import io
 import time
 import logging
 import threading
+import base64
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
