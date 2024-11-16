@@ -2,6 +2,7 @@ import argparse
 import requests
 import base64
 import json
+import time
 from pathlib import Path
 
 def test_scene_analysis(image_path: str, api_url: str = "http://localhost:8001", context: str = None):
