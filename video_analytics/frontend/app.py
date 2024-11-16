@@ -180,10 +180,19 @@ if __name__ == "__main__":
         # Perform initial scene analysis
         with st.spinner("Analyzing scene..."):
             try:
+                # Save first frame for scene analysis
+                temp_frame_path = "temp_frame.jpg"
+                cap = cv2.VideoCapture(str(video_path))
+                ret, frame = cap.read()
+                if not ret:
+                    raise ValueError("Could not read video file")
+                cv2.imwrite(temp_frame_path, frame)
+                cap.release()
+
                 response = requests.post(
                     "http://localhost:8001/api/v1/analyze_scene",
                     json={
-                        "image_path": str(video_path.name),
+                        "image_path": temp_frame_path,
                         "context": "Video upload analysis",
                         "stream_type": "uploaded_video"
                     }
@@ -203,6 +212,13 @@ if __name__ == "__main__":
                     st.warning("Scene analysis failed. Continuing with basic processing.")
             except Exception as e:
                 st.error(f"Scene analysis error: {str(e)}")
+                logging.error(f"Scene analysis failed: {str(e)}", exc_info=True)
+                
+                # Cleanup temp file
+                try:
+                    Path(temp_frame_path).unlink(missing_ok=True)
+                except Exception as cleanup_error:
+                    logging.error(f"Failed to cleanup temp file: {cleanup_error}")
 
         # Initialize chat history
         if "messages" not in st.session_state:
