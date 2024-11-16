@@ -187,33 +187,76 @@ def main():
     """Main application entry point"""
     st.title("Video Analytics Dashboard")
     
-    # Create three columns for the main layout
-    left_col, center_col, right_col = st.columns([1, 2, 1])
+    # Create main container with custom CSS
+    st.markdown("""
+        <style>
+        .main-container {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+        .control-panel {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .viewer-panel {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chat-panel {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Create three columns with better proportions
+    left_col, center_col, right_col = st.columns([1.2, 2, 1.2])
     
     # Left column - Controls and Upload
     with left_col:
+        st.markdown('<div class="control-panel">', unsafe_allow_html=True)
         st.header("Controls")
         video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
         
         if video_path:
             st.subheader("Analysis Settings")
-            sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)
-            max_workers = st.slider("Max Workers", 1, 8, 4)
+            with st.expander("Basic Settings", expanded=True):
+                sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)
+                max_workers = st.slider("Max Workers", 1, 8, 4)
             
-            # Add any other control widgets here
-            st.subheader("Processing Options")
-            enable_object_detection = st.checkbox("Object Detection", value=True)
-            enable_tracking = st.checkbox("Object Tracking", value=True)
-            enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
+            with st.expander("Processing Options", expanded=True):
+                enable_object_detection = st.checkbox("Object Detection", value=True)
+                enable_tracking = st.checkbox("Object Tracking", value=True)
+                enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Center column - Rerun Visualizer
     with center_col:
+        st.markdown('<div class="viewer-panel">', unsafe_allow_html=True)
         st.header("Live Analysis")
         
         if video_path:
             # Initialize Rerun viewer
             if not init_rerun():
                 st.warning("Rerun visualization unavailable")
+            
+            # Add progress indicators
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Frames Processed", "0")
+            with col2:
+                st.metric("Processing Speed", "0 fps")
+        st.markdown('</div>', unsafe_allow_html=True)
             
             # Perform initial scene analysis
             with st.spinner("Analyzing scene..."):
@@ -289,6 +332,7 @@ def main():
 
     # Right column - Chat History
     with right_col:
+        st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
         st.header("Analysis Chat")
         
         # Initialize chat history
@@ -298,9 +342,13 @@ def main():
         # Chat container with scrolling
         chat_container = st.container()
         with chat_container:
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+            if not st.session_state.messages:
+                st.info("Start analyzing a video to begin the chat interaction")
+            else:
+                for message in st.session_state.messages:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Chat input below columns
     if video_path:  # Only show chat input if video is uploaded
