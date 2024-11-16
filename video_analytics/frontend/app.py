@@ -159,14 +159,26 @@ def init_rerun():
         rr.init("video_analytics/frontend", spawn=True)
         rr.connect()
         
-        # Get the viewer URL from Rerun
-        viewer_url = "http://localhost:6006"  # Default Rerun web viewer port
+        # Configure Rerun viewer URL
+        RERUN_VERSION = rr.__version__  # Get current Rerun version
+        RRD_URL = "ws://localhost:9000"  # WebSocket URL for Rerun data
+        
+        # Create viewer iframe URL
+        viewer_url = f"https://app.rerun.io/version/{RERUN_VERSION}/index.html?url={RRD_URL}"
         
         # Add iframe to display Rerun viewer
-        st.components.v1.iframe(
-            viewer_url,
-            height=600,
-            scrolling=True
+        st.components.v1.html(
+            f"""
+            <iframe 
+                src="{viewer_url}"
+                width="100%"
+                height="600px"
+                frameborder="0"
+                style="border: 1px solid #ddd; border-radius: 4px;"
+                allow="accelerometer; camera; gyroscope; microphone"
+            ></iframe>
+            """,
+            height=620  # Slightly larger than iframe to account for borders
         )
         return True
     except Exception as e:
