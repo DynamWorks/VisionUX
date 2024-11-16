@@ -157,8 +157,21 @@ Additional context: {context if context else 'None provided'}"""
             # Save analysis results using content manager
             from ..content_manager import ContentManager
             content_manager = ContentManager()
-            timestamp = int(time.time())
-            content_manager.save_analysis(structured_response, f"scene_{timestamp}")
+            
+            # Generate a unique identifier based on frame timestamps
+            frame_timestamps = [time.time()]  # Default if no frames
+            if isinstance(image_input, list) and image_input:
+                # If we have multiple frames, use their timestamps
+                frame_timestamps = [frame.get('timestamp', time.time()) if isinstance(frame, dict) else time.time() 
+                                 for frame in image_input[:8]]
+            
+            # Create a hash of the timestamps to identify unique frame sets
+            import hashlib
+            timestamps_hash = hashlib.md5(str(frame_timestamps).encode()).hexdigest()[:8]
+            
+            # Save with unique identifier
+            scene_id = f"scene_analysis_{timestamps_hash}"
+            content_manager.save_analysis(structured_response, scene_id)
             
             return structured_response
             
