@@ -15,7 +15,12 @@ class Config:
             'port': 8501
         },
         'backend': {
-            'port': 8502
+            'port': 8502,
+            'content_storage': {
+                'base_path': 'tmp_content',
+                'cleanup_interval': 24,  # hours
+                'max_file_age': 48  # hours
+            }
         },
         'logging': {
             'level': 'INFO'

@@ -5,4 +5,5 @@
 *.jpg
 .aider*
 .env
+video_analytics/backend/tmp_content/
 .env
