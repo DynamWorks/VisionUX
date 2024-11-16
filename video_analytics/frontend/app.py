@@ -189,24 +189,27 @@ def is_ready():
 
 def main():
     """Main application entry point"""
-    st.title("Video Analytics Dashboard")
-    
     # Create main container with custom CSS
     st.markdown("""
         <style>
         .main-container {
-            padding: 1rem;
+            padding: 0.5rem;
             background-color: #f8f9fa;
             border-radius: 10px;
-            width: calc(100vw - 2rem);
-            max-width: calc(100vw - 2rem);
-            margin: 0 1rem;
+            width: calc(100vw - 1rem);
+            max-width: calc(100vw - 1rem);
+            margin: 0.5rem;
             box-sizing: border-box;
         }
-        /* Adjust Streamlit container padding */
+        /* Remove default Streamlit padding */
         .block-container {
-            padding: 1rem !important;
-            max-width: calc(100vw - 2rem) !important;
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+        /* Remove title padding */
+        .stTitle {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
         }
         .stApp {
             margin: 0 auto;
@@ -267,6 +270,9 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
+    # Add title with minimal padding
+    st.markdown("<h1 style='margin:0;padding:0.5rem;'>Video Analytics Dashboard</h1>", unsafe_allow_html=True)
+    
     # Create responsive columns
     left_col, center_col, right_col = st.columns([1, 2, 1])
     
