@@ -258,7 +258,8 @@ def main():
                 st.metric("Processing Speed", "0 fps")
         st.markdown('</div>', unsafe_allow_html=True)
             
-            # Perform initial scene analysis
+        # Perform initial scene analysis if video is uploaded
+        if video_path:
             with st.spinner("Analyzing scene..."):
                 try:
                     # Convert uploaded file to bytes and read with OpenCV
