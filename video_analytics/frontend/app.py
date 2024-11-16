@@ -369,14 +369,22 @@ def main():
 
                     scene_analysis = response.json()
                     
-                    # Display scene analysis results
-                    st.subheader("Scene Analysis")
-                    st.json(scene_analysis.get('scene_analysis', {}))
-                    
-                    # Display suggested pipeline
-                    st.subheader("Suggested Processing Pipeline")
-                    for step in scene_analysis.get('suggested_pipeline', []):
-                        st.write(f"- {step}")
+                    # Display scene analysis results in chat
+                    with st.chat_message("assistant"):
+                        st.markdown("**Scene Analysis:**")
+                        description = scene_analysis.get('scene_analysis', {}).get('description', '')
+                        st.markdown(description)
+                        
+                        st.markdown("\n**Suggested Processing Pipeline:**")
+                        for step in scene_analysis.get('suggested_pipeline', []):
+                            st.markdown(f"- {step}")
+                            
+                    # Add to chat history
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"**Scene Analysis:**\n\n{description}\n\n**Suggested Processing Pipeline:**\n" + 
+                                 "\n".join([f"- {step}" for step in scene_analysis.get('suggested_pipeline', [])])
+                    })
 
                 except Exception as e:
                     st.warning("Scene analysis failed. Continuing with basic processing.")
