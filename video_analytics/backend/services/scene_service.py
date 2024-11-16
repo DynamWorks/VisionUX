@@ -153,6 +153,12 @@ Additional context: {context if context else 'None provided'}"""
                 'suggested_pipeline': self._suggest_pipeline(analysis)
             }
             
+            # Save analysis results using content manager
+            from ..content_manager import ContentManager
+            content_manager = ContentManager()
+            timestamp = int(time.time())
+            content_manager.save_analysis(structured_response, f"scene_{timestamp}")
+            
             return structured_response
             
         except Exception as e:

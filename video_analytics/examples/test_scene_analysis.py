@@ -63,8 +63,9 @@ def test_scene_analysis(image_path: str, api_url: str = "http://localhost:8001",
             for step in results['suggested_pipeline']:
                 print(f"- {step}")
                 
-        # Save results to file
-        output_path = "scene_analysis.json"
+        # Save results to tmp_content
+        output_path = Path('video_analytics/backend/tmp_content/scene_analysis') / f"scene_analysis_{int(time.time())}.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w') as f:
             json.dump(results, f, indent=2)
             
