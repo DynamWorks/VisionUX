@@ -48,35 +48,46 @@ class SceneAnalysisService:
         else:
             raise ValueError("Unsupported image format")
 
-    def analyze_scene(self, frame, context: Optional[str] = None, 
-                     frame_number: Optional[int] = None,
-                     timestamp: Optional[float] = None) -> Dict:
+    def analyze_scene(self, frames: List[np.ndarray], context: Optional[str] = None,
+                     frame_numbers: Optional[List[int]] = None,
+                     timestamps: Optional[List[float]] = None) -> Dict:
         """
-        Analyze scene using GPT-4V and suggest use cases
+        Analyze multiple frames using GPT-4V and suggest use cases
         
         Args:
-            frame: Image/video frame to analyze
+            frames: List of frames to analyze
             context: Optional context about the video stream
-            frame_number: Optional frame number for time series context
-            timestamp: Optional timestamp for time series context
+            frame_numbers: Optional list of frame numbers
+            timestamps: Optional list of timestamps
             
         Returns:
             Dictionary containing scene analysis and suggested use cases
         """
         try:
-            # Encode image for API
-            base64_image = self._encode_image(frame)
+            # Encode multiple frames for API
+            content = [{"type": "text", "text": "Analyze these frames from a video and suggest relevant computer vision applications. Note any changes or patterns between frames."}]
+            
+            # Add encoded frames (up to 8)
+            for frame in frames[:8]:
+                base64_image = self._encode_image(frame)
+                content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                })
             
             # Prepare system message with available functions
-            system_msg = f"""Analyze the scene and identify:
+            system_msg = f"""Analyze the video frames and identify:
 1. Scene type and setting
 2. Main objects and activities
-3. Relevant use cases from: {list(self.available_functions.keys())}
-4. Specific applications based on scene context
+3. Any changes or patterns between frames
+4. Relevant use cases from: {list(self.available_functions.keys())}
+5. Specific applications based on scene context
 
 Additional context: {context if context else 'None provided'}"""
 
-            # Call GPT-4V API
+            # Call GPT-4V API with multiple frames
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -86,15 +97,7 @@ Additional context: {context if context else 'None provided'}"""
                     },
                     {
                         "role": "user",
-                        "content": [
-                            {"type": "text", "text": "Analyze this scene and suggest relevant computer vision applications."},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
-                                }
-                            }
-                        ]
+                        "content": content
                     }
                 ],
                 max_tokens=500

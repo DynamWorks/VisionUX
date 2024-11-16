@@ -200,22 +200,27 @@ if __name__ == "__main__":
                 with open(temp_video, "wb") as f:
                     f.write(file_bytes)
                 
+                # Read first 8 frames
+                frames = []
                 cap = cv2.VideoCapture(temp_video)
-                ret, frame = cap.read()
-                if not ret:
-                    raise ValueError("Could not read video file")
-                    
-                temp_frame_path = "temp_frame.jpg"
-                cv2.imwrite(temp_frame_path, frame)
+                for _ in range(8):
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    frames.append(frame)
                 cap.release()
+                
+                if not frames:
+                    raise ValueError("Could not read video file")
                 
                 # Clean up temp video file
                 Path(temp_video).unlink()
 
+                # Convert frames to base64 for API request
                 response = requests.post(
                     "http://localhost:8001/api/v1/analyze_scene",
                     json={
-                        "image_path": temp_frame_path,
+                        "frames": [cv2.imencode('.jpg', frame)[1].tobytes().decode('latin1') for frame in frames],
                         "context": "Video upload analysis",
                         "stream_type": "uploaded_video"
                     }
