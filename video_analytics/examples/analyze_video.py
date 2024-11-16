@@ -39,7 +39,7 @@ def analyze_video(video_path: str, text_queries: list, api_url: str = "http://lo
         )
         
         # Save results in tmp_content
-        output_path = Path('video_analytics/backend/tmp_content/analysis') / f"analysis_results_{int(time.time())}.json"
+        output_path = Path('tmp_content/analysis') / f"analysis_results_{int(time.time())}.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w') as f:
             json.dump(results, f, indent=2)

@@ -17,7 +17,7 @@ def visualize_analysis_results(results_path: str, video_path: str = None):
     visualizer = ResultVisualizer(results_path)
     
     # Create output directory in tmp_content
-    output_dir = Path('video_analytics/backend/tmp_content/visualizations')
+    output_dir = Path('tmp_content/visualizations')
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate timeline plots
