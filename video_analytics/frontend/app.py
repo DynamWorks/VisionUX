@@ -185,14 +185,36 @@ if __name__ == "__main__":
     start()
     st.title("Video Analytics Dashboard")
     
-    # Sidebar for controls
-    with st.sidebar:
+    # Create three columns for the main layout
+    left_col, center_col, right_col = st.columns([1, 2, 1])
+    
+    # Left column - Controls and Upload
+    with left_col:
         st.header("Controls")
         video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
+        
+        if video_path:
+            st.subheader("Analysis Settings")
+            sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)
+            max_workers = st.slider("Max Workers", 1, 8, 4)
+            
+            # Add any other control widgets here
+            st.subheader("Processing Options")
+            enable_object_detection = st.checkbox("Object Detection", value=True)
+            enable_tracking = st.checkbox("Object Tracking", value=True)
+            enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
 
-    if video_path:
-        # Perform initial scene analysis
-        with st.spinner("Analyzing scene..."):
+    # Center column - Rerun Visualizer
+    with center_col:
+        st.header("Live Analysis")
+        
+        if video_path:
+            # Initialize Rerun viewer
+            if not init_rerun():
+                st.warning("Rerun visualization unavailable")
+            
+            # Perform initial scene analysis
+            with st.spinner("Analyzing scene..."):
             try:
                 # Convert uploaded file to bytes and read with OpenCV
                 file_bytes = video_path.read()
@@ -267,18 +289,23 @@ if __name__ == "__main__":
                 except Exception as cleanup_error:
                     logging.error(f"Failed to cleanup temp file: {cleanup_error}")
 
+    # Right column - Chat Interface
+    with right_col:
+        st.header("Analysis Chat")
+        
         # Initialize chat history
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        # Display chat messages
-        st.header("Chat Analysis")
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+        # Chat container with scrolling
+        chat_container = st.container()
+        with chat_container:
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
 
-        # Chat input (outside sidebar)
-        if prompt := st.chat_input("Ask about the video..."):
+        # Chat input at bottom of right column
+        if prompt := st.chat_input("Ask about the video...", key="chat_input"):
             # Add user message to chat history
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
