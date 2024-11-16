@@ -4,7 +4,7 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
 from ..core.processor import VideoProcessor
 from ..core.analyzer import ClipVideoAnalyzer
-from ..backend.utils.memory import FrameMemory
+from ..utils.memory import FrameMemory
 from ..content_manager import ContentManager
 import logging
 
