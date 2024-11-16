@@ -368,13 +368,6 @@ def main():
                         st.markdown("\n**Suggested Processing Pipeline:**")
                         for step in scene_analysis.get('suggested_pipeline', []):
                             st.markdown(f"- {step}")
-                            
-                    # Add to chat history
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": f"**Scene Analysis:**\n\n{description}\n\n**Suggested Processing Pipeline:**\n" + 
-                                 "\n".join([f"- {step}" for step in scene_analysis.get('suggested_pipeline', [])])
-                    })
 
                 except Exception as e:
                     st.warning("Scene analysis failed. Continuing with basic processing.")
