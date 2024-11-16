@@ -8,6 +8,10 @@ import json
 from PIL import Image
 import io
 import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Set page config as first Streamlit command
 st.set_page_config(page_title="Video Analytics Dashboard")
