@@ -313,8 +313,14 @@ def main():
                 # Reset file pointer for later use
                 video_path.seek(0)
                 
-                # Log video to Rerun
-                rr.log("video", rr.VideoFile(temp_video))
+                # Log video frames to Rerun
+                cap = cv2.VideoCapture(temp_video)
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    rr.log("video", rr.Image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+                cap.release()
                 
                 # Clean up temp file
                 Path(temp_video).unlink()
