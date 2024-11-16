@@ -29,6 +29,7 @@ rerun-sdk==0.10.0
 # Development
 pytest==8.0.0
 black==24.1.1
+watchdog==3.0.0
 
 # Machine Learning & Vision
 ultralytics==8.0.196  # YOLOv8
