@@ -153,22 +153,24 @@ def process_video(video_path, query, chat_mode=False):
 def init_rerun():
     """Initialize and connect to Rerun"""
     try:
-        # Initialize Rerun with application name
-        rr.init("video_analytics/frontend")
-        
-        # Configure recording settings
-        rr.spawn()  # Start the viewer
+        # Initialize Rerun with application name and spawn viewer
+        rr.init("video_analytics/frontend", spawn=True)
         
         # Wait briefly for viewer to start
         import time
         time.sleep(1)
         
-        # Create embedded viewer
-        rr.native_viewer(
-            width=800,
-            height=600,
-            container=st.empty()  # Embed in Streamlit
-        )
+        # Connect to the viewer
+        rr.connect()
+        
+        # Create viewer container
+        viewer_container = st.empty()
+        
+        # Configure recording settings
+        rr.connect()  # Connect to the running viewer
+        
+        # Store viewer container for later use
+        st.session_state.viewer_container = viewer_container
         return True
     except Exception as e:
         st.error(f"Failed to initialize Rerun viewer: {e}")
