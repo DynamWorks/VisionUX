@@ -298,18 +298,26 @@ def main():
     with center_col:
         st.markdown('<div class="viewer-panel">', unsafe_allow_html=True)
         
-        st.header("Live Analysis")
+        st.header("Video Stream")
         if video_path:
             # Initialize Rerun viewer
             if not init_rerun():
                 st.warning("Rerun visualization unavailable")
-            
-            # Add progress indicators
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Frames Processed", "0")
-            with col2:
-                st.metric("Processing Speed", "0 fps")
+            else:
+                # Log video to Rerun
+                file_bytes = video_path.read()
+                temp_video = "temp_video.mp4"
+                with open(temp_video, "wb") as f:
+                    f.write(file_bytes)
+                
+                # Reset file pointer for later use
+                video_path.seek(0)
+                
+                # Log video to Rerun
+                rr.log("video", rr.VideoFile(temp_video))
+                
+                # Clean up temp file
+                Path(temp_video).unlink()
         st.markdown('</div>', unsafe_allow_html=True)
             
         # Perform initial scene analysis if video is uploaded
