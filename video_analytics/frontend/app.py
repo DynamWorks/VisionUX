@@ -291,8 +291,8 @@ def main():
     # Center column - Rerun Visualizer
     with center_col:
         st.markdown('<div class="viewer-panel">', unsafe_allow_html=True)
-        st.header("Live Analysis")
         
+        st.header("Live Analysis")
         if video_path:
             # Initialize Rerun viewer
             if not init_rerun():
@@ -382,7 +382,6 @@ def main():
     # Right column - Chat History
     with right_col:
         st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
-        st.header("Analysis Chat")
         
         # Initialize chat history
         if "messages" not in st.session_state:
@@ -391,6 +390,7 @@ def main():
         # Chat container with scrolling
         chat_container = st.container()
         with chat_container:
+            st.header("Analysis Chat")
             if not st.session_state.messages:
                 st.info("Start analyzing a video to begin the chat interaction")
             else:
