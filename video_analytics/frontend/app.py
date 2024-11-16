@@ -153,22 +153,15 @@ def process_video(video_path, query, chat_mode=False):
 def init_rerun():
     """Initialize and connect to Rerun"""
     try:
-        # Configure Rerun settings first
-        rr.set_global_settings(
-            serve_ui=True,  # Enable local UI server
-            serve_port=9876,  # Use default Rerun port
-            serve_host="127.0.0.1"  # Only allow local connections
-        )
+        # Initialize Rerun with application name
+        rr.init("video_analytics/frontend")
         
-        # Initialize Rerun and start server
-        rr.init("video_analytics/frontend", spawn=True)
+        # Configure recording settings
+        rr.spawn()  # Start the viewer
         
-        # Wait briefly for server to start
+        # Wait briefly for viewer to start
         import time
         time.sleep(1)
-        
-        # Connect to running server
-        rr.connect()
         
         # Create embedded viewer
         rr.native_viewer(
