@@ -220,8 +220,8 @@ if __name__ == "__main__":
                     file_bytes = video_path.read()
                     temp_video = "temp_video.mp4"
                 
-                with open(temp_video, "wb") as f:
-                    f.write(file_bytes)
+                    with open(temp_video, "wb") as f:
+                        f.write(file_bytes)
                 
                 # Read first 8 frames
                 frames = []
