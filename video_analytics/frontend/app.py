@@ -19,7 +19,11 @@ logging.basicConfig(level=logging.INFO)
 RERUN_PORT = 9000  # Port for Rerun web viewer
 
 # Set page config as first Streamlit command
-st.set_page_config(page_title="Video Analytics Dashboard")
+st.set_page_config(
+    page_title="Video Analytics Dashboard",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
 def check_server_status(url: str = "http://localhost:8001") -> bool:
     """Check if the API server is running"""
@@ -191,20 +195,31 @@ def main():
     st.markdown("""
         <style>
         .main-container {
-            padding: 1rem;
+            padding: 0.5rem;
             background-color: #f8f9fa;
             border-radius: 10px;
-            width: 100%;
+            width: 100vw;
             max-width: 100vw;
             margin: 0;
             box-sizing: border-box;
+            position: absolute;
+            left: 0;
+            right: 0;
+        }
+        /* Hide default Streamlit padding */
+        .block-container {
+            padding: 0 !important;
+            max-width: 100vw !important;
+        }
+        .stApp {
+            margin: 0 auto;
         }
         .control-panel {
             background-color: white;
             padding: 1rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            height: calc(100vh - 100px);
+            height: calc(100vh - 80px);
             overflow-y: auto;
         }
         .viewer-panel {
