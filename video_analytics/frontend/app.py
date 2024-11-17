@@ -10,7 +10,6 @@ st.set_page_config(
 import rerun as rr
 import cv2
 import numpy as np
-from pathlib import Path
 import requests
 import json
 from PIL import Image
