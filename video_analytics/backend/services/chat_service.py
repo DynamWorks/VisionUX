@@ -5,6 +5,7 @@ import logging
 from typing import Dict, List, Optional
 from ..content_manager import ContentManager
 from ...core.swarm_agents import SwarmCoordinator
+from .rag_service import RAGService
 import numpy as np
 
 class ChatService:
@@ -73,6 +74,13 @@ class ChatService:
             
             # Query knowledge base
             rag_response = self.rag_service.query_knowledge_base(query, self._current_chain)
+            
+            # Initialize response data
+            response_data = {
+                "query": query,
+                "rag_response": rag_response,
+                "results": {}
+            }
             
             # Extract required functions for additional processing
             required_functions = self._extract_function_calls(query)
