@@ -257,9 +257,17 @@ def main():
     with left_col:
         st.markdown('<div class="control-panel">', unsafe_allow_html=True)
         st.header("Controls")
-        video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
         
+        # Clear tmp_content when new video is uploaded
+        video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
         if video_path:
+            # Clear tmp_content directory
+            import shutil
+            tmp_content = Path('tmp_content')
+            if tmp_content.exists():
+                shutil.rmtree(tmp_content)
+            tmp_content.mkdir(parents=True)
+            
             st.subheader("Analysis Settings")
             with st.expander("Basic Settings", expanded=True):
                 sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)
