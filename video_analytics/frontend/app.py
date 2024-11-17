@@ -435,7 +435,7 @@ def main():
                         process_video(
                             str(st.session_state.current_video),
                             prompt,
-                            viz_col,
+                            right_col,
                             sample_rate=sample_rate,
                             max_workers=max_workers,
                             chat_mode=True
