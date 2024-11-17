@@ -33,7 +33,8 @@ def check_server_status(url: str = "http://localhost:8001") -> bool:
     except:
         return False
 
-def process_video(video_path, query, chat_mode=False, use_swarm=False):
+def process_video(video_path, query, sample_rate: int = 30, max_workers: int = 4, 
+                 chat_mode=False, use_swarm=False):
     """Process video with analysis and visualization"""
     # Create processing columns
     col1, col2 = st.columns(2)
@@ -331,7 +332,7 @@ def main():
                 with st.chat_message("user"):
                     st.markdown(prompt)
                     
-                # Process video analysis
+                # Process video analysis with UI settings
                 with st.spinner("Analyzing video..."):
                     try:
                         response = requests.post(
