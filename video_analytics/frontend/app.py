@@ -208,12 +208,41 @@ def main():
     # Add title
     st.title("Video Analytics Dashboard")
     
-    # Create three columns for controls, chat, and visualizer
-    controls_col, chat_col, viz_col = st.columns([1, 1, 1])
+    # Add custom CSS
+    st.markdown("""
+        <style>
+        .stApp {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .main .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .streamlit-expanderHeader {
+            background-color: #f0f2f6;
+            border-radius: 4px;
+        }
+        .stButton>button {
+            width: 100%;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Add description
+    st.markdown("""
+        <div style='text-align: center; padding: 1rem 0;'>
+            Analyze videos using AI and chat with the system about the content.
+            Upload a video or use your camera to get started.
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Create three columns with adjusted ratios for better layout
+    controls_col, chat_col, viz_col = st.columns([1, 1.2, 1.8])
     
     # Controls column
     with controls_col:
-        st.header("Controls")
+        with st.expander("📹 Video Source", expanded=True):
         
         # Create tmp_content directory path
         from pathlib import Path
@@ -261,10 +290,11 @@ def main():
                 except Exception as e:
                     st.warning(f"Failed to initialize rerun: {e}")
 
-                # Video controls in container
+                # Video controls in clean container
                 with st.container():
-                    st.subheader("Video Controls")
-                    col1, col2 = st.columns(2)
+                    st.markdown("### 🎮 Video Controls")
+                    st.markdown("---")
+                    col1, col2, col3 = st.columns([1, 1, 1])
                     
                     with col1:
                         if st.button("Start Video", type="primary"):
@@ -366,13 +396,13 @@ def main():
                                 rr.log("camera/frame", rr.Image(frame_rgb))
                         time.sleep(0.03)  # Control frame rate
             
-            # Analysis settings
-            st.subheader("Analysis Settings")
-            sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)
-            max_workers = st.slider("Max Workers", 1, 8, 4)
+            # Analysis settings in expander
+            with st.expander("⚙️ Analysis Settings", expanded=False):
+                sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)
+                max_workers = st.slider("Max Workers", 1, 8, 4)
             
-            # Processing options
-            st.subheader("Processing Options")
+            # Processing options in expander
+            with st.expander("🔧 Processing Options", expanded=False):
             enable_object_detection = st.checkbox("Object Detection", value=True)
             enable_tracking = st.checkbox("Object Tracking", value=True)
             enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
