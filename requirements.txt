@@ -7,6 +7,7 @@ Pillow==10.2.0
 pyyaml==6.0.1
 python-dotenv==1.0.0
 sseclient-py==1.8.0
+pydantic>=2.5.0,<3.0.0
 
 # Machine Learning & Vision
 ultralytics==8.0.196
@@ -19,7 +20,7 @@ torchvision>=0.15.0
 openai==1.12.0
 requests>=2.31.0
 python-jose==3.3.0
-langchain==0.3.7
+langchain>=0.1.0
 chromadb==0.5.18
 sentence-transformers==3.3.0
 
@@ -33,20 +34,3 @@ rerun-sdk==0.20.0
 pytest==8.0.0
 black==24.1.1
 watchdog==3.0.0
-
-# Machine Learning & Vision
-ultralytics==8.0.196  # YOLOv8
-mediapipe==0.10.9
-segment-anything==1.0  # SAM2
-
-# API and Vision Services
-openai==1.12.0
-requests>=2.31.0
-
-# Visualization
-streamlit==1.27.2
-matplotlib==3.8.2
-
-# Development
-pytest==8.0.0
-black==24.1.1
