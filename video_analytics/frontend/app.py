@@ -237,11 +237,11 @@ def main():
         </div>
     """, unsafe_allow_html=True)
     
-    # Create three columns with adjusted ratios for better layout
-    controls_col, chat_col, viz_col = st.columns([1, 1.2, 1.8])
+    # Create two columns with adjusted ratios for better layout
+    left_col, right_col = st.columns([1, 1.5])
     
-    # Controls column
-    with controls_col:
+    # Left column for controls and chat
+    with left_col:
         with st.expander("📹 Video Source", expanded=True):
             # Create tmp_content directory path
             from pathlib import Path
@@ -278,12 +278,15 @@ def main():
                     rr.connect()
                     
                     # Add visualizer to right column
-                    with viz_col:
+                    with right_col:
+                        st.subheader("Video Stream")
                         video_placeholder = st.empty()
                         st.markdown("---")  # Add separator
+                    
+                        # Add Rerun visualizer below video
                         st.components.v1.iframe(
                             src=f"http://localhost:9000",
-                            height=600,
+                            height=400,
                             scrolling=True
                         )
                 except Exception as e:
@@ -315,7 +318,7 @@ def main():
 
                 # Display video feed if active
                 if hasattr(st.session_state, 'video_active') and st.session_state.video_active:
-                    with viz_col:
+                    with right_col:
                         frame_placeholder = st.empty()
                         while st.session_state.video_active:
                             frame_data = st.session_state.video_stream.read()
