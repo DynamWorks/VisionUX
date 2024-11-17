@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from ..content_manager import ContentManager
 from ...core.swarm_agents import SwarmCoordinator
 from .rag_service import RAGService
+from ...utils.memory_manager import MemoryManager
 import numpy as np
 
 class ChatService:
