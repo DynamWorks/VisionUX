@@ -142,7 +142,7 @@ def analyze_scene():
     
     Expected JSON payload:
     {
-        "image_path": "path/to/image.jpg",
+        "image_path": "path/to/video.mp4",
         "context": "Optional context about the video stream",
         "stream_type": "webcam|traffic|moving_camera"
     }
@@ -159,37 +159,33 @@ def analyze_scene():
         if not isinstance(data['image_path'], str):
             return jsonify({'error': 'image_path must be a string'}), 400
             
-        # Validate image path exists
+        # Validate video path exists
         from pathlib import Path
-        image_path = Path(data['image_path'])
-        if not image_path.exists():
-            return jsonify({'error': f"Image file not found: {data['image_path']}"}), 400
+        video_path = Path(data['image_path'])
+        if not video_path.exists():
+            return jsonify({'error': f"Video file not found: {data['image_path']}"}), 400
             
         # Initialize scene analysis service
         from ..services.scene_service import SceneAnalysisService
         scene_service = SceneAnalysisService()
         
+        # Extract first frame from video
+        import cv2
+        cap = cv2.VideoCapture(str(video_path))
+        ret, frame = cap.read()
+        cap.release()
+        
+        if not ret or frame is None:
+            return jsonify({'error': f"Failed to read video frame: {data['image_path']}"}), 400
+        
         # Analyze scene
         context = data.get('context', '')
         stream_type = data.get('stream_type', 'unknown')
         
-        try:
-            # Read image file
-            import cv2
-            image = cv2.imread(str(image_path))
-            if image is None:
-                return jsonify({'error': f"Failed to read image: {data['image_path']}"}), 400
-                
-            analysis = scene_service.analyze_scene(
-                image,  # Pass the actual image data
-                context=f"Stream type: {stream_type}. {context}"
-            )
-            return jsonify(analysis)
-        except Exception as e:
-            return jsonify({
-                'error': f"Scene analysis failed: {str(e)}"
-            }), 500
-        
+        analysis = scene_service.analyze_scene(
+            frame,  # Pass the first frame
+            context=f"Stream type: {stream_type}. {context}"
+        )
         return jsonify(analysis)
         
     except Exception as e:
