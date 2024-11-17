@@ -32,9 +32,13 @@ class RAGService:
             memory_key="chat_history",
             return_messages=True
         )
-        self.llm = ChatOpenAI(model_name=model_name)
+        self.llm = ChatOpenAI(
+            model_name="gpt-4-turbo-preview",
+            openai_api_key=settings.OPENAI_API_KEY,
+            openai_api_base=settings.OPENAI_API_BASE
+        )
         self.logger = logging.getLogger(__name__)
-        self.persist_dir = Path(persist_dir)
+        self.persist_dir = Path("tmp_content/vector_store")
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
     def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
