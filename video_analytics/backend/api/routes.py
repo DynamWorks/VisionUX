@@ -1,5 +1,6 @@
 import json
 import time
+import cv2
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
 from ..services.scene_service import SceneAnalysisService
@@ -87,13 +88,31 @@ def analyze_video():
 
         # Create callback and start processing
         callback = generate_results()
-        results = processor.process_video(
-            video_path=video_path,
-            text_queries=text_queries,
-            sample_rate=sample_rate,
-            max_workers=max_workers,
-            callback=callback
-        )
+        
+        # Process video frames with scene service
+        cap = cv2.VideoCapture(video_path)
+        frame_number = 0
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+                
+            # Process every nth frame based on sample rate
+            if frame_number % sample_rate == 0:
+                # Analyze frame with scene service
+                result = scene_service.analyze_scene(frame)
+                
+                # Add frame metadata
+                result['frame_number'] = frame_number
+                result['timestamp'] = frame_number / cap.get(cv2.CAP_PROP_FPS)
+                
+                # Call callback with result
+                callback(result)
+                
+            frame_number += 1
+            
+        cap.release()
         
         # Format results and store in memory
         formatted_results = []
