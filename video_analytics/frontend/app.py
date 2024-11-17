@@ -61,6 +61,11 @@ def process_video(video_path, query, chat_mode=False, use_swarm=False):
     try:
         # Start video processing
         with st.spinner("Analyzing video..."):
+            # Initialize video stream
+            from ..utils.video_stream import VideoStream
+            stream = VideoStream(str(video_file_path), loop=True)
+            stream.start()
+            
             # Send analysis request
             endpoint = "/api/v1/chat" if chat_mode else "/api/v1/analyze"
             response = requests.post(
@@ -72,18 +77,19 @@ def process_video(video_path, query, chat_mode=False, use_swarm=False):
                     "sample_rate": 30,
                     "max_workers": 4,
                     "use_vila": chat_mode,
-                    "use_swarm": use_swarm
+                    "use_swarm": use_swarm,
+                    "stream_mode": True
                 },
                 stream=True
             )
             
             # Process streaming results
-            cap = cv2.VideoCapture(str(video_file_path))
-            
             while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
+                frame_data = stream.read()
+                if not frame_data:
+                    continue
+                    
+                frame = frame_data['frame']
                     
                 try:
                     # Display frame
@@ -144,13 +150,13 @@ def process_video(video_path, query, chat_mode=False, use_swarm=False):
                     st.warning(f"Frame processing error: {str(e)}")
                     continue
                     
-            cap.release()
+            stream.stop()
             
     except Exception as e:
         st.error(f"Video processing error: {str(e)}")
     finally:
-        # No cleanup needed - file is managed by content_manager
-        pass
+        if 'stream' in locals():
+            stream.stop()
 
 def init_rerun():
     """Initialize and connect to Rerun"""
