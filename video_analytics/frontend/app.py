@@ -1,4 +1,4 @@
-from pathlib import Path
+
 import streamlit as st
 # Set page config as first Streamlit command
 st.set_page_config(
@@ -200,6 +200,7 @@ def main():
         st.header("Controls")
         
         # Create tmp_content directory path
+        from pathlib import Path
         tmp_content_dir = Path('tmp_content')
         
         # Video source selection with session state
