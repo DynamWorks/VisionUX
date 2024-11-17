@@ -216,6 +216,14 @@ def main():
                 
             st.session_state.current_video = str(saved_video_path)
             
+            # Initialize rerun for video visualization
+            import rerun as rr
+            try:
+                rr.init("video_analytics", spawn=True)
+                rr.connect()
+            except Exception as e:
+                st.warning(f"Failed to initialize rerun: {e}")
+            
             # Analysis settings
             st.subheader("Analysis Settings")
             sample_rate = st.slider("Sample Rate (frames)", 1, 60, 30)

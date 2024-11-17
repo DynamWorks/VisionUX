@@ -51,6 +51,13 @@ class VideoStream:
                         self.buffer.get_nowait()
                     except:
                         pass
+                # Convert BGR to RGB for rerun
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Log frame to rerun
+                import rerun as rr
+                rr.log("video/frames", rr.Image(frame_rgb))
+                
                 self.buffer.put({
                     'frame': frame,
                     'timestamp': time.time(),
