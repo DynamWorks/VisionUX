@@ -229,7 +229,7 @@ def main():
                     st.warning(f"Failed to initialize rerun: {e}")
                     
         else:  # Use Camera
-            from video_analytics.utils.camera import CameraManager
+            from ..utils.camera import CameraManager
             camera_mgr = CameraManager()
             available_cameras = camera_mgr.get_available_cameras()
             
