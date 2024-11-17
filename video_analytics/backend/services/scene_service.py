@@ -50,16 +50,19 @@ class SceneAnalysisService:
         else:
             raise ValueError("Unsupported image format")
 
-    def analyze_scene(self, image_input, context: Optional[str] = None) -> Dict:
+    def analyze_scene(self, image_input, context: Optional[str] = None, 
+                     start_time: float = 0, num_frames: int = 8) -> Dict:
         """
         Analyze scene using GPT-4V and suggest use cases
         
         Args:
             image_input: Can be either:
-                - A path to an image file (str)
+                - A path to video file (str)
                 - A single frame (np.ndarray)
                 - A list of frames (List[np.ndarray])
             context: Optional context about the video stream
+            start_time: Start time in seconds for frame extraction
+            num_frames: Number of frames to analyze
             
         Returns:
             Dictionary containing scene analysis and suggested use cases
