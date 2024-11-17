@@ -99,9 +99,10 @@ def process_video(video_path, query, sample_rate: int = 30, max_workers: int = 4
                 frame = frame_data['frame']
                     
                 try:
-                    # Display frame
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    video_placeholder.image(frame_rgb)
+                    # Display frame in visualizer column
+                    with viz_col:
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        video_placeholder.image(frame_rgb)
                     
                     # Log frame to Rerun
                     rr.log("video/frame", rr.Image(frame_rgb))
@@ -281,13 +282,14 @@ def main():
 
                 # Display video feed if active
                 if hasattr(st.session_state, 'video_active') and st.session_state.video_active:
-                    frame_placeholder = st.empty()
-                    while st.session_state.video_active:
-                        frame_data = st.session_state.video_stream.read()
-                        if frame_data:
-                            frame = frame_data['frame']
-                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            frame_placeholder.image(frame_rgb)
+                    with viz_col:
+                        frame_placeholder = st.empty()
+                        while st.session_state.video_active:
+                            frame_data = st.session_state.video_stream.read()
+                            if frame_data:
+                                frame = frame_data['frame']
+                                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                frame_placeholder.image(frame_rgb)
                             # Log to rerun
                             if hasattr(st.session_state, '_rerun_initialized'):
                                 rr.log("video/frame", rr.Image(frame_rgb))
