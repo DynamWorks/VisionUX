@@ -99,12 +99,14 @@ def process_video(video_path, query, viz_col, sample_rate: int = 30, max_workers
                 frame = frame_data['frame']
                     
                 try:
-                    # Log frame to Rerun first
+                    # Convert frame to RGB first
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    
+                    # Log frame to Rerun
                     rr.log("video/frame", rr.Image(frame_rgb))
                     
                     # Display frame in visualizer column
                     with viz_col:
-                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         st.subheader("Video Feed")
                         video_placeholder.image(frame_rgb)
                         st.markdown("---")  # Add separator
