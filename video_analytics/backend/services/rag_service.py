@@ -236,7 +236,7 @@ class RAGService:
         metadata = {
             'results_hash': results_hash,
             'created_at': datetime.now().isoformat(),
-            'embeddings_model': self.embeddings.model_name
+            'embeddings_model': 'text-embedding-ada-002'  # Default OpenAI embeddings model
         }
         try:
             with open(store_path / 'metadata.json', 'w') as f:
