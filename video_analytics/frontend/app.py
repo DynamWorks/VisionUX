@@ -204,8 +204,8 @@ def main():
     # Add title
     st.title("Video Analytics Dashboard")
     
-    # Create two columns for controls and chat
-    controls_col, chat_col = st.columns([1, 1])
+    # Create three columns for controls, chat, and visualizer
+    controls_col, chat_col, viz_col = st.columns([1, 1, 1])
     
     # Controls column
     with controls_col:
@@ -244,6 +244,15 @@ def main():
                 try:
                     rr.init("video_analytics", spawn=True)
                     rr.connect()
+                    
+                    # Add visualizer to right column
+                    with viz_col:
+                        st.header("Visualizer")
+                        st.components.v1.iframe(
+                            src=f"http://localhost:9000",
+                            height=600,
+                            scrolling=True
+                        )
                 except Exception as e:
                     st.warning(f"Failed to initialize rerun: {e}")
 
