@@ -341,19 +341,6 @@ def main():
                     if not frames:
                         raise ValueError("Could not read video file")
 
-                # Convert frames to base64 for API request
-                encoded_frames = []
-                for frame in frames:
-                    success, buffer = cv2.imencode('.jpg', frame)
-                    if not success:
-                        raise ValueError("Failed to encode frame")
-                    encoded_frames.append(base64.b64encode(buffer).decode('utf-8'))
-
-                # Save first frame as temporary image for scene analysis
-                first_frame = frames[0]
-                temp_image = "temp_scene_frame.jpg"
-                cv2.imwrite(temp_image, first_frame)
-
                 try:
                     response = requests.post(
                         "http://localhost:8001/api/v1/analyze_scene",
