@@ -66,7 +66,7 @@ def process_video(video_path, query, chat_mode=False):
             response = requests.post(
                 f"http://localhost:8001{endpoint}",
                 json={
-                    "video_path": str(temp_path),
+                    "video_path": str(video_file_path),
                     "prompt": query if chat_mode else None,
                     "text_queries": [query] if not chat_mode else None,
                     "sample_rate": 30,
@@ -77,7 +77,7 @@ def process_video(video_path, query, chat_mode=False):
             )
             
             # Process streaming results
-            cap = cv2.VideoCapture(str(temp_path))
+            cap = cv2.VideoCapture(str(video_file_path))
             
             while True:
                 ret, frame = cap.read()
