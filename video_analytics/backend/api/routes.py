@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 api = Blueprint('api', __name__)
 
-# Initialize processor and memory store with config
+# Initialize services and memory store with config
 from ...utils.config import Config
 config = Config()
-processor = VideoProcessor(analyzer=ClipVideoAnalyzer(config=config.config))
+scene_service = SceneAnalysisService()
+chat_service = ChatService()
 frame_memory = MemoryManager(content_manager=None)
 
 @api.route('/analyze', methods=['POST'])
