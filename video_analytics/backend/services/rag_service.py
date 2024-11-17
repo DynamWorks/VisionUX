@@ -160,6 +160,12 @@ class RAGService:
                 "sources": [doc.metadata for doc in response["source_documents"]],
                 "chat_history": self.memory.chat_memory.messages
             }
+        except Exception as e:
+            self.logger.error(f"Error querying knowledge base: {str(e)}")
+            return {
+                "error": str(e),
+                "answer": "Failed to process query"
+            }
             
     def _hash_results(self, results_path: Path) -> str:
         """Generate hash of results file for vector store identification"""
@@ -188,12 +194,11 @@ class RAGService:
             'created_at': datetime.now().isoformat(),
             'embeddings_model': self.embeddings.model_name
         }
-        with open(store_path / 'metadata.json', 'w') as f:
-            json.dump(metadata, f, indent=2)
-            
+        try:
+            with open(store_path / 'metadata.json', 'w') as f:
+                json.dump(metadata, f, indent=2)
         except Exception as e:
-            self.logger.error(f"Error querying knowledge base: {str(e)}")
-            return {
-                "error": str(e),
+            self.logger.error(f"Error saving vector store metadata: {str(e)}")
+            raise
                 "answer": "Failed to process query"
             }
