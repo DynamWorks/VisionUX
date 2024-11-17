@@ -198,31 +198,63 @@ def main():
     with controls_col:
         st.header("Controls")
         
-        # Video upload
-        video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
-        if video_path:
-            # Save uploaded video
-            tmp_content = Path('tmp_content')
-            tmp_content.mkdir(parents=True, exist_ok=True)
-            
-            uploads_dir = tmp_content / 'uploads'
-            uploads_dir.mkdir(exist_ok=True)
-            
-            video_filename = f"uploaded_video_{int(time.time())}.mp4"
-            saved_video_path = uploads_dir / video_filename
-            
-            with open(saved_video_path, 'wb') as f:
-                f.write(video_path.getvalue())
+        # Video source selection
+        source_type = st.radio("Select Video Source", ["Upload Video", "Use Camera"])
+        
+        if source_type == "Upload Video":
+            video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
+            if video_path:
+                # Save uploaded video
+                tmp_content = Path('tmp_content')
+                tmp_content.mkdir(parents=True, exist_ok=True)
                 
-            st.session_state.current_video = str(saved_video_path)
+                uploads_dir = tmp_content / 'uploads'
+                uploads_dir.mkdir(exist_ok=True)
+                
+                video_filename = f"uploaded_video_{int(time.time())}.mp4"
+                saved_video_path = uploads_dir / video_filename
+                
+                with open(saved_video_path, 'wb') as f:
+                    f.write(video_path.getvalue())
+                    
+                st.session_state.current_video = str(saved_video_path)
+                st.session_state.video_source = "file"
+                
+                # Initialize rerun for video visualization
+                import rerun as rr
+                try:
+                    rr.init("video_analytics", spawn=True)
+                    rr.connect()
+                except Exception as e:
+                    st.warning(f"Failed to initialize rerun: {e}")
+                    
+        else:  # Use Camera
+            from ..utils.camera import CameraManager
+            camera_mgr = CameraManager()
+            available_cameras = camera_mgr.get_available_cameras()
             
-            # Initialize rerun for video visualization
-            import rerun as rr
-            try:
-                rr.init("video_analytics", spawn=True)
-                rr.connect()
-            except Exception as e:
-                st.warning(f"Failed to initialize rerun: {e}")
+            if not available_cameras:
+                st.error("No cameras detected on your device")
+            else:
+                camera_options = {f"{cam['name']} ({cam['system']})": cam['id'] 
+                                for cam in available_cameras}
+                selected_camera = st.selectbox("Select Camera", list(camera_options.keys()))
+                
+                if st.button("Start Camera"):
+                    camera_id = camera_options[selected_camera]
+                    cap = camera_mgr.open_camera(camera_id)
+                    
+                    if cap:
+                        st.session_state.current_video = cap
+                        st.session_state.video_source = "camera"
+                        
+                        # Initialize rerun for camera visualization
+                        import rerun as rr
+                        try:
+                            rr.init("video_analytics", spawn=True)
+                            rr.connect()
+                        except Exception as e:
+                            st.warning(f"Failed to initialize rerun: {e}")
             
             # Analysis settings
             st.subheader("Analysis Settings")

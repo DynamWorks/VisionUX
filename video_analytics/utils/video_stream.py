@@ -8,9 +8,9 @@ from typing import Optional, Generator
 class VideoStream:
     """Handles video streaming, either from file or camera"""
     
-    def __init__(self, source: str, loop: bool = True, buffer_size: int = 30):
+    def __init__(self, source, loop: bool = True, buffer_size: int = 30):
         self.source = source
-        self.loop = loop
+        self.loop = loop and isinstance(source, str)  # Only loop for file sources
         self.buffer = Queue(maxsize=buffer_size)
         
         self.stop_event = Event()
@@ -27,7 +27,8 @@ class VideoStream:
     def _stream_frames(self):
         """Stream frames from video source"""
         while not self.stop_event.is_set():
-            cap = cv2.VideoCapture(self.source)
+            # Handle both string paths and VideoCapture objects
+            cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
             if not cap.isOpened():
                 self.logger.error(f"Failed to open video source: {self.source}")
                 break
