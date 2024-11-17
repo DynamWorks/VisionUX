@@ -18,7 +18,8 @@ class VideoAnalyticsClient:
             return False
             
     def analyze_video(self, video_path: str, text_queries: List[str],
-                     sample_rate: int = 1, max_workers: int = 4) -> Dict:
+                     sample_rate: int = 1, max_workers: int = 4,
+                     timeout: int = 300) -> Dict:
         """
         Send video analysis request to API
         
@@ -57,9 +58,15 @@ class VideoAnalyticsClient:
             "max_workers": max_workers
         }
         
+        # Validate video format
+        valid_formats = ['.mp4', '.avi', '.mov', '.mkv']
+        if not any(str(video_path).lower().endswith(fmt) for fmt in valid_formats):
+            raise ValueError(f"Unsupported video format. Supported formats: {valid_formats}")
+            
         response = requests.post(
             f"{self.api_url}/api/analyze",
-            json=payload
+            json=payload,
+            timeout=timeout
         )
         response.raise_for_status()
         

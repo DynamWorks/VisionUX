@@ -7,14 +7,22 @@ import logging
 class MemoryManager:
     """Manages frame memory and persistence"""
     
-    def __init__(self, content_manager=None):
+    def __init__(self, content_manager=None, max_frames: int = 1000):
         self.frames = []
         self.content_manager = content_manager
         self.logger = logging.getLogger(__name__)
+        self.max_frames = max_frames
         
     def add_frame(self, frame_data: Dict) -> None:
-        """Add frame data to memory"""
+        """Add frame data to memory with size management"""
         self.frames.append(frame_data)
+        
+        # Manage memory size
+        if len(self.frames) > self.max_frames:
+            self.logger.warning(f"Memory limit reached ({self.max_frames} frames). Removing oldest frames.")
+            # Remove oldest 20% of frames
+            frames_to_remove = int(self.max_frames * 0.2)
+            self.frames = self.frames[frames_to_remove:]
         
         # If we have a content manager, persist the frame
         if self.content_manager:
