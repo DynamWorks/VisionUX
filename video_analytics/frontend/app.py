@@ -223,6 +223,28 @@ def main():
             enable_tracking = st.checkbox("Object Tracking", value=True)
             enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
 
+            # Perform initial scene analysis if enabled
+            if enable_scene_analysis:
+                with st.spinner("Performing initial scene analysis..."):
+                    try:
+                        response = requests.post(
+                            "http://localhost:8001/api/v1/analyze_scene",
+                            json={
+                                "image_path": str(saved_video_path),
+                                "context": "Initial video upload analysis",
+                                "stream_type": "uploaded_video"
+                            }
+                        )
+                        if response.status_code == 200:
+                            scene_results = response.json()
+                            st.success("Initial scene analysis complete!")
+                            with st.expander("Scene Analysis Results"):
+                                st.json(scene_results)
+                        else:
+                            st.warning("Scene analysis failed. Continuing without initial analysis.")
+                    except Exception as e:
+                        st.warning(f"Scene analysis error: {str(e)}")
+
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
