@@ -2,8 +2,8 @@ import json
 import time
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
-from ..core.processor import VideoProcessor
-from ..core.analyzer import ClipVideoAnalyzer
+from ..services.scene_service import SceneAnalysisService
+from ..services.chat_service import ChatService
 from ...utils.memory_manager import MemoryManager
 from ..content_manager import ContentManager
 import logging
