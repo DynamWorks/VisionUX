@@ -1,4 +1,11 @@
+# Set page config as first Streamlit command
 import streamlit as st
+st.set_page_config(
+    page_title="Video Analytics Dashboard",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 import rerun as rr
 import cv2
 import numpy as np
@@ -17,13 +24,6 @@ logging.basicConfig(level=logging.INFO)
 
 # Configure Rerun
 RERUN_PORT = 9000  # Port for Rerun web viewer
-
-# Set page config as first Streamlit command
-st.set_page_config(
-    page_title="Video Analytics Dashboard",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
 
 def check_server_status(url: str = "http://localhost:8001") -> bool:
     """Check if the API server is running"""
