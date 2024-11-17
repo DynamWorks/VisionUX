@@ -243,9 +243,8 @@ def main():
     # Controls column
     with controls_col:
         with st.expander("📹 Video Source", expanded=True):
-        
-        # Create tmp_content directory path
-        from pathlib import Path
+            # Create tmp_content directory path
+            from pathlib import Path
         tmp_content_dir = Path('tmp_content')
         
         # Video source selection with session state
