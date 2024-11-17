@@ -402,9 +402,9 @@ def main():
             
             # Processing options in expander
             with st.expander("🔧 Processing Options", expanded=False):
-            enable_object_detection = st.checkbox("Object Detection", value=True)
-            enable_tracking = st.checkbox("Object Tracking", value=True)
-            enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
+                enable_object_detection = st.checkbox("Object Detection", value=True)
+                enable_tracking = st.checkbox("Object Tracking", value=True)
+                enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
 
 
     # Initialize chat history
