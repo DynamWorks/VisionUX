@@ -107,7 +107,6 @@ def process_video(video_path, query, viz_col, sample_rate: int = 30, max_workers
                     
                     # Display frame in visualizer column
                     with viz_col:
-                        st.subheader("Video Feed")
                         video_placeholder.image(frame_rgb)
                         st.markdown("---")  # Add separator
                     
@@ -252,10 +251,8 @@ def main():
                     
                     # Add visualizer to right column
                     with viz_col:
-                        st.subheader("Video Feed")
                         video_placeholder = st.empty()
                         st.markdown("---")  # Add separator
-                        st.header("Visualizer")
                         st.components.v1.iframe(
                             src=f"http://localhost:9000",
                             height=600,
