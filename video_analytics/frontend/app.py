@@ -52,9 +52,11 @@ def process_video(video_path, query, chat_mode=False):
         st.code("python video_analytics/main.py")
         return
 
-    # Save uploaded video temporarily
-    temp_path = Path("temp_video.mp4")
-    temp_path.write_bytes(video_path.read())
+    # Use the saved video path from tmp_content
+    video_file_path = Path(st.session_state.current_video)
+    if not video_file_path.exists():
+        st.error("Video file not found in tmp_content")
+        return
     
     try:
         # Start video processing
@@ -146,9 +148,8 @@ def process_video(video_path, query, chat_mode=False):
     except Exception as e:
         st.error(f"Video processing error: {str(e)}")
     finally:
-        # Cleanup
-        if temp_path.exists():
-            temp_path.unlink()
+        # No cleanup needed - file is managed by content_manager
+        pass
 
 def init_rerun():
     """Initialize and connect to Rerun"""
@@ -267,6 +268,18 @@ def main():
             if tmp_content.exists():
                 shutil.rmtree(tmp_content)
             tmp_content.mkdir(parents=True)
+            
+            # Create uploads directory and save video
+            uploads_dir = tmp_content / 'uploads'
+            uploads_dir.mkdir(exist_ok=True)
+            
+            video_filename = f"uploaded_video_{int(time.time())}.mp4"
+            saved_video_path = uploads_dir / video_filename
+            
+            with open(saved_video_path, 'wb') as f:
+                f.write(video_path.getvalue())
+                
+            st.session_state.current_video = str(saved_video_path)
             
             st.subheader("Analysis Settings")
             with st.expander("Basic Settings", expanded=True):
