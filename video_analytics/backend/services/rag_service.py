@@ -5,9 +5,9 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from ...utils.config import Config
 from langchain_community.vectorstores import Chroma
 from langchain.memory.buffer import ConversationBufferMemory
-from langchain_community.chains import ConversationalRetrievalQA
+from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.prompts import PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from pathlib import Path
 import json
 import logging
 import hashlib
