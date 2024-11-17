@@ -56,7 +56,7 @@ class ChatService:
         self.logger = logging.getLogger(__name__)
         self._current_chain = None
         
-    def process_chat(self, query: str, video_path: str) -> Dict:
+    def process_chat(self, query: str, video_path: str, use_swarm: bool = False) -> Dict:
         """Process chat query with RAG and execute required functions"""
         try:
             # Get latest analysis results
@@ -86,8 +86,8 @@ class ChatService:
             # Extract required functions for additional processing
             required_functions = self._extract_function_calls(query)
             
-            # Execute required functions using swarm
-            if required_functions:
+            # Execute required functions using swarm if enabled
+            if required_functions and use_swarm:
                 import cv2
                 cap = cv2.VideoCapture(video_path)
                 frames = []

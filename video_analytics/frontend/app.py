@@ -33,7 +33,7 @@ def check_server_status(url: str = "http://localhost:8001") -> bool:
     except:
         return False
 
-def process_video(video_path, query, chat_mode=False):
+def process_video(video_path, query, chat_mode=False, use_swarm=False):
     """Process video with analysis and visualization"""
     # Create processing columns
     col1, col2 = st.columns(2)
@@ -71,7 +71,8 @@ def process_video(video_path, query, chat_mode=False):
                     "text_queries": [query] if not chat_mode else None,
                     "sample_rate": 30,
                     "max_workers": 4,
-                    "use_vila": chat_mode
+                    "use_vila": chat_mode,
+                    "use_swarm": use_swarm
                 },
                 stream=True
             )
@@ -289,7 +290,9 @@ def main():
             with st.expander("Processing Options", expanded=True):
                 enable_object_detection = st.checkbox("Object Detection", value=True)
                 enable_tracking = st.checkbox("Object Tracking", value=True)
-                enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
+                enable_scene_analysis = st.checkbox("Scene Analysis", value=False)
+                enable_swarm_analysis = st.checkbox("Enable Swarm Analysis", value=False,
+                    help="Use swarm agents for advanced scene analysis when querying")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Center column - Empty for now
@@ -430,7 +433,8 @@ def main():
                 st.markdown(prompt)
 
             # Process video with chat prompt
-            process_video(video_path, prompt, chat_mode=True)
+            process_video(video_path, prompt, chat_mode=True, 
+                        use_swarm=st.session_state.get('enable_swarm_analysis', False))
 
 
 def start():
