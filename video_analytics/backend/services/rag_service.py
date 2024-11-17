@@ -146,31 +146,62 @@ class RAGService:
             self.logger.error(f"Error creating knowledge base: {str(e)}")
             return None
             
-    def get_retrieval_chain(self, vectordb: Chroma) -> ConversationalRetrievalQA:
-        """Create retrieval chain with conversation memory"""
+    def get_retrieval_chain(self, vectordb: Chroma) -> RetrievalQAWithSourcesChain:
+        """Create retrieval chain with custom prompt"""
         retriever = vectordb.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": 3}
+            search_type="similarity_score_threshold",
+            search_kwargs={
+                "k": 3,
+                "score_threshold": 0.7
+            }
         )
+
+        # Custom prompt template
+        prompt_template = """Use the following pieces of context to answer the question. 
+        If you don't know the answer, just say that you don't know. Don't try to make up an answer.
         
-        chain = ConversationalRetrievalQA.from_llm(
+        Context: {context}
+        
+        Question: {question}
+        
+        Answer with specific references to frame numbers and timestamps when possible.
+        Include confidence levels for any claims you make.
+        """
+
+        PROMPT = PromptTemplate(
+            template=prompt_template, 
+            input_variables=["context", "question"]
+        )
+
+        chain = RetrievalQAWithSourcesChain.from_chain_type(
             llm=self.llm,
+            chain_type="stuff",
             retriever=retriever,
-            memory=self.memory,
             return_source_documents=True,
-            verbose=True
+            chain_type_kwargs={
+                "prompt": PROMPT,
+                "verbose": True
+            }
         )
         
         return chain
         
-    def query_knowledge_base(self, query: str, chain: ConversationalRetrievalQA) -> Dict:
-        """Query the knowledge base with conversation history"""
+    def query_knowledge_base(self, query: str, chain: RetrievalQAWithSourcesChain) -> Dict:
+        """Query the knowledge base with enhanced source tracking"""
         try:
             response = chain({"question": query})
             
             return {
                 "answer": response["answer"],
-                "sources": [doc.metadata for doc in response["source_documents"]],
+                "sources": response["sources"],
+                "source_documents": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "score": getattr(doc, "score", None)
+                    }
+                    for doc in response["source_documents"]
+                ],
                 "chat_history": self.memory.chat_memory.messages
             }
         except Exception as e:
