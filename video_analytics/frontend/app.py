@@ -246,24 +246,50 @@ def main():
                                 for cam in available_cameras}
                 selected_camera = st.selectbox("Select Camera", list(camera_options.keys()))
                 
-                if st.button("Start Camera"):
-                    camera_id = camera_options[selected_camera]
-                    cap = camera_mgr.open_camera(camera_id)
-                    
-                    if cap:
-                        # For camera input, we'll use a special identifier
-                        st.session_state.current_video = f"camera:{camera_id}"
-                        st.session_state.video_source = "camera"
+                # Camera control buttons side by side
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Start Camera"):
+                        camera_id = camera_options[selected_camera]
+                        cap = camera_mgr.open_camera(camera_id)
                         
-                        # Initialize rerun for camera visualization
-                        import rerun as rr
-                        try:
-                            if not hasattr(st.session_state, '_rerun_initialized'):
-                                rr.init("video_analytics", spawn=True)
-                                rr.connect()
-                                st.session_state._rerun_initialized = True
-                        except Exception as e:
-                            st.warning(f"Failed to initialize rerun: {e}")
+                        if cap:
+                            # Store camera state in session
+                            st.session_state.current_video = f"camera:{camera_id}"
+                            st.session_state.video_source = "camera"
+                            st.session_state.camera_active = True
+                            st.session_state.camera_cap = cap
+                            
+                            # Initialize rerun for camera visualization
+                            import rerun as rr
+                            try:
+                                if not hasattr(st.session_state, '_rerun_initialized'):
+                                    rr.init("video_analytics", spawn=True)
+                                    rr.connect()
+                                    st.session_state._rerun_initialized = True
+                            except Exception as e:
+                                st.warning(f"Failed to initialize rerun: {e}")
+                
+                with col2:
+                    if st.button("Stop Camera"):
+                        if hasattr(st.session_state, 'camera_cap'):
+                            st.session_state.camera_cap.release()
+                            st.session_state.camera_active = False
+                            del st.session_state.camera_cap
+                            st.experimental_rerun()
+
+                # Display camera feed if active
+                if hasattr(st.session_state, 'camera_active') and st.session_state.camera_active:
+                    frame_placeholder = st.empty()
+                    while st.session_state.camera_active:
+                        ret, frame = st.session_state.camera_cap.read()
+                        if ret:
+                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            frame_placeholder.image(frame_rgb)
+                            # Log to rerun
+                            if hasattr(st.session_state, '_rerun_initialized'):
+                                rr.log("camera/frame", rr.Image(frame_rgb))
+                        time.sleep(0.03)  # Control frame rate
             
             # Analysis settings
             st.subheader("Analysis Settings")
