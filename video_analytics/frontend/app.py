@@ -184,12 +184,6 @@ def is_ready():
 
 def main():
     """Main application entry point"""
-    st.set_page_config(
-        page_title="Video Analytics Dashboard",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-
     # Add title
     st.title("Video Analytics Dashboard")
     
