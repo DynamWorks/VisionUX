@@ -12,9 +12,13 @@ class VILAProcessor:
         self.processor = AutoProcessor.from_pretrained(model_name)
         self.logger = logging.getLogger(__name__)
         
-    def analyze_scene(self, frame_result: Dict) -> Dict:
+    def analyze_scene(self, frame_result: Dict, image: np.ndarray = None) -> Dict:
         """
         Enhance frame analysis with VILA scene understanding
+        
+        Args:
+            frame_result: Dictionary containing detection results
+            image: Optional raw image array for additional analysis
         """
         try:
             # Extract scene elements
@@ -23,6 +27,18 @@ class VILAProcessor:
             signs = [d['class'] for d in detections.get('signs', [])]
             texts = [d['text'] for d in detections.get('text', [])]
             lanes = detections.get('lanes', [])
+
+            # Perform additional image analysis if provided
+            if image is not None:
+                # Process image with CLIP
+                inputs = self.processor(
+                    images=Image.fromarray(image),
+                    return_tensors="pt",
+                    padding=True
+                ).to(self.device)
+                
+                with torch.no_grad():
+                    image_features = self.model.get_image_features(**inputs)
             
             # Create structured scene description
             scene_analysis = {

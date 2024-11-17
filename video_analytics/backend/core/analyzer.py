@@ -224,8 +224,8 @@ class ClipVideoAnalyzer:
             for x1, y1, x2, y2, conf, cls in results.boxes.data
         ]
 
-    def analyze_frame(self, frame: np.ndarray, text_queries: List[str],
-                     confidence_threshold: float = 0.5) -> Dict:
+    def analyze_frame(self, frame: np.ndarray, text_queries: List[str] = None,
+                     confidence_threshold: float = 0.5, scene_analysis: bool = False) -> Dict:
         """Analyze a single frame"""
         try:
             # Validate frame
@@ -268,8 +268,38 @@ class ClipVideoAnalyzer:
                 'text': [],
                 'signs': [],
                 'tracking': {'current': 0, 'total': 0}
-            }
+            },
+            'scene_analysis': {}
         }
+
+    def analyze_scene(self, image: np.ndarray) -> Dict:
+        """Analyze a single image for scene understanding"""
+        try:
+            # Convert BGR to RGB if needed
+            if len(image.shape) == 3 and image.shape[2] == 3:
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            else:
+                image_rgb = image
+
+            # Get basic detections
+            result = self._analyze_frame_content(image_rgb, [], 0.3)
+            
+            # Enhance with VILA analysis
+            vila_result = self._analyze_clip(image_rgb, [
+                "urban scene", "highway", "intersection",
+                "pedestrian area", "parking lot"
+            ])
+            
+            # Add scene analysis
+            result['scene_analysis'] = self.vila_processor.analyze_scene(
+                result, image=image_rgb
+            )
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Scene analysis failed: {str(e)}")
+            return self._get_default_result()
 
     def _analyze_frame_content(self, frame_rgb: np.ndarray, text_queries: List[str], 
                              confidence_threshold: float) -> Dict:

@@ -29,10 +29,11 @@ class VideoProcessor:
         self.logger = logging.getLogger(__name__)
         self.frame_config = FrameConfig()
 
-    def process_video(self, video_path: str, text_queries: List[str],
+    def process_video(self, video_path: str, text_queries: List[str] = None,
                      sample_rate: int = 1, max_workers: int = 4,
                      analysis_types: Optional[List[str]] = None,
-                     callback: Callable[[Dict], None] = None) -> List[Dict]:
+                     callback: Callable[[Dict], None] = None,
+                     scene_analysis: bool = False) -> List[Dict]:
         """
         Process a video file using the analyzer
         
