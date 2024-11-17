@@ -234,6 +234,43 @@ def main():
                     rr.connect()
                 except Exception as e:
                     st.warning(f"Failed to initialize rerun: {e}")
+
+                # Video controls in container
+                with st.container():
+                    st.subheader("Video Controls")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if st.button("Start Video", type="primary"):
+                            st.session_state.video_active = True
+                            # Initialize video stream
+                            from ..utils.video_stream import VideoStream
+                            stream = VideoStream(str(saved_video_path), loop=True)
+                            st.session_state.video_stream = stream
+                            stream.start()
+                    
+                    with col2:
+                        if st.button("Stop Video", type="secondary", 
+                                   disabled=not getattr(st.session_state, 'video_active', False)):
+                            if hasattr(st.session_state, 'video_stream'):
+                                st.session_state.video_stream.stop()
+                                st.session_state.video_active = False
+                                del st.session_state.video_stream
+                                st.experimental_rerun()
+
+                # Display video feed if active
+                if hasattr(st.session_state, 'video_active') and st.session_state.video_active:
+                    frame_placeholder = st.empty()
+                    while st.session_state.video_active:
+                        frame_data = st.session_state.video_stream.read()
+                        if frame_data:
+                            frame = frame_data['frame']
+                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            frame_placeholder.image(frame_rgb)
+                            # Log to rerun
+                            if hasattr(st.session_state, '_rerun_initialized'):
+                                rr.log("video/frame", rr.Image(frame_rgb))
+                        time.sleep(0.03)  # Control frame rate
                     
         else:  # Use Camera
             import sys
