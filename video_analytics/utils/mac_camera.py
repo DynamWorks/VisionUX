@@ -52,27 +52,34 @@ def get_mac_cameras() -> List[Dict]:
     except Exception as e:
         logger.warning(f"USB detection failed: {e}")
 
-    # Method 3: Direct device testing
-    for i in range(8):  # Test first 8 indices
-        cap = cv2.VideoCapture(i)
-        if cap.isOpened():
-            # Get device info
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            
-            # Generate a unique ID based on resolution and index
-            unique_id = f"camera_{i}_{width}x{height}"
-            
-            if unique_id not in cameras:
-                cameras[unique_id] = {
-                    'id': i,
-                    'name': f'Camera {i} ({width}x{height})',
-                    'model': 'Unknown',
-                    'unique_id': unique_id,
-                    'system': 'darwin',
-                    'resolution': f'{width}x{height}'
-                }
+    # Method 3: Direct device testing - only test indices 0 and 1 on macOS
+    for i in range(2):  # Only test first 2 indices on macOS
+        try:
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                # Try to read a frame to verify camera works
+                ret, _ = cap.read()
+                if ret:
+                    # Get device info
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    
+                    # Generate a unique ID based on resolution and index
+                    unique_id = f"camera_{i}_{width}x{height}"
+                    
+                    if unique_id not in cameras:
+                        cameras[unique_id] = {
+                            'id': i,
+                            'name': f'Camera {i} ({width}x{height})',
+                            'model': 'Unknown',
+                            'unique_id': unique_id,
+                            'system': 'darwin',
+                            'resolution': f'{width}x{height}'
+                        }
+                        logger.info(f"Found working camera at index {i}: {width}x{height}")
             cap.release()
+        except Exception as e:
+            logger.warning(f"Error testing camera index {i}: {e}")
 
     return list(cameras.values())
 
