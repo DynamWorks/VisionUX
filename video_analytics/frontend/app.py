@@ -292,36 +292,9 @@ def main():
                 enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Center column - Rerun Visualizer
+    # Center column - Empty for now
     with center_col:
         st.markdown('<div class="viewer-panel">', unsafe_allow_html=True)
-        
-        st.header("Video Stream")
-        if video_path:
-            # Initialize Rerun viewer
-            if not init_rerun():
-                st.warning("Rerun visualization unavailable")
-            else:
-                # Log video to Rerun
-                file_bytes = video_path.read()
-                temp_video = "temp_video.mp4"
-                with open(temp_video, "wb") as f:
-                    f.write(file_bytes)
-                
-                # Reset file pointer for later use
-                video_path.seek(0)
-                
-                # Log video frames to Rerun
-                cap = cv2.VideoCapture(temp_video)
-                while True:
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    rr.log("video", rr.Image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
-                cap.release()
-                
-                # Clean up temp file
-                Path(temp_video).unlink()
         st.markdown('</div>', unsafe_allow_html=True)
             
         # Perform initial scene analysis if video is uploaded
@@ -417,6 +390,36 @@ def main():
                     with st.chat_message(message["role"]):
                         st.markdown(message["content"])
         st.markdown('</div>', unsafe_allow_html=True)
+
+        # Scene Analysis Section
+        if video_path:
+            st.markdown('<div class="scene-panel">', unsafe_allow_html=True)
+            st.header("Scene Analysis")
+            # Initialize Rerun viewer
+            if not init_rerun():
+                st.warning("Rerun visualization unavailable")
+            else:
+                # Log video to Rerun
+                file_bytes = video_path.read()
+                temp_video = "temp_video.mp4"
+                with open(temp_video, "wb") as f:
+                    f.write(file_bytes)
+                
+                # Reset file pointer for later use
+                video_path.seek(0)
+                
+                # Log video frames to Rerun
+                cap = cv2.VideoCapture(temp_video)
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    rr.log("video", rr.Image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+                cap.release()
+                
+                # Clean up temp file
+                Path(temp_video).unlink()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     # Chat input below columns
     if video_path:  # Only show chat input if video is uploaded
