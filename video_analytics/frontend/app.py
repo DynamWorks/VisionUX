@@ -63,7 +63,7 @@ def process_video(video_path, query, sample_rate: int = 30, max_workers: int = 4
         # Start video processing
         with st.spinner("Analyzing video..."):
             # Initialize video stream
-            from ..utils.video_stream import VideoStream
+            from video_analytics.utils.video_stream import VideoStream
             stream = VideoStream(str(video_file_path), loop=True)
             stream.start()
             
