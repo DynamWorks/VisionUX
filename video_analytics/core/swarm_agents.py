@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import time
 import numpy as np
 from ..backend.services.scene_service import SceneAnalysisService
-from ..utils.memory import FrameMemory
+from ..utils.memory_manager import MemoryManager
 
 @dataclass
 class AgentResult:
@@ -62,7 +62,7 @@ class SwarmAgent:
 class SwarmCoordinator:
     def __init__(self):
         self.scene_service = SceneAnalysisService()
-        self.frame_memory = FrameMemory()
+        self.frame_memory = MemoryManager(content_manager=None)  # Will be set when processing starts
         self.agents: List[SwarmAgent] = []
         
     def analyze_frame_batch(self, frames: List[np.ndarray], 

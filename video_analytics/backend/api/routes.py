@@ -4,7 +4,7 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
 from ..core.processor import VideoProcessor
 from ..core.analyzer import ClipVideoAnalyzer
-from ..utils.memory import FrameMemory
+from ..utils.memory_manager import MemoryManager
 from ..content_manager import ContentManager
 import logging
 
@@ -19,7 +19,7 @@ api = Blueprint('api', __name__)
 from ..utils.config import Config
 config = Config()
 processor = VideoProcessor(analyzer=ClipVideoAnalyzer(config=config.config))
-frame_memory = FrameMemory()
+frame_memory = MemoryManager(content_manager=None)
 
 @api.route('/analyze', methods=['POST'])
 def analyze_video():
