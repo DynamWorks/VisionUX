@@ -15,7 +15,7 @@ from datetime import datetime
 class RAGService:
     """Service for RAG-based retrieval and chat"""
     
-    def __init__(self, model_name: str = "gpt-4", persist_dir: str = "tmp_content/vector_store"):
+    def __init__(self, model_name: str = "gpt-4o-mini", persist_dir: str = "tmp_content/vector_store"):
         self.embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-mpnet-base-v2"
         )
