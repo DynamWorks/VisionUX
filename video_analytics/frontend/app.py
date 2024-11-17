@@ -66,14 +66,14 @@ def process_video(video_path, query, chat_mode=False, use_swarm=False):
             stream = VideoStream(str(video_file_path), loop=True)
             stream.start()
             
-            # Send chat request
+            # Send chat request with UI settings
             response = requests.post(
                 "http://localhost:8001/api/v1/chat",
                 json={
                     "video_path": str(video_file_path),
                     "prompt": query,
-                    "sample_rate": 30,
-                    "max_workers": 4,
+                    "sample_rate": sample_rate,
+                    "max_workers": max_workers,
                     "use_vila": True,
                     "use_swarm": use_swarm,
                     "stream_mode": True
@@ -201,8 +201,11 @@ def main():
         # Create tmp_content directory path
         tmp_content_dir = Path('tmp_content')
         
-        # Video source selection
-        source_type = st.radio("Select Video Source", ["Upload Video", "Use Camera"])
+        # Video source selection with session state
+        if 'source_type' not in st.session_state:
+            st.session_state.source_type = "Upload Video"
+        source_type = st.radio("Select Video Source", ["Upload Video", "Use Camera"], 
+                             key='source_type')
         
         if source_type == "Upload Video":
             video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
@@ -248,37 +251,41 @@ def main():
                                 for cam in available_cameras}
                 selected_camera = st.selectbox("Select Camera", list(camera_options.keys()))
                 
-                # Camera control buttons side by side
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Start Camera"):
-                        camera_id = camera_options[selected_camera]
-                        cap = camera_mgr.open_camera(camera_id)
-                        
-                        if cap:
-                            # Store camera state in session
-                            st.session_state.current_video = f"camera:{camera_id}"
-                            st.session_state.video_source = "camera"
-                            st.session_state.camera_active = True
-                            st.session_state.camera_cap = cap
+                # Camera controls in container
+                with st.container():
+                    st.subheader("Camera Controls")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if st.button("Start Camera", type="primary"):
+                            camera_id = camera_options[selected_camera]
+                            cap = camera_mgr.open_camera(camera_id)
                             
-                            # Initialize rerun for camera visualization
-                            import rerun as rr
-                            try:
-                                if not hasattr(st.session_state, '_rerun_initialized'):
-                                    rr.init("video_analytics", spawn=True)
-                                    rr.connect()
-                                    st.session_state._rerun_initialized = True
-                            except Exception as e:
-                                st.warning(f"Failed to initialize rerun: {e}")
-                
-                with col2:
-                    if st.button("Stop Camera"):
-                        if hasattr(st.session_state, 'camera_cap'):
-                            st.session_state.camera_cap.release()
-                            st.session_state.camera_active = False
-                            del st.session_state.camera_cap
-                            st.experimental_rerun()
+                            if cap:
+                                # Store camera state in session
+                                st.session_state.current_video = f"camera:{camera_id}"
+                                st.session_state.video_source = "camera"
+                                st.session_state.camera_active = True
+                                st.session_state.camera_cap = cap
+                                
+                                # Initialize rerun for camera visualization
+                                import rerun as rr
+                                try:
+                                    if not hasattr(st.session_state, '_rerun_initialized'):
+                                        rr.init("video_analytics", spawn=True)
+                                        rr.connect()
+                                        st.session_state._rerun_initialized = True
+                                except Exception as e:
+                                    st.warning(f"Failed to initialize rerun: {e}")
+                    
+                    with col2:
+                        if st.button("Stop Camera", type="secondary", 
+                                   disabled=not getattr(st.session_state, 'camera_active', False)):
+                            if hasattr(st.session_state, 'camera_cap'):
+                                st.session_state.camera_cap.release()
+                                st.session_state.camera_active = False
+                                del st.session_state.camera_cap
+                                st.experimental_rerun()
 
                 # Display camera feed if active
                 if hasattr(st.session_state, 'camera_active') and st.session_state.camera_active:
