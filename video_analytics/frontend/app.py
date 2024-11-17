@@ -229,7 +229,13 @@ def main():
                     st.warning(f"Failed to initialize rerun: {e}")
                     
         else:  # Use Camera
-            from ..utils.camera import CameraManager
+            import sys
+            from pathlib import Path
+            # Add project root to Python path
+            project_root = str(Path(__file__).parent.parent.parent)
+            if project_root not in sys.path:
+                sys.path.append(project_root)
+            from video_analytics.utils.camera import CameraManager
             camera_mgr = CameraManager()
             available_cameras = camera_mgr.get_available_cameras()
             
