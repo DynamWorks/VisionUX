@@ -251,7 +251,8 @@ def main():
                     cap = camera_mgr.open_camera(camera_id)
                     
                     if cap:
-                        st.session_state.current_video = cap
+                        # For camera input, we'll use a special identifier
+                        st.session_state.current_video = f"camera:{camera_id}"
                         st.session_state.video_source = "camera"
                         
                         # Initialize rerun for camera visualization
@@ -284,7 +285,7 @@ def main():
             st.markdown(message["content"])
             
     # Chat input - outside columns
-    if video_path:
+    if source_type == "Upload Video" and video_path:
         # Chat header
         st.header("Analysis Chat")
         if prompt := st.chat_input("Ask about the video..."):
@@ -299,7 +300,7 @@ def main():
                         response = requests.post(
                             "http://localhost:8001/api/v1/chat",
                             json={
-                                "video_path": st.session_state.current_video,
+                                "video_path": str(st.session_state.current_video) if isinstance(st.session_state.current_video, Path) else st.session_state.current_video,
                                 "prompt": prompt,
                                 "sample_rate": sample_rate,
                                 "max_workers": max_workers,
