@@ -271,26 +271,26 @@ def main():
                 st.session_state.current_video = str(saved_video_path)
                 st.session_state.video_source = "file"
                 
-                # Initialize rerun for video visualization
+                # Initialize rerun and setup video display
                 import rerun as rr
                 try:
                     rr.init("video_analytics", spawn=True)
                     rr.connect()
-                    
-                    # Add visualizer to right column
-                    with right_col:
-                        st.subheader("Video Stream")
-                        video_placeholder = st.empty()
-                        st.markdown("---")  # Add separator
-                    
-                        # Add Rerun visualizer below video
-                        st.components.v1.iframe(
-                            src=f"http://localhost:9000",
-                            height=400,
-                            scrolling=True
-                        )
                 except Exception as e:
                     st.warning(f"Failed to initialize rerun: {e}")
+
+                # Add video stream to right column immediately
+                with right_col:
+                    st.subheader("Video Stream")
+                    video_placeholder = st.empty()
+                    
+                    # Add Rerun visualizer
+                    st.components.v1.iframe(
+                        src=f"http://localhost:9000",
+                        height=400,
+                        scrolling=True
+                    )
+                    st.markdown("---")  # Add separator
 
                 # Video controls in clean container
                 with st.container():
