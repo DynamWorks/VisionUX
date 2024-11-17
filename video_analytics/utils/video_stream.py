@@ -12,6 +12,13 @@ class VideoStream:
         self.source = source
         self.loop = loop
         self.buffer = Queue(maxsize=buffer_size)
+        
+        # Initialize rerun if not already done
+        import rerun as rr
+        try:
+            rr.init("video_stream", spawn=True)
+        except:
+            pass  # Already initialized
         self.stop_event = Event()
         self.frame_count = 0
         self.current_frame = None
@@ -50,6 +57,13 @@ class VideoStream:
                         self.buffer.get_nowait()
                     except:
                         pass
+                # Convert BGR to RGB for rerun
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Log frame to rerun
+                import rerun as rr
+                rr.log("video/raw", rr.Image(frame_rgb))
+                
                 self.buffer.put({
                     'frame': frame,
                     'timestamp': time.time(),
