@@ -256,11 +256,15 @@ def main():
         if source_type == "Upload Video":
             video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
             if video_path:
-                # Save uploaded video
-                tmp_content_dir.mkdir(parents=True, exist_ok=True)
+                # Clear existing tmp_content directory
+                if tmp_content_dir.exists():
+                    import shutil
+                    shutil.rmtree(tmp_content_dir)
                 
+                # Create fresh directories
+                tmp_content_dir.mkdir(parents=True)
                 uploads_dir = tmp_content_dir / 'uploads'
-                uploads_dir.mkdir(exist_ok=True)
+                uploads_dir.mkdir()
                 
                 video_filename = f"uploaded_video_{int(time.time())}.mp4"
                 saved_video_path = uploads_dir / video_filename
