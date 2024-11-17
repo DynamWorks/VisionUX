@@ -1,11 +1,18 @@
 import subprocess
+import json
 from typing import List, Dict
+import cv2
+import logging
+import re
+
+logger = logging.getLogger(__name__)
 
 def get_mac_cameras() -> List[Dict]:
-    """Get available cameras on macOS using system_profiler"""
-    cameras = []
+    """Get available cameras on macOS using multiple detection methods"""
+    cameras = {}  # Use dict to avoid duplicates
+    
+    # Method 1: system_profiler
     try:
-        # Run system_profiler to get camera info
         result = subprocess.run(
             ['system_profiler', 'SPCameraDataType', '-json'],
             capture_output=True,
@@ -13,22 +20,78 @@ def get_mac_cameras() -> List[Dict]:
         )
         
         if result.returncode == 0:
-            import json
             data = json.loads(result.stdout)
-            
-            # Parse camera data
             if 'SPCameraDataType' in data:
                 for device in data['SPCameraDataType']:
                     if '_items' in device:
                         for camera in device['_items']:
-                            cameras.append({
-                                'id': len(cameras),  # Use index as ID
+                            unique_id = camera.get('unique_id', '')
+                            cameras[unique_id] = {
+                                'id': len(cameras),
                                 'name': camera.get('_name', f'Camera {len(cameras)}'),
                                 'model': camera.get('model_id', ''),
-                                'unique_id': camera.get('unique_id', ''),
+                                'unique_id': unique_id,
                                 'system': 'darwin'
-                            })
+                            }
     except Exception as e:
-        print(f"Error detecting macOS cameras: {e}")
+        logger.warning(f"system_profiler detection failed: {e}")
+
+    # Method 2: AVFoundation devices
+    try:
+        result = subprocess.run(
+            ['system_profiler', 'SPUSBDataType', '-json'],
+            capture_output=True,
+            text=True
+        )
         
-    return cameras
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            if 'SPUSBDataType' in data:
+                for controller in data['SPUSBDataType']:
+                    _parse_usb_devices(controller, cameras)
+    except Exception as e:
+        logger.warning(f"USB detection failed: {e}")
+
+    # Method 3: Direct device testing
+    for i in range(8):  # Test first 8 indices
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            # Get device info
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            # Generate a unique ID based on resolution and index
+            unique_id = f"camera_{i}_{width}x{height}"
+            
+            if unique_id not in cameras:
+                cameras[unique_id] = {
+                    'id': i,
+                    'name': f'Camera {i} ({width}x{height})',
+                    'model': 'Unknown',
+                    'unique_id': unique_id,
+                    'system': 'darwin',
+                    'resolution': f'{width}x{height}'
+                }
+            cap.release()
+
+    return list(cameras.values())
+
+def _parse_usb_devices(device: Dict, cameras: Dict):
+    """Recursively parse USB devices to find cameras"""
+    if '_items' in device:
+        for item in device['_items']:
+            if isinstance(item, dict):
+                # Check if device is a camera
+                if any(cam_hint in str(item).lower() for cam_hint in 
+                      ['camera', 'webcam', 'facetime', 'isight']):
+                    unique_id = item.get('serial_num', '')
+                    if unique_id and unique_id not in cameras:
+                        cameras[unique_id] = {
+                            'id': len(cameras),
+                            'name': item.get('_name', f'USB Camera {len(cameras)}'),
+                            'model': item.get('manufacturer', 'Unknown'),
+                            'unique_id': unique_id,
+                            'system': 'darwin'
+                        }
+                # Recurse into sub-items
+                _parse_usb_devices(item, cameras)
