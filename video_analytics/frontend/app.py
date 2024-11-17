@@ -279,16 +279,32 @@ def main():
                 except Exception as e:
                     st.warning(f"Failed to initialize rerun: {e}")
 
-                # Create container for right column content
-                right_container = right_col.container()
+                # Create flex container for right side layout
+                right_col.markdown("""
+                    <style>
+                    .right-flex-container {
+                        display: flex;
+                        flex-direction: column;
+                        height: 100%;
+                    }
+                    .video-container {
+                        flex: 1;
+                        min-height: 400px;
+                        margin-bottom: 20px;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
                 
-                # Add video stream to top
-                with right_container:
-                    st.subheader("Video Stream")
-                    video_placeholder = st.empty()
+                # Create flex container div
+                right_col.markdown('<div class="right-flex-container">', unsafe_allow_html=True)
                 
-                # Add Rerun visualizer below    
-                with right_container:
+                # Video stream container at top
+                right_col.markdown('<div class="video-container">', unsafe_allow_html=True)
+                st.subheader("Video Stream")
+                video_placeholder = st.empty()
+                right_col.markdown('</div>', unsafe_allow_html=True)
+                
+                # Rerun visualizer below
                     st.components.v1.iframe(
                         src=f"http://localhost:9000",
                         height=400,
