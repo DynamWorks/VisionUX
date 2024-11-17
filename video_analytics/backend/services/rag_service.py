@@ -1,10 +1,10 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from django.conf import settings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_community.vectorstores import Chroma
-from langchain_community.document_loaders import JSONLoader
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain_community.chains import ConversationalRetrievalQA
-from langchain_openai import ChatOpenAI
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pathlib import Path
 import json
 import logging
@@ -12,12 +12,15 @@ import hashlib
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 class RAGService:
     """Service for RAG-based retrieval and chat"""
     
-    def __init__(self, model_name: str = "gpt-4o-mini", persist_dir: str = "tmp_content/vector_store"):
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-mpnet-base-v2"
+    def __init__(self, user_id: str = None, project_id: str = None):
+        self.embeddings = OpenAIEmbeddings(
+            openai_api_key=settings.OPENAI_API_KEY,
+            openai_api_base=settings.OPENAI_API_BASE
         )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,

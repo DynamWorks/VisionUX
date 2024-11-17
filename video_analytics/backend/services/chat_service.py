@@ -1,5 +1,3 @@
-import json
-import time
 from pathlib import Path
 import logging
 from typing import Dict, List, Optional
@@ -7,6 +5,10 @@ from ..content_manager import ContentManager
 from ...core.swarm_agents import SwarmCoordinator
 from .rag_service import RAGService
 from ...utils.memory_manager import MemoryManager
+from django.conf import settings
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+import json
+import time
 import numpy as np
 
 class ChatService:
@@ -49,12 +51,22 @@ class ChatService:
                 
         return required_functions
         
-    def __init__(self):
+    def __init__(self, user_id: str = None, project_id: str = None):
         self.content_manager = ContentManager()
         self.swarm_coordinator = SwarmCoordinator()
-        self.rag_service = RAGService()
+        self.rag_service = RAGService(user_id=user_id, project_id=project_id)
         self.logger = logging.getLogger(__name__)
         self._current_chain = None
+        self.system_message = SystemMessage(
+            content="""You are an AI assistant powered by a RAG system.
+            When answering questions about video content:
+            1. Only use information from the provided context
+            2. If the context doesn't contain enough information, clearly state that
+            3. Cite specific frames and timestamps when possible
+            4. Keep responses clear and concise
+            5. If you're unsure about something, express that uncertainty
+            6. Never make up information that isn't in the context"""
+        )
         
     def process_chat(self, query: str, video_path: str, use_swarm: bool = False) -> Dict:
         """Process chat query with RAG and execute required functions"""
