@@ -160,7 +160,7 @@ class RAGService:
         prompt_template = """Use the following pieces of context to answer the question. 
         If you don't know the answer, just say that you don't know. Don't try to make up an answer.
         
-        Context: {context}
+        Context: {summaries}
         
         Question: {question}
         
@@ -170,7 +170,7 @@ class RAGService:
 
         PROMPT = PromptTemplate(
             template=prompt_template, 
-            input_variables=["context", "question"]
+            input_variables=["summaries", "question"]
         )
 
         chain = RetrievalQAWithSourcesChain.from_chain_type(
@@ -180,6 +180,7 @@ class RAGService:
             return_source_documents=True,
             chain_type_kwargs={
                 "prompt": PROMPT,
+                "document_variable_name": "summaries",
                 "verbose": True
             }
         )
