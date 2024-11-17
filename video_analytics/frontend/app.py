@@ -340,8 +340,9 @@ def main():
                 if not frames:
                     raise ValueError("Could not read video file")
 
-                # Send scene analysis request
-                response = requests.post(
+                try:
+                    # Send scene analysis request
+                    response = requests.post(
                         "http://localhost:8001/api/v1/analyze_scene",
                         json={
                             "video_path": str(video_path_obj),
@@ -370,9 +371,6 @@ def main():
                 except Exception as e:
                     st.warning("Scene analysis failed. Continuing with basic processing.")
                     logging.warning(f"Scene analysis failed: {str(e)}")
-                finally:
-                    # Clean up temporary image file
-                    Path(temp_image).unlink(missing_ok=True)
 
     # Right column - Chat History
     with right_col:
