@@ -3,7 +3,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import JSONLoader
 from langchain.memory.buffer import ConversationBufferMemory
-from langchain_core.chains import ConversationalRetrievalQA
+from langchain.chains import ConversationalRetrievalQA
 from langchain_openai import ChatOpenAI
 from pathlib import Path
 import json
