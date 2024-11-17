@@ -1,6 +1,8 @@
-from django.conf import settings
+import os
+from pathlib import Path
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from ...utils.config import Config
 from langchain_community.vectorstores import Chroma
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain_community.chains import ConversationalRetrievalQA
@@ -18,9 +20,13 @@ class RAGService:
     """Service for RAG-based retrieval and chat"""
     
     def __init__(self, user_id: str = None, project_id: str = None):
+        # Load config
+        self.config = Config()
+        
+        # Initialize embeddings with API key from env or config
         self.embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_API_BASE
+            openai_api_key=os.getenv('OPENAI_API_KEY') or self.config.get('services', {}).get('openai', {}).get('api_key'),
+            openai_api_base=os.getenv('OPENAI_API_BASE') or self.config.get('services', {}).get('openai', {}).get('api_base')
         )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
@@ -33,9 +39,9 @@ class RAGService:
             return_messages=True
         )
         self.llm = ChatOpenAI(
-            model_name="gpt-4o-mini",
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_API_BASE
+            model_name=self.config.get('services', {}).get('rag', {}).get('model', 'gpt-4-turbo-preview'),
+            openai_api_key=os.getenv('OPENAI_API_KEY') or self.config.get('services', {}).get('openai', {}).get('api_key'),
+            openai_api_base=os.getenv('OPENAI_API_BASE') or self.config.get('services', {}).get('openai', {}).get('api_base')
         )
         self.logger = logging.getLogger(__name__)
         self.persist_dir = Path("tmp_content/vector_store")
