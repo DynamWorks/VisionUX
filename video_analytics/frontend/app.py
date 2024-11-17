@@ -197,6 +197,10 @@ def is_ready():
 
 def main():
     """Main application entry point"""
+    # Initialize chat messages if not present
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        
     # Add title
     st.title("Video Analytics Dashboard")
     
