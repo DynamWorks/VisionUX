@@ -99,13 +99,15 @@ def process_video(video_path, query, viz_col, sample_rate: int = 30, max_workers
                 frame = frame_data['frame']
                     
                 try:
+                    # Log frame to Rerun first
+                    rr.log("video/frame", rr.Image(frame_rgb))
+                    
                     # Display frame in visualizer column
                     with viz_col:
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        st.subheader("Video Feed")
                         video_placeholder.image(frame_rgb)
-                    
-                    # Log frame to Rerun
-                    rr.log("video/frame", rr.Image(frame_rgb))
+                        st.markdown("---")  # Add separator
                     
                     # Process analysis results
                     for line in response.iter_lines():
@@ -248,6 +250,9 @@ def main():
                     
                     # Add visualizer to right column
                     with viz_col:
+                        st.subheader("Video Feed")
+                        video_placeholder = st.empty()
+                        st.markdown("---")  # Add separator
                         st.header("Visualizer")
                         st.components.v1.iframe(
                             src=f"http://localhost:9000",
