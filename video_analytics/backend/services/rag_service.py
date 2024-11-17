@@ -33,7 +33,7 @@ class RAGService:
             return_messages=True
         )
         self.llm = ChatOpenAI(
-            model_name="gpt-4-turbo-preview",
+            model_name="gpt-4o-mini",
             openai_api_key=settings.OPENAI_API_KEY,
             openai_api_base=settings.OPENAI_API_BASE
         )
