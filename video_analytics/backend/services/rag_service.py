@@ -200,5 +200,3 @@ class RAGService:
         except Exception as e:
             self.logger.error(f"Error saving vector store metadata: {str(e)}")
             raise
-                "answer": "Failed to process query"
-            }
