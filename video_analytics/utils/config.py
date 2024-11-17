@@ -42,12 +42,29 @@ class Config:
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
             
-    def load_config(self, config_path: str):
-        """Load configuration from YAML file"""
+    def load_config(self, config_path: str) -> None:
+        """
+        Load configuration from YAML file
+        
+        Args:
+            config_path: Path to YAML config file
+            
+        Raises:
+            FileNotFoundError: If config file does not exist
+            yaml.YAMLError: If config file is invalid YAML
+            ValueError: If config structure is invalid
+        """
+        if not Path(config_path).exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+            
         try:
             with open(config_path, 'r') as f:
                 yaml_config = yaml.safe_load(f)
+                if not isinstance(yaml_config, dict):
+                    raise ValueError("Config file must contain a YAML dictionary")
                 self._update_config(yaml_config)
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError(f"Invalid YAML in config file: {str(e)}")
         except Exception as e:
             raise ValueError(f"Error loading config file: {str(e)}")
             

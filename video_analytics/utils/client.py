@@ -30,12 +30,25 @@ class VideoAnalyticsClient:
             
         Returns:
             Analysis results dictionary
+            
+        Raises:
+            ConnectionError: If API server is not running
+            FileNotFoundError: If video file does not exist
+            ValueError: If text_queries is empty
+            requests.exceptions.RequestException: If API request fails
         """
         if not self.check_server():
             raise ConnectionError("API server is not running. Start it with: python -m video_analytics.main")
             
-        if not Path(video_path).exists():
+        video_path = Path(video_path)
+        if not video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
+            
+        if not video_path.is_file():
+            raise ValueError(f"Path is not a file: {video_path}")
+            
+        if not text_queries:
+            raise ValueError("text_queries cannot be empty")
             
         payload = {
             "video_path": str(Path(video_path).absolute()),
