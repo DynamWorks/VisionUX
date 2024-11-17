@@ -303,46 +303,45 @@ def main():
         # Perform initial scene analysis if video is uploaded
         if video_path:
             with st.spinner("Analyzing scene..."):
-                try:
-                    # Save uploaded video with timestamp in tmp_content
-                    timestamp = int(time.time())
-                    video_filename = f"uploaded_video_{timestamp}.mp4"
-                    video_path_obj = Path("tmp_content") / video_filename
-                    video_path_obj.parent.mkdir(parents=True, exist_ok=True)
-                    
-                    with open(video_path_obj, "wb") as f:
-                        f.write(video_path.getvalue())
-                    
-                    # Store video path in session state
-                    st.session_state.current_video = str(video_path_obj)
-                    
-                    # Read frames starting at 10 seconds
-                    frames = []
-                    cap = cv2.VideoCapture(str(video_path_obj))
-                    
-                    # Get video properties
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    start_time = 10.0  # Start at 10 seconds
-                    start_frame = int(start_time * fps)
-                    
-                    try:
-                        # Set frame position
-                        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-                        
-                        # Read 8 frames
-                        for _ in range(8):
-                            ret, frame = cap.read()
-                            if not ret:
-                                break
-                            frames.append(frame)
-                    finally:
-                        cap.release()
+                # Save uploaded video with timestamp in tmp_content
+                timestamp = int(time.time())
+                video_filename = f"uploaded_video_{timestamp}.mp4"
+                video_path_obj = Path("tmp_content") / video_filename
+                video_path_obj.parent.mkdir(parents=True, exist_ok=True)
                 
-                    if not frames:
-                        raise ValueError("Could not read video file")
-
+                with open(video_path_obj, "wb") as f:
+                    f.write(video_path.getvalue())
+                
+                # Store video path in session state
+                st.session_state.current_video = str(video_path_obj)
+                
+                # Read frames starting at 10 seconds
+                frames = []
+                cap = cv2.VideoCapture(str(video_path_obj))
+                
+                # Get video properties
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                start_time = 10.0  # Start at 10 seconds
+                start_frame = int(start_time * fps)
+                
                 try:
-                    response = requests.post(
+                    # Set frame position
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+                    
+                    # Read 8 frames
+                    for _ in range(8):
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+                        frames.append(frame)
+                finally:
+                    cap.release()
+            
+                if not frames:
+                    raise ValueError("Could not read video file")
+
+                # Send scene analysis request
+                response = requests.post(
                         "http://localhost:8001/api/v1/analyze_scene",
                         json={
                             "video_path": str(video_path_obj),
