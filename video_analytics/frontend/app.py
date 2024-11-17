@@ -244,7 +244,7 @@ def main():
                         if st.button("Start Video", type="primary"):
                             st.session_state.video_active = True
                             # Initialize video stream
-                            from ..utils.video_stream import VideoStream
+                            from video_analytics.utils.video_stream import VideoStream
                             stream = VideoStream(str(saved_video_path), loop=True)
                             st.session_state.video_stream = stream
                             stream.start()
