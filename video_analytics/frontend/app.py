@@ -1,6 +1,6 @@
 from pathlib import Path
-# Set page config as first Streamlit command
 import streamlit as st
+# Set page config as first Streamlit command
 st.set_page_config(
     page_title="Video Analytics Dashboard",
     layout="wide",
