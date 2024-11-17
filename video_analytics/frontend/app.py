@@ -66,17 +66,15 @@ def process_video(video_path, query, chat_mode=False, use_swarm=False):
             stream = VideoStream(str(video_file_path), loop=True)
             stream.start()
             
-            # Send analysis request
-            endpoint = "/api/v1/chat" if chat_mode else "/api/v1/analyze"
+            # Send chat request
             response = requests.post(
-                f"http://localhost:8001{endpoint}",
+                "http://localhost:8001/api/v1/chat",
                 json={
                     "video_path": str(video_file_path),
-                    "prompt": query if chat_mode else None,
-                    "text_queries": [query] if not chat_mode else None,
+                    "prompt": query,
                     "sample_rate": 30,
                     "max_workers": 4,
-                    "use_vila": chat_mode,
+                    "use_vila": True,
                     "use_swarm": use_swarm,
                     "stream_mode": True
                 },
