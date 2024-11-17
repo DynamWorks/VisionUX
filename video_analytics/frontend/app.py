@@ -223,22 +223,20 @@ def main():
             enable_tracking = st.checkbox("Object Tracking", value=True)
             enable_scene_analysis = st.checkbox("Scene Analysis", value=True)
 
-    # Chat column
-    with chat_col:
-        st.header("Analysis Chat")
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
         
-        # Initialize chat history
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
+    # Display chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
             
-        # Display chat messages
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-                
-        # Chat input
-        if video_path:
-            if prompt := st.chat_input("Ask about the video..."):
+    # Chat input - outside columns
+    if video_path:
+        # Chat header
+        st.header("Analysis Chat")
+        if prompt := st.chat_input("Ask about the video..."):
                 # Add user message
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 with st.chat_message("user"):
