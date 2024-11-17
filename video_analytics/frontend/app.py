@@ -41,7 +41,7 @@ def check_server_status(url: str = "http://localhost:8001") -> bool:
     except:
         return False
 
-def process_video(video_path, query, sample_rate: int = 30, max_workers: int = 4, 
+def process_video(video_path, query, viz_col, sample_rate: int = 30, max_workers: int = 4, 
                  chat_mode=False, use_swarm=False):
     """Process video with analysis and visualization"""
     # Create processing columns
@@ -396,6 +396,14 @@ def main():
                 # Process video analysis with UI settings
                 with st.spinner("Analyzing video..."):
                     try:
+                        process_video(
+                            str(st.session_state.current_video),
+                            prompt,
+                            viz_col,
+                            sample_rate=sample_rate,
+                            max_workers=max_workers,
+                            chat_mode=True
+                        )
                         response = requests.post(
                             "http://localhost:8001/api/v1/chat",
                             json={
