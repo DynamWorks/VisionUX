@@ -348,7 +348,7 @@ def main():
                             "video_path": str(video_path_obj),
                             "context": "Video upload analysis",
                             "stream_type": "uploaded_video",
-                            "start_time": 10.0,  # Start at 10 seconds
+                            "start_time": 1.0,  # Start at 1 seconds
                             "num_frames": 8      # Analyze 8 frames
                         }
                     )
