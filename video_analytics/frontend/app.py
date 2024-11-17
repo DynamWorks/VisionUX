@@ -12,7 +12,7 @@ import streamlit as st
 st.set_page_config(
     page_title="Video Analytics Dashboard",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 import rerun as rr
