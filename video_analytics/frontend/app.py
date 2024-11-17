@@ -210,9 +210,8 @@ def main():
             if video_path:
                 # Save uploaded video
                 tmp_content_dir.mkdir(parents=True, exist_ok=True)
-                tmp_content.mkdir(parents=True, exist_ok=True)
                 
-                uploads_dir = tmp_content / 'uploads'
+                uploads_dir = tmp_content_dir / 'uploads'
                 uploads_dir.mkdir(exist_ok=True)
                 
                 video_filename = f"uploaded_video_{int(time.time())}.mp4"
