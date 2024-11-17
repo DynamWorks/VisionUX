@@ -279,16 +279,16 @@ def main():
                 except Exception as e:
                     st.warning(f"Failed to initialize rerun: {e}")
 
-                # Split right column into top and bottom
-                right_top, right_bottom = right_col.container().columns(1)
+                # Create container for right column content
+                right_container = right_col.container()
                 
-                # Add video stream to top right
-                with right_top:
+                # Add video stream to top
+                with right_container:
                     st.subheader("Video Stream")
                     video_placeholder = st.empty()
                 
-                # Add Rerun visualizer to bottom right    
-                with right_bottom:
+                # Add Rerun visualizer below    
+                with right_container:
                     st.components.v1.iframe(
                         src=f"http://localhost:9000",
                         height=400,
