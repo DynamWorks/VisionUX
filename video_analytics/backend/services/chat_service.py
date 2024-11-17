@@ -47,21 +47,35 @@ class ChatService:
                 
         return required_functions
         
+    def __init__(self):
+        self.content_manager = ContentManager()
+        self.swarm_coordinator = SwarmCoordinator()
+        self.rag_service = RAGService()
+        self.logger = logging.getLogger(__name__)
+        self._current_chain = None
+        
     def process_chat(self, query: str, video_path: str) -> Dict:
-        """Process chat query with context and execute required functions"""
+        """Process chat query with RAG and execute required functions"""
         try:
-            # Get context from tmp_content
-            context = self._get_context_from_tmp()
+            # Get latest analysis results
+            analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
+            if not analysis_files:
+                return {"error": "No analysis results found"}
+                
+            latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
             
-            # Extract required functions
+            # Create or get knowledge base
+            if not self._current_chain:
+                vectordb = self.rag_service.create_knowledge_base(latest_results)
+                if not vectordb:
+                    return {"error": "Failed to create knowledge base"}
+                self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+            
+            # Query knowledge base
+            rag_response = self.rag_service.query_knowledge_base(query, self._current_chain)
+            
+            # Extract required functions for additional processing
             required_functions = self._extract_function_calls(query)
-            
-            response_data = {
-                "query": query,
-                "context_used": len(context),
-                "functions_executed": required_functions,
-                "results": {}
-            }
             
             # Execute required functions using swarm
             if required_functions:
