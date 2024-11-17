@@ -20,9 +20,19 @@ class CameraManager:
                 for i in range(10):
                     cap = cv2.VideoCapture(i)
                     if cap.isOpened():
+                        # Get device name if available
+                        device_name = cap.getBackendName()
+                        if self._system == 'darwin':
+                            import subprocess
+                            try:
+                                result = subprocess.run(['system_profiler', 'SPCameraDataType'], capture_output=True, text=True)
+                                if 'Camera Name' in result.stdout:
+                                    device_name = result.stdout.split('Camera Name:')[1].split('\n')[0].strip()
+                            except:
+                                pass
                         cameras.append({
                             'id': i,
-                            'name': f'Camera {i}',
+                            'name': device_name or f'Camera {i}',
                             'system': self._system
                         })
                         cap.release()

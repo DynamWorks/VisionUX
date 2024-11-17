@@ -56,8 +56,15 @@ class VideoStream:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
                 # Log frame to rerun
-                import rerun as rr
-                rr.log("video/frames", rr.Image(frame_rgb))
+                try:
+                    import rerun as rr
+                    if not hasattr(self, '_rerun_initialized'):
+                        rr.init("video_analytics", spawn=True)
+                        rr.connect()
+                        self._rerun_initialized = True
+                    rr.log("video/frames", rr.Image(frame_rgb))
+                except Exception as e:
+                    self.logger.warning(f"Failed to log to Rerun: {e}")
                 
                 self.buffer.put({
                     'frame': frame,

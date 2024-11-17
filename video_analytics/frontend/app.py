@@ -258,8 +258,10 @@ def main():
                         # Initialize rerun for camera visualization
                         import rerun as rr
                         try:
-                            rr.init("video_analytics", spawn=True)
-                            rr.connect()
+                            if not hasattr(st.session_state, '_rerun_initialized'):
+                                rr.init("video_analytics", spawn=True)
+                                rr.connect()
+                                st.session_state._rerun_initialized = True
                         except Exception as e:
                             st.warning(f"Failed to initialize rerun: {e}")
             
