@@ -305,12 +305,12 @@ def main():
                 right_col.markdown('</div>', unsafe_allow_html=True)
                 
                 # Rerun visualizer below
-                    st.components.v1.iframe(
-                        src=f"http://localhost:9000",
-                        height=400,
-                        scrolling=True
-                    )
-                    st.markdown("---")  # Add separator
+                st.components.v1.iframe(
+                    src=f"http://localhost:9000",
+                    height=400,
+                    scrolling=True
+                )
+                st.markdown("---")  # Add separator
 
                 # Video controls in clean container
                 with st.container():
