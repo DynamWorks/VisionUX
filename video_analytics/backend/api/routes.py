@@ -114,37 +114,6 @@ def analyze_video():
             
         cap.release()
         
-        # Format results and store in memory
-        formatted_results = []
-        for frame_result in results:
-            if not isinstance(frame_result, dict):
-                logger.warning(f"Unexpected result format: {type(frame_result)}")
-                continue
-                
-            # Store in frame memory
-            frame_memory.add_frame(frame_result)
-                
-            detections = frame_result.get('detections', {})
-            if not isinstance(detections, dict):
-                detections = {
-                    'segments': detections if isinstance(detections, list) else [],
-                    'lanes': [],
-                    'text': [],
-                    'signs': [],
-                    'tracking': {}
-                }
-                
-            formatted_results.append({
-                'frame_number': frame_result.get('frame_number', 0),
-                'timestamp': frame_result.get('timestamp', 0.0),
-                'detections': {
-                    'segments': detections.get('segments', []),
-                    'lanes': detections.get('lanes', []),
-                    'text': detections.get('text', []),
-                    'signs': detections.get('signs', []),
-                    'tracking': detections.get('tracking', {})
-                }
-            })
 
         return Response(
             generate_results(),
