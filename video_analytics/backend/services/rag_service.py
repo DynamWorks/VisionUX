@@ -1,10 +1,10 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.document_loaders import JSONLoader
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalQA
-from langchain.chat_models import ChatOpenAI
+from langchain_community.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_community.document_loaders import JSONLoader
+from langchain_core.memory import ConversationBufferMemory
+from langchain_core.chains import ConversationalRetrievalQA
+from langchain_openai import ChatOpenAI
 from pathlib import Path
 import json
 import logging
