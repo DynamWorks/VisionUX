@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 api = Blueprint('api', __name__)
 
 # Initialize processor and memory store with config
-from ..utils.config import Config
+from ...utils.config import Config
 config = Config()
 processor = VideoProcessor(analyzer=ClipVideoAnalyzer(config=config.config))
 frame_memory = MemoryManager(content_manager=None)
