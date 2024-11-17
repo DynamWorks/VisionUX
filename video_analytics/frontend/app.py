@@ -1,5 +1,5 @@
-from pathlib import Path
 import streamlit as st
+from pathlib import Path
 # Set page config as first Streamlit command
 st.set_page_config(
     page_title="Video Analytics Dashboard",
@@ -199,6 +199,9 @@ def main():
     with controls_col:
         st.header("Controls")
         
+        # Create tmp_content directory path
+        tmp_content_dir = Path('tmp_content')
+        
         # Video source selection
         source_type = st.radio("Select Video Source", ["Upload Video", "Use Camera"])
         
@@ -206,7 +209,7 @@ def main():
             video_path = st.file_uploader("Upload Video", type=['mp4', 'avi'])
             if video_path:
                 # Save uploaded video
-                tmp_content = Path('tmp_content')
+                tmp_content_dir.mkdir(parents=True, exist_ok=True)
                 tmp_content.mkdir(parents=True, exist_ok=True)
                 
                 uploads_dir = tmp_content / 'uploads'
