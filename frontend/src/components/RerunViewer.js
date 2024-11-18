@@ -9,12 +9,12 @@ const RerunViewer = () => {
             const script = document.createElement('script');
             script.src = 'https://app.rerun.io/web-viewer/0.20.0/web-viewer.js';
             script.async = true;
-            
+
             script.onload = () => {
                 if (viewerRef.current) {
                     const viewer = viewerRef.current;
                     viewer.setAttribute('recording-id', 'video_analytics');
-                    viewer.setAttribute('ws-url', 'ws://localhost:4321');
+                    viewer.setAttribute('ws-url', process.env.REACT_APP_RERUN_WS_URL || 'ws://localhost:4321');
                     viewer.setAttribute('auto-connect', 'true');
                 }
             };
@@ -36,7 +36,7 @@ const RerunViewer = () => {
             borderRadius: '8px',
             overflow: 'hidden'
         }}>
-            <rerun-viewer 
+            <rerun-viewer
                 ref={viewerRef}
                 style={{
                     width: '100%',
