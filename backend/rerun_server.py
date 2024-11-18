@@ -14,8 +14,7 @@ class RerunServer:
         self.site = None
         
         # Initialize Rerun
-        rr.init("video_analytics")
-        #rr.spawn()  # Start Rerun server in non-blocking mode
+        rr.init("video_analytics", spawn=True)
         rr.serve(open_browser=False, ws_port=4321)
         
     async def start(self):

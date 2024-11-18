@@ -43,8 +43,9 @@ class WebSocketHandler:
                         # Convert BGR to RGB for Rerun
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         
-                        # Log frame to Rerun with timestamp
-                        rr.log("camera", rr.Image(frame_rgb), timedelta=time.time())
+                        # Log frame to Rerun
+                        rr.log("camera", rr.Image(frame_rgb))
+                        rr.flush()  # Ensure frame is sent immediately
                         
                         response = {
                             "type": "frame_processed",
