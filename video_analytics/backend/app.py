@@ -8,6 +8,7 @@ class BackendApp:
         self.app = Flask(__name__)
         self.server = None
         self.content_manager = None
+        self.models_loaded = False
 
     def is_ready(self):
         """Check if backend is ready"""
@@ -24,6 +25,11 @@ class BackendApp:
                         base_path=content_config.get('base_path', 'tmp_content')
                     )
                     logging.info("Content manager initialized")
+                    
+                # Ensure model directories exist
+                Path("backend/models/yolo").mkdir(parents=True, exist_ok=True)
+                Path("backend/models/clip").mkdir(parents=True, exist_ok=True)
+                Path("backend/models/traffic_signs").mkdir(parents=True, exist_ok=True)
                 
                 self.app.run(host='localhost', port=port, debug=False)
             except Exception as e:

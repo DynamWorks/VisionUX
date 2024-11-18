@@ -25,13 +25,13 @@ processing:
 models:
   clip:
     name: "openai/clip-vit-base-patch32"
-    local_path: "models/clip"
+    local_path: "backend/models/clip"
   yolo:
     name: "yolov8x.pt"
     local_path: "backend/models/yolo"
   traffic_signs:
     name: "yolov8n.pt"
-    local_path: "models/traffic_signs"
+    local_path: "backend/models/traffic_signs"
 
 # Service Configuration
 services:

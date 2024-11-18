@@ -17,6 +17,7 @@ class ContentManager:
         self.uploads_dir = self.base_path / "uploads"
         self.analysis_dir = self.base_path / "analysis"
         self.chat_dir = self.base_path / "chat_history"
+        self.models_dir = Path("backend/models")
         
         for directory in [self.uploads_dir, self.analysis_dir, self.chat_dir]:
             directory.mkdir(exist_ok=True)

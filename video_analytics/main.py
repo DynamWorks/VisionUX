@@ -64,6 +64,7 @@ def create_app(config_path: Optional[str] = None) -> Flask:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If config is invalid
+        RuntimeError: If required model files are missing
     """
     # Initialize app
     app = Flask(__name__)
