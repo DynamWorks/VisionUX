@@ -14,7 +14,7 @@ const RerunViewer = () => {
                 if (viewerRef.current) {
                     const viewer = viewerRef.current;
                     viewer.setAttribute('recording-id', 'video_analytics');
-                    viewer.setAttribute('ws-url', process.env.REACT_APP_RERUN_WS_URL || 'ws://localhost:4321');
+                    viewer.setAttribute('ws-url', 'ws://localhost:4321');
                     viewer.setAttribute('auto-connect', 'true');
                 }
             };
