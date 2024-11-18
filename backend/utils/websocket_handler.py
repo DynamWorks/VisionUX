@@ -15,9 +15,9 @@ class WebSocketHandler:
         self.uploads_path = Path("tmp_content/uploads")
         self.uploads_path.mkdir(parents=True, exist_ok=True)
         
-        # Initialize Rerun in headless mode
+        # Initialize Rerun for headless operation
         rr.init("video_analytics")
-        rr.serve(headless=True)  # Start Rerun server in headless mode
+        rr.spawn()  # Start Rerun server in non-blocking mode
 
     async def handle_connection(self, websocket):
         self.clients.add(websocket)
