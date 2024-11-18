@@ -1,0 +1,72 @@
+# Server Configuration
+api:
+  host: localhost
+  port: 8001
+  debug: false
+
+frontend:
+  host: localhost
+  port: 8501
+  title: "Video Analytics Dashboard"
+  
+backend:
+  host: localhost
+  port: 8502
+  workers: 4
+
+# Processing Configuration
+processing:
+  sample_rate: 30
+  max_workers: 4
+  confidence_threshold: 0.5
+  batch_size: 8
+
+# Model Configuration  
+models:
+  clip:
+    name: "openai/clip-vit-base-patch32"
+    local_path: "backend/models/clip"
+  yolo:
+    name: "yolov8x.pt"
+    local_path: "backend/models/yolo"
+  traffic_signs:
+    name: "yolov8n.pt"
+    local_path: "backend/models/traffic_signs"
+
+# Service Configuration
+services:
+  openai:
+    model: gpt-4-vision-preview-v2
+    max_tokens: 500
+    temperature: 0.7
+  
+  scene_analysis:
+    model: "gpt-4o-mini"
+    max_tokens: 500
+    temperature: 0.7
+    
+  detection:
+    model: yolov8n.pt
+    confidence: 0.25
+    sample_rate: 30
+    
+  rag:
+    embeddings_model: "sentence-transformers/all-mpnet-base-v2"
+    chunk_size: 1000
+    chunk_overlap: 200
+
+# Storage Configuration
+storage:
+  base_path: "tmp_content"
+  max_age_hours: 24
+  subdirs:
+    - uploads
+    - analysis 
+    - chat_history
+    - visualizations
+
+# Logging Configuration
+logging:
+  level: INFO
+  file: video_analytics.log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
