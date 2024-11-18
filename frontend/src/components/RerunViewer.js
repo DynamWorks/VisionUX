@@ -11,7 +11,7 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <iframe
-                src="https://app.rerun.io/web-viewer/0.20.0/"
+                src="https://app.rerun.io/web-viewer/0.20.0/?ws_url=ws://localhost:4321"
                 style={{
                     width: '100%',
                     height: '100%',
