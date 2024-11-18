@@ -36,6 +36,6 @@ class WebSocketHandler:
         finally:
             self.clients.remove(websocket)
 
-    async def start_server(self, host='localhost', port=8502):
+    async def start_server(self, host='localhost', port=8000):
         async with websockets.serve(self.handle_connection, host, port):
             await asyncio.Future()  # run forever
