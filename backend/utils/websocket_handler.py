@@ -48,7 +48,7 @@ class WebSocketHandler:
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         
                         # Process frame with edge detection
-                        edges_rgb = self.edge_detector.detect_edges(frame)
+                        #edges_rgb = self.edge_detector.detect_edges(frame)
                         
                         # Log original frame to Rerun
                         timestamp = time.time()
