@@ -18,7 +18,18 @@ const RerunViewer = ({ stream, videoFile }) => {
                         { type: 'image', path: 'camera' }
                     ]
                 },
-                autoConnect: true
+                autoConnect: true,
+                headless: true
+            });
+
+            // Add error handling for connection issues
+            viewer.addEventListener('error', (error) => {
+                console.error('Failed to connect to Rerun server:', error);
+            });
+
+            // Add connection status handling
+            viewer.addEventListener('connect', () => {
+                console.log('Successfully connected to Rerun server');
             });
 
             // Handle connection status
