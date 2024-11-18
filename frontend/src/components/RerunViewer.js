@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { RerunViewer as Viewer } from '@rerun-io/web-viewer-react';
+import WebViewer from '@rerun-io/web-viewer-react';
 
 const RerunViewer = ({ stream, isStreaming }) => {
     useEffect(() => {
@@ -10,7 +10,7 @@ const RerunViewer = ({ stream, isStreaming }) => {
     }, [stream, isStreaming]);
 
     return (
-        <Viewer
+        <WebViewer
             style={{
                 width: '100%',
                 height: '500px',
