@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { WebViewer } from '@rerun-io/web-viewer';
+import WebViewer from '@rerun-io/web-viewer';
 
 const RerunViewer = ({ stream, isStreaming, videoFile }) => {
     const [rrdUrl, setRrdUrl] = useState(null);

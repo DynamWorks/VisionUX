@@ -7,7 +7,7 @@
         "@emotion/styled": "^11.11.0",
         "@mui/icons-material": "^5.14.20",
         "@mui/material": "^5.14.20",
-        "@rerun-io/web-viewer": "^0.20.0",
+        "@rerun-io/web-viewer": "0.9.0",
         "axios": "^1.6.2",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
