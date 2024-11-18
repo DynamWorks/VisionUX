@@ -3,7 +3,7 @@ import threading
 import asyncio
 from pathlib import Path
 from .content_manager import ContentManager
-from video_analytics.utils.websocket_handler import WebSocketHandler
+from utils.websocket_handler import WebSocketHandler
 import logging
 
 class BackendApp:
