@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Viewer } from '@rerun-io/web-viewer';
+import { WebViewer } from '@rerun-io/web-viewer';
 
 const RerunViewer = ({ stream, isStreaming }) => {
     const containerRef = useRef(null);
@@ -34,7 +34,7 @@ const RerunViewer = ({ stream, isStreaming }) => {
     }, [stream, isStreaming]);
 
     return (
-        <div 
+        <div
             ref={containerRef}
             style={{
                 width: '100%',
