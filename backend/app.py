@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 from content_manager import ContentManager
 from utils.websocket_handler import WebSocketHandler
-from rerun_server import RerunServer
+from utils.rerun_server import RerunServer
 import logging
 import os
 
