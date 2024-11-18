@@ -37,7 +37,7 @@ function App() {
         }
     }, [stream]);
 
-    const refreshDevices = async () => {
+    const refreshDevices = useCallback(async () => {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
@@ -45,7 +45,7 @@ function App() {
         } catch (error) {
             console.error('Error enumerating devices:', error);
         }
-    };
+    }, []);
 
     // Initialize devices on mount
     useEffect(() => {
