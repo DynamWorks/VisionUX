@@ -1,7 +1,7 @@
 # Server Configuration
 api:
   host: localhost
-  port: 8001
+  port: 8502
   debug: false
 
 frontend:
