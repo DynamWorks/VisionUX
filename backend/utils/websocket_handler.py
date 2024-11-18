@@ -49,14 +49,6 @@ class WebSocketHandler:
                               rr.Image(frame_rgb),
                               timeless=False,
                               timestamp=timestamp)
-                        rr.flush()
-                        
-                        response = {
-                            "type": "frame_processed",
-                            "timestamp": time.time()
-                        }
-                    
-                    await websocket.send(json.dumps(response))
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
