@@ -4,7 +4,7 @@ import { Box, Container } from '@mui/material';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CameraSelector from './components/CameraSelector';
-import RerunViewer from './components/RerunViewer';
+import VideoDisplay from './components/VideoDisplay';
 import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
 
@@ -113,9 +113,8 @@ function App() {
                             )}
                         </Box>
                         <Box sx={{ width: '70%' }}>
-                            <RerunViewer
+                            <VideoDisplay
                                 stream={stream}
-                                isStreaming={isStreaming && !isPaused}
                                 videoFile={videoFile}
                             />
                         </Box>
