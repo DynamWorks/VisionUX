@@ -3,6 +3,8 @@ import requests
 import json
 from pathlib import Path
 import time
+import sys
+sys.path.append("../../")  # Add parent directory to path
 
 def test_chat_service(video_path: str, prompt: str, api_url: str = "http://localhost:8001"):
     """

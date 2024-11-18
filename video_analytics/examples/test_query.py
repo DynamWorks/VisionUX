@@ -3,6 +3,8 @@ import requests
 import json
 import sseclient
 from typing import List, Dict, Generator
+import sys
+sys.path.append("../../")  # Add parent directory to path
 
 def test_query(query: str, video_path: str, api_url: str = "http://localhost:8001", 
                max_results: int = 5, threshold: float = 0.2, filters: Dict = None,

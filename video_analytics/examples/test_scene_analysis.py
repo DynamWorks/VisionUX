@@ -4,6 +4,8 @@ import base64
 import json
 import time
 from pathlib import Path
+import sys
+sys.path.append("../../")  # Add parent directory to path
 
 def test_scene_analysis(image_path: str, api_url: str = "http://localhost:8001", context: str = None):
     """

@@ -28,7 +28,7 @@ models:
     local_path: "models/clip"
   yolo:
     name: "yolov8x.pt"
-    local_path: "models/yolo"
+    local_path: "backend/models/yolo"
   traffic_signs:
     name: "yolov8n.pt"
     local_path: "models/traffic_signs"
