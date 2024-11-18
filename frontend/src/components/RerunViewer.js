@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box } from '@mui/material';
 
-const RERUN_VERSION = '${process.env.REACT_APP_RERUN_VER}$';  // Match your @rerun-io/web-viewer version
-const RRD_URL = '${process.env.REACT_APP_RERUN_URL}$';  // Use explicit IP address
-
 const RerunViewer = () => {
-    const iframeUrl = `https://app.rerun.io/version/${RERUN_VERSION}/index.html?url=${encodeURIComponent(RRD_URL)}`;
+    useEffect(() => {
+        // Load Rerun viewer script
+        const script = document.createElement('script');
+        script.src = 'https://app.rerun.io/web-viewer/0.20.0/web-viewer.js';
+        script.async = true;
+        document.body.appendChild(script);
+
+        return () => {
+            document.body.removeChild(script);
+        };
+    }, []);
 
     return (
         <Box sx={{
@@ -15,14 +22,14 @@ const RerunViewer = () => {
             borderRadius: '8px',
             overflow: 'hidden'
         }}>
-            <iframe
-                src={iframeUrl}
+            <rerun-viewer 
                 style={{
                     width: '100%',
                     height: '100%',
                     border: 'none'
                 }}
-                title="Rerun Viewer"
+                recording-id="video_analytics"
+                ws-url="ws://127.0.0.1:4321"
             />
         </Box>
     );
