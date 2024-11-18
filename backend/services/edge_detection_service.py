@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import rerun as rr
+import time
 
 class EdgeDetectionService:
     def __init__(self, low_threshold=100, high_threshold=200):
@@ -36,5 +38,12 @@ class EdgeDetectionService:
         
         # Convert back to RGB for visualization
         edges_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
+        
+        # Log the edge detection result to Rerun
+        timestamp = time.time()
+        rr.log("edge_detection/edges", 
+               rr.Image(edges_rgb),
+               timeless=False,
+               timestamp=timestamp)
         
         return edges_rgb

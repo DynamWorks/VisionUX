@@ -50,15 +50,10 @@ class WebSocketHandler:
                         # Process frame with edge detection
                         edges_rgb = self.edge_detector.detect_edges(frame)
                         
-                        # Log both original and edge-detected frames to Rerun
+                        # Log original frame to Rerun
                         timestamp = time.time()
                         rr.log("camera/original", 
                               rr.Image(frame_rgb),
-                              timeless=False,
-                              timestamp=timestamp)
-                        
-                        rr.log("camera/edges", 
-                              rr.Image(edges_rgb),
                               timeless=False,
                               timestamp=timestamp)
         except websockets.exceptions.ConnectionClosed:
