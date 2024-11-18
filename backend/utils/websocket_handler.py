@@ -15,9 +15,9 @@ class WebSocketHandler:
         self.uploads_path = Path("tmp_content/uploads")
         self.uploads_path.mkdir(parents=True, exist_ok=True)
         
-        # Initialize Rerun
+        # Initialize Rerun with specific configuration
         rr.init("video_analytics")
-        rr.serve()  # Start Rerun server on default port
+        rr.serve(host="localhost", port=9000)  # Start Rerun server on port 9000
 
     async def handle_connection(self, websocket):
         self.clients.add(websocket)

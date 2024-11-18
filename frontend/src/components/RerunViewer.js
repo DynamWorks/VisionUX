@@ -10,14 +10,24 @@ const RerunViewer = ({ stream, videoFile }) => {
         if (viewerRef.current) {
             const viewer = new WebViewer({
                 container: viewerRef.current,
-                recording: rrdRef.current,
+                serverUrl: 'ws://localhost:9000',  // Connect to Rerun server
                 blueprint: {
                     layout: 'horizontal',
                     widgets: [
                         { type: 'viewer3d', path: 'world' },
                         { type: 'image', path: 'camera' }
                     ]
-                }
+                },
+                autoConnect: true
+            });
+
+            // Handle connection status
+            viewer.addEventListener('connect', () => {
+                console.log('Connected to Rerun server');
+            });
+
+            viewer.addEventListener('error', (error) => {
+                console.error('Rerun viewer error:', error);
             });
 
             return () => {
