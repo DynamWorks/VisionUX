@@ -17,7 +17,10 @@ const RerunViewer = ({ stream, isStreaming }) => {
 
         return () => {
             if (viewerRef.current) {
-                viewerRef.current.dispose();
+                // Clean up by removing the viewer from the DOM
+                if (containerRef.current) {
+                    containerRef.current.innerHTML = '';
+                }
                 viewerRef.current = null;
             }
         };
