@@ -7,14 +7,17 @@ from pathlib import Path
 import numpy as np
 import cv2
 import base64
+import rerun as rr
 
 class WebSocketHandler:
     def __init__(self):
         self.clients = set()
-        self.rrd_path = Path("tmp_content/rrd")
         self.uploads_path = Path("tmp_content/uploads")
-        self.rrd_path.mkdir(parents=True, exist_ok=True)
         self.uploads_path.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize Rerun
+        rr.init("video_analytics")
+        rr.serve(port=9000)  # Start Rerun server
 
     async def handle_connection(self, websocket):
         self.clients.add(websocket)
@@ -38,12 +41,12 @@ class WebSocketHandler:
                         nparr = np.frombuffer(message, np.uint8)
                         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                         
-                        # Process frame here
-                        rrd_file = self.rrd_path / f"frame_{len(self.clients)}.rrd"
+                        # Log frame to Rerun
+                        rr.log_image("camera", frame)
                         
                         response = {
                             "type": "frame_processed",
-                            "rrdUrl": str(rrd_file)
+                            "timestamp": time.time()
                         }
                     
                     await websocket.send(json.dumps(response))
