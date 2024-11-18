@@ -10,8 +10,8 @@ const RerunViewer = () => {
             borderRadius: '8px',
             overflow: 'hidden'
         }}>
-            <iframe // the src should not change :src={`https://app.rerun.io/version/${process.env.REACT_APP_RERUN_VER}/?ws_url=${process.env.REACT_APP_RERUN_WS_URL}&hide_welcome_screen=true`}
-                src={`https://app.rerun.io/version/${process.env.REACT_APP_RERUN_VER}/?ws_url=${process.env.REACT_APP_RERUN_WS_URL}&hide_welcome_screen=true`}
+            <iframe
+                src={`https://app.rerun.io/version/${process.env.REACT_APP_RERUN_VER}/?ws_url=${process.env.REACT_APP_RERUN_WS_URL}&hide_welcome_screen=true&persist=true`}
                 style={{
                     width: '100%',
                     height: '100%',
@@ -19,7 +19,7 @@ const RerunViewer = () => {
                 }}
                 title="Rerun Viewer"
                 allow="camera"
-                sandbox="allow-scripts allow-same-origin"
+                sandbox="allow-scripts allow-same-origin allow-forms"
             />
         </Box>
     );
