@@ -1,7 +1,7 @@
 # Server Configuration
 api:
-  host: localhost
-  port: 8000
+  host: ${WS_HOST:-localhost}
+  port: ${WS_PORT:-8000}
   debug: false
 
 frontend:

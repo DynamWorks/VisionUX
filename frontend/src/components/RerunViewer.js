@@ -29,7 +29,7 @@ const RerunViewer = () => {
                     border: 'none'
                 }}
                 recording-id="video_analytics"
-                ws-url="ws://127.0.0.1:4321"
+                ws-url={process.env.REACT_APP_RERUN_WS_URL}
             />
         </Box>
     );

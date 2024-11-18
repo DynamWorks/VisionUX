@@ -19,7 +19,7 @@ function App() {
     const [ws, setWs] = useState(null);
 
     useEffect(() => {
-        const websocket = new WebSocket('ws://localhost:8000');
+        const websocket = new WebSocket(process.env.REACT_APP_WS_URL);
         setWs(websocket);
         return () => {
             if (websocket) {
