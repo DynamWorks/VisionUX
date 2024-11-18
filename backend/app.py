@@ -2,8 +2,8 @@ from flask import Flask
 import threading
 import asyncio
 from pathlib import Path
-from backend.content_manager import ContentManager
-from backend.utils.websocket_handler import WebSocketHandler
+from content_manager import ContentManager
+from utils.websocket_handler import WebSocketHandler
 import logging
 
 class BackendApp:
