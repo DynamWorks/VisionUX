@@ -19,7 +19,7 @@ class RerunServer:
             open_browser=False,
             ws_port=4321,
             skip_welcome=True,
-            default_blueprint=rr.Blueprint(
+            default_blueprint=rr.blueprint(
                 ["camera/feed"],
                 name="Video Feed"
             )
