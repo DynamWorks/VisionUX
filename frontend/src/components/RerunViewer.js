@@ -24,10 +24,10 @@ const RerunViewer = ({ stream, isStreaming, videoFile }) => {
                 reader.onload = () => {
                     if (viewerRef.current) {
                         const frameData = new Uint8Array(reader.result);
-                        viewerRef.current.addPoints("camera/frames", {
+                        viewerRef.current.logImage("camera/frames", {
                             data: frameData,
-                            frame: frameRef.current++,
-                            timestamp: performance.now()
+                            frameNr: frameRef.current++,
+                            timestamp: performance.now() * 1e6 // Convert to nanoseconds
                         });
                     }
                 };
@@ -93,10 +93,11 @@ const RerunViewer = ({ stream, isStreaming, videoFile }) => {
             height="500px"
             blueprint={{
                 name: "Camera Feed",
-                entities: {
+                components: {
                     "camera/frames": {
                         type: "image",
-                        shape: [720, 1280, 3]
+                        shape: [720, 1280, 3],
+                        stream: true
                     }
                 }
             }}
@@ -109,7 +110,14 @@ const RerunViewer = ({ stream, isStreaming, videoFile }) => {
                 viewerRef.current?.clear();
                 frameRef.current = 0;
             }}
-            onError={(error) => console.error('Rerun viewer error:', error)}
+            onError={(error) => {
+                console.error('Rerun viewer error:', error);
+                // Attempt recovery
+                if (viewerRef.current) {
+                    viewerRef.current.clear();
+                    frameRef.current = 0;
+                }
+            }}
         />
     );
 };
