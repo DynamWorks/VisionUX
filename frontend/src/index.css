@@ -4,7 +4,7 @@
   --background-color: #f4f4f4;
   --text-color: #ffffff;
   --body-text-color: #050402;
-  --header-height: 200px;
+  --header-height: 60px;
   --button-text-color: #ffffff;
 }
 
@@ -28,19 +28,16 @@ body {
     display: flex;
     flex: 1;
     padding: 20px;
-}
-
-@media (max-width: 768px) {
-    .main-content {
-        flex-direction: column;
-    }
+    gap: 20px;
 }
 
 .video-container {
-    flex: 1;
-    min-height: 400px;
-    margin-bottom: 20px;
     position: relative;
+    width: 100%;
+    min-height: 400px;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .controls-container {
@@ -58,11 +55,22 @@ body {
     border-radius: 4px;
     cursor: pointer;
     margin: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #a17e3a;
 }
 
 .button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+    }
 }
 :root {
   --primary-color: #333333;
