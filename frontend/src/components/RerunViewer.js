@@ -8,7 +8,7 @@ const RerunViewer = ({ stream, isStreaming }) => {
     useEffect(() => {
         if (stream && isStreaming) {
             // Connect to WebSocket for stream processing
-            const ws = new WebSocket('ws://localhost:8502/stream');
+            const ws = new WebSocket('ws://localhost:8000/stream');
             wsRef.current = ws;
 
             ws.onopen = () => {

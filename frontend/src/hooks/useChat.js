@@ -8,7 +8,7 @@ const useChat = () => {
     const sendMessage = useCallback(async (message) => {
         setIsLoading(true);
         try {
-            const response = await axios.post('http://localhost:8502/api/chat', {
+            const response = await axios.post('http://localhost:8000/api/chat', {
                 message,
                 context: messages
             });
