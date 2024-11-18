@@ -20,10 +20,25 @@ function App() {
     const [ws, setWs] = useState(null);
 
     useEffect(() => {
+        if (!process.env.REACT_APP_WS_URL) {
+            console.error('WebSocket URL is not defined in environment variables');
+            return;
+        }
+        
         const websocket = new WebSocket(process.env.REACT_APP_WS_URL);
+        
+        websocket.onopen = () => {
+            console.log('WebSocket Connected');
+        };
+        
+        websocket.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+        };
+        
         setWs(websocket);
+        
         return () => {
-            if (websocket) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
                 websocket.close();
             }
         };
