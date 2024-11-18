@@ -1,17 +1,31 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
 
 const RerunViewer = () => {
-    useEffect(() => {
-        // Load Rerun viewer script
-        const script = document.createElement('script');
-        script.src = 'https://app.rerun.io/web-viewer/0.20.0/web-viewer.js';
-        script.async = true;
-        document.body.appendChild(script);
+    const viewerRef = useRef(null);
 
-        return () => {
-            document.body.removeChild(script);
+    useEffect(() => {
+        const loadViewer = async () => {
+            const script = document.createElement('script');
+            script.src = 'https://app.rerun.io/web-viewer/0.20.0/web-viewer.js';
+            script.async = true;
+            
+            script.onload = () => {
+                if (viewerRef.current) {
+                    const viewer = viewerRef.current;
+                    viewer.setAttribute('recording-id', 'video_analytics');
+                    viewer.setAttribute('ws-url', process.env.REACT_APP_RERUN_WS_URL || 'ws://localhost:4321');
+                    viewer.setAttribute('auto-connect', 'true');
+                }
+            };
+
+            document.body.appendChild(script);
+            return () => {
+                document.body.removeChild(script);
+            };
         };
+
+        loadViewer();
     }, []);
 
     return (
@@ -23,13 +37,12 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <rerun-viewer 
+                ref={viewerRef}
                 style={{
                     width: '100%',
                     height: '100%',
                     border: 'none'
                 }}
-                recording-id="video_analytics"
-                ws-url={process.env.REACT_APP_RERUN_WS_URL}
             />
         </Box>
     );

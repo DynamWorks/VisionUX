@@ -156,10 +156,6 @@ function App() {
                             )}
                         </Box>
                         <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <VideoDisplay
-                                stream={stream}
-                                videoFile={videoFile}
-                            />
                             <RerunViewer />
                         </Box>
                     </Box>
