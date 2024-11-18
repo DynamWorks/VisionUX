@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import WebViewer from '@rerun-io/web-viewer';
 
 const RerunViewer = ({ stream, isStreaming, videoFile }) => {
-    const [rrdUrl, setRrdUrl] = useState(null);
     const wsRef = useRef(null);
     const viewerRef = useRef(null);
+    const frameRef = useRef(0);
 
     const initWebSocket = useCallback(() => {
         const ws = new WebSocket(`ws://${process.env.REACT_APP_API_URL.replace('http://', '')}/stream`);
@@ -12,15 +12,26 @@ const RerunViewer = ({ stream, isStreaming, videoFile }) => {
 
         ws.onopen = () => {
             console.log('WebSocket connected');
+            if (viewerRef.current) {
+                viewerRef.current.clear();
+                frameRef.current = 0;
+            }
         };
 
         ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.rrdUrl) {
-                setRrdUrl(data.rrdUrl);
-                if (viewerRef.current) {
-                    viewerRef.current.loadRrd(data.rrdUrl);
-                }
+            if (event.data instanceof Blob) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (viewerRef.current) {
+                        const frameData = new Uint8Array(reader.result);
+                        viewerRef.current.addPoints("camera/frames", {
+                            data: frameData,
+                            frame: frameRef.current++,
+                            timestamp: performance.now()
+                        });
+                    }
+                };
+                reader.readAsArrayBuffer(event.data);
             }
         };
 
@@ -80,18 +91,23 @@ const RerunViewer = ({ stream, isStreaming, videoFile }) => {
             ref={viewerRef}
             width="100%"
             height="500px"
-            rrd={rrdUrl}
-            hide_welcome_screen={!rrdUrl}
-            autoLoad={true}
+            blueprint={{
+                name: "Camera Feed",
+                entities: {
+                    "camera/frames": {
+                        type: "image",
+                        shape: [720, 1280, 3]
+                    }
+                }
+            }}
             style={{
                 borderRadius: '8px',
                 overflow: 'hidden'
             }}
             onInit={() => {
                 console.log('Rerun viewer initialized');
-                if (rrdUrl) {
-                    viewerRef.current?.loadRrd(rrdUrl);
-                }
+                viewerRef.current?.clear();
+                frameRef.current = 0;
             }}
             onError={(error) => console.error('Rerun viewer error:', error)}
         />
