@@ -26,20 +26,31 @@ class WebSocketHandler:
         self.clients.add(websocket)
         try:
             async for message in websocket:
-                data = json.loads(message) if isinstance(message, str) else None
-                
-                if isinstance(message, bytes):
-                    if data and data.get('type') == 'video_upload':
-                        # Handle video file upload
+                # Try to parse as JSON first
+                try:
+                    data = json.loads(message) if isinstance(message, str) else None
+                    message_type = data.get('type') if data else None
+                except:
+                    message_type = None
+                    data = None
+
+                if message_type == 'video_upload':
+                    # Next message will be the video file
+                    message = await websocket.recv()
+                    if isinstance(message, bytes):
                         filename = f"video_{len(self.clients)}_{int(time.time())}.mp4"
                         file_path = self.uploads_path / filename
                         with open(file_path, 'wb') as f:
                             f.write(message)
-                        response = {
+                        await websocket.send(json.dumps({
                             "type": "upload_complete",
                             "path": str(file_path)
-                        }
-                    else:
+                        }))
+                
+                elif message_type == 'camera_frame':
+                    # Next message will be the frame data
+                    message = await websocket.recv()
+                    if isinstance(message, bytes):
                         # Handle live stream frame
                         nparr = np.frombuffer(message, np.uint8)
                         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)

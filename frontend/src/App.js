@@ -57,6 +57,9 @@ function App() {
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
                     canvas.toBlob(
                         (blob) => {
+                            // Send frame type indicator first
+                            ws.send(JSON.stringify({ type: 'camera_frame' }));
+                            // Then send the actual frame data
                             ws.send(blob);
                         },
                         'image/jpeg',
@@ -151,6 +154,12 @@ function App() {
                                             stopCamera();
                                         }
                                         setVideoFile(file);
+                                        
+                                        // Send video file through WebSocket
+                                        if (ws && ws.readyState === WebSocket.OPEN) {
+                                            ws.send(JSON.stringify({ type: 'video_upload' }));
+                                            ws.send(file);
+                                        }
                                     }}
                                 />
                             )}
