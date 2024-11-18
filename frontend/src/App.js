@@ -116,6 +116,7 @@ function App() {
                             <RerunViewer
                                 stream={stream}
                                 isStreaming={isStreaming && !isPaused}
+                                videoFile={videoFile}
                             />
                         </Box>
                     </Box>

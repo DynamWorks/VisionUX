@@ -1,12 +1,37 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { WebViewer } from '@rerun-io/web-viewer';
 
-const RerunViewer = ({ stream, isStreaming }) => {
+const RerunViewer = ({ stream, isStreaming, videoFile }) => {
     const [rrdUrl, setRrdUrl] = useState(null);
     const wsRef = useRef(null);
 
     useEffect(() => {
-        if (stream && isStreaming) {
+        if (videoFile) {
+            // Handle video file upload
+            const ws = new WebSocket(`ws://${process.env.REACT_APP_API_URL.replace('http://', '')}/stream`);
+            wsRef.current = ws;
+
+            ws.onopen = async () => {
+                console.log('WebSocket connected for video upload');
+                const arrayBuffer = await videoFile.arrayBuffer();
+                ws.send(new Blob([arrayBuffer], { type: videoFile.type }));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'upload_complete') {
+                    console.log('Video upload complete:', data.path);
+                    // Start processing the uploaded video
+                    // Additional logic here
+                }
+            };
+
+            return () => {
+                if (wsRef.current) {
+                    wsRef.current.close();
+                }
+            };
+        } else if (stream && isStreaming) {
             // Connect to WebSocket for stream processing
             const ws = new WebSocket(`ws://${process.env.REACT_APP_API_URL.replace('http://', '')}/stream`);
             wsRef.current = ws;
