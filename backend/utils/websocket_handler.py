@@ -40,8 +40,11 @@ class WebSocketHandler:
                         nparr = np.frombuffer(message, np.uint8)
                         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                         
-                        # Log frame to Rerun
-                        rr.log_image("camera", frame)
+                        # Convert BGR to RGB for Rerun
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        
+                        # Log frame to Rerun with timestamp
+                        rr.log("camera", rr.Image(frame_rgb), timedelta=time.time())
                         
                         response = {
                             "type": "frame_processed",

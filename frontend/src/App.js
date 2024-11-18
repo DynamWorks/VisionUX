@@ -16,6 +16,18 @@ function App() {
     const [stream, setStream] = useState(null);
     const [videoFile, setVideoFile] = useState(null);
 
+    const [ws, setWs] = useState(null);
+
+    useEffect(() => {
+        const websocket = new WebSocket('ws://localhost:8000');
+        setWs(websocket);
+        return () => {
+            if (websocket) {
+                websocket.close();
+            }
+        };
+    }, []);
+
     const startCamera = async (deviceId) => {
         try {
             const constraints = {
@@ -28,6 +40,36 @@ function App() {
             const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
             setStream(mediaStream);
             setIsStreaming(true);
+
+            // Set up video frame capture and sending
+            const video = document.createElement('video');
+            video.srcObject = mediaStream;
+            video.play();
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 1280;
+            canvas.height = 720;
+
+            const sendFrame = () => {
+                if (isStreaming && ws && ws.readyState === WebSocket.OPEN) {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(
+                        (blob) => {
+                            ws.send(blob);
+                        },
+                        'image/jpeg',
+                        0.8
+                    );
+                }
+                if (isStreaming) {
+                    requestAnimationFrame(sendFrame);
+                }
+            };
+
+            video.onloadedmetadata = () => {
+                sendFrame();
+            };
         } catch (error) {
             console.error('Error accessing camera:', error);
         }
