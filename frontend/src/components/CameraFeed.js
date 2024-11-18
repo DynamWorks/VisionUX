@@ -4,6 +4,7 @@ import { Box } from '@mui/material';
 const CameraFeed = ({
     stream,
     isStreaming,
+    videoFile,
     selectedFeature,
     onFrame
 }) => {
@@ -14,8 +15,13 @@ const CameraFeed = ({
         if (videoRef.current) {
             if (isStreaming && stream) {
                 videoRef.current.srcObject = stream;
+                videoRef.current.src = '';
+            } else if (videoFile) {
+                videoRef.current.srcObject = null;
+                videoRef.current.src = URL.createObjectURL(videoFile);
             } else {
                 videoRef.current.srcObject = null;
+                videoRef.current.src = '';
             }
         }
     }, [isStreaming, stream]);

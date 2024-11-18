@@ -5,12 +5,16 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import CameraSelector from './components/CameraSelector';
 import CameraFeed from './components/CameraFeed';
+import VideoUpload from './components/VideoUpload';
+import InputSelector from './components/InputSelector';
 
 function App() {
+    const [inputType, setInputType] = useState('camera');
     const [devices, setDevices] = useState([]);
     const [selectedDevice, setSelectedDevice] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const [stream, setStream] = useState(null);
+    const [videoFile, setVideoFile] = useState(null);
 
     const startCamera = async (deviceId) => {
         try {
@@ -62,20 +66,36 @@ function App() {
                 <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <Box sx={{ width: '30%' }}>
-                            <CameraSelector
-                                devices={devices}
-                                selectedDevice={selectedDevice}
-                                setSelectedDevice={setSelectedDevice}
-                                isStreaming={isStreaming}
-                                startCamera={startCamera}
-                                stopCamera={stopCamera}
-                                refreshDevices={refreshDevices}
+                            <InputSelector 
+                                inputType={inputType}
+                                setInputType={setInputType}
                             />
+                            {inputType === 'camera' ? (
+                                <CameraSelector
+                                    devices={devices}
+                                    selectedDevice={selectedDevice}
+                                    setSelectedDevice={setSelectedDevice}
+                                    isStreaming={isStreaming}
+                                    startCamera={startCamera}
+                                    stopCamera={stopCamera}
+                                    refreshDevices={refreshDevices}
+                                />
+                            ) : (
+                                <VideoUpload
+                                    onUpload={(file) => {
+                                        if (isStreaming) {
+                                            stopCamera();
+                                        }
+                                        setVideoFile(file);
+                                    }}
+                                />
+                            )}
                         </Box>
                         <Box sx={{ width: '70%' }}>
                             <CameraFeed
                                 stream={stream}
                                 isStreaming={isStreaming}
+                                videoFile={videoFile}
                             />
                         </Box>
                     </Box>
