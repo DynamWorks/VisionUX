@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import WebViewer from '@rerun-io/web-viewer';
+import { WebViewer } from '@rerun-io/web-viewer';
 
 const RerunViewer = ({ stream, isStreaming, videoFile }) => {
     const wsRef = useRef(null);
