@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import CameraSelector from './components/CameraSelector';
 import RerunViewer from './components/RerunViewer';
+import VideoDisplay from './components/VideoDisplay';
 import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
 
@@ -154,11 +155,12 @@ function App() {
                                 />
                             )}
                         </Box>
-                        <Box sx={{ width: '70%' }}>
-                            <RerunViewer
+                        <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <VideoDisplay
                                 stream={stream}
                                 videoFile={videoFile}
                             />
+                            <RerunViewer />
                         </Box>
                     </Box>
                 </Container>

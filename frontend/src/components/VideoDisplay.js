@@ -6,13 +6,20 @@ const VideoDisplay = ({ stream, videoFile }) => {
     const canvasRef = useRef(null);
 
     useEffect(() => {
-        if (videoRef.current) {
+        const videoElement = videoRef.current;
+        if (videoElement) {
             if (stream) {
-                videoRef.current.srcObject = stream;
+                videoElement.srcObject = stream;
+                videoElement.play().catch(err => console.error('Error playing video:', err));
             } else if (videoFile) {
-                videoRef.current.src = URL.createObjectURL(videoFile);
+                videoElement.src = URL.createObjectURL(videoFile);
             }
         }
+        return () => {
+            if (videoElement) {
+                videoElement.srcObject = null;
+            }
+        };
     }, [stream, videoFile]);
 
     return (
