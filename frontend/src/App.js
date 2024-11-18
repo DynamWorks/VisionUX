@@ -25,22 +25,45 @@ function App() {
             return;
         }
         
-        const websocket = new WebSocket(process.env.REACT_APP_WS_URL);
-        
-        websocket.onopen = () => {
-            console.log('WebSocket Connected');
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        let reconnectTimeout;
+
+        const connectWebSocket = () => {
+            try {
+                const websocket = new WebSocket(process.env.REACT_APP_WS_URL);
+                
+                websocket.onopen = () => {
+                    console.log('WebSocket Connected');
+                    reconnectAttempts = 0; // Reset attempts on successful connection
+                };
+                
+                websocket.onclose = () => {
+                    console.log('WebSocket Closed');
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        console.log(`Reconnecting... Attempt ${reconnectAttempts}`);
+                        reconnectTimeout = setTimeout(connectWebSocket, 3000);
+                    }
+                };
+                
+                websocket.onerror = (error) => {
+                    console.error('WebSocket Error:', error);
+                };
+                
+                setWs(websocket);
+            } catch (error) {
+                console.error('WebSocket connection error:', error);
+            }
         };
-        
-        websocket.onerror = (error) => {
-            console.error('WebSocket Error:', error);
-        };
-        
-        setWs(websocket);
+
+        connectWebSocket();
         
         return () => {
-            if (websocket && websocket.readyState === WebSocket.OPEN) {
-                websocket.close();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
             }
+            clearTimeout(reconnectTimeout);
         };
     }, []);
 
