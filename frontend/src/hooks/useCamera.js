@@ -8,8 +8,6 @@ const useCamera = () => {
 
     const getDevices = useCallback(async () => {
         try {
-            // We need to call getUserMedia first to trigger the browser's permission request
-            await navigator.mediaDevices.getUserMedia({ video: true });
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             setDevices(videoDevices);
@@ -25,19 +23,22 @@ const useCamera = () => {
         getDevices();
     }, [getDevices]);
 
-    const startCamera = useCallback(async () => {
-        if (selectedDevice) {
-            try {
-                const newStream = await navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: selectedDevice }
-                });
-                setStream(newStream);
-                setIsStreaming(true);
-            } catch (error) {
-                console.error('Error starting camera:', error);
-            }
+    const startCamera = useCallback(async (deviceId) => {
+        try {
+            const constraints = {
+                video: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+            const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            setStream(mediaStream);
+            setIsStreaming(true);
+        } catch (error) {
+            console.error('Error accessing camera:', error);
         }
-    }, [selectedDevice]);
+    }, []);
 
     const stopCamera = useCallback(() => {
         if (stream) {
@@ -46,8 +47,6 @@ const useCamera = () => {
             setIsStreaming(false);
         }
     }, [stream]);
-
-    // Remove the useEffect that automatically starts the camera
 
     const refreshDevices = useCallback(() => {
         getDevices();
