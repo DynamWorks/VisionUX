@@ -8,12 +8,16 @@ import numpy as np
 import cv2
 import base64
 import rerun as rr
+from services.edge_detection_service import EdgeDetectionService
 
 class WebSocketHandler:
     def __init__(self):
         self.clients = set()
         self.uploads_path = Path("tmp_content/uploads")
         self.uploads_path.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize services
+        self.edge_detector = EdgeDetectionService()
         
         # Initialize Rerun
         rr.init("video_analytics")
@@ -43,10 +47,18 @@ class WebSocketHandler:
                         # Convert BGR to RGB for Rerun
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         
-                        # Log frame to Rerun with timestamp
+                        # Process frame with edge detection
+                        edges_rgb = self.edge_detector.detect_edges(frame)
+                        
+                        # Log both original and edge-detected frames to Rerun
                         timestamp = time.time()
-                        rr.log("camera/feed", 
+                        rr.log("camera/original", 
                               rr.Image(frame_rgb),
+                              timeless=False,
+                              timestamp=timestamp)
+                        
+                        rr.log("camera/edges", 
+                              rr.Image(edges_rgb),
                               timeless=False,
                               timestamp=timestamp)
         except websockets.exceptions.ConnectionClosed:
