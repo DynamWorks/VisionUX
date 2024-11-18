@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 import threading
 import asyncio
 from pathlib import Path
@@ -6,15 +6,27 @@ from content_manager import ContentManager
 from utils.websocket_handler import WebSocketHandler
 from rerun_server import RerunServer
 import logging
+import os
 
 class BackendApp:
     def __init__(self):
-        self.app = Flask(__name__)
+        self.app = Flask(__name__, static_folder='../frontend/build')
         self.server = None
         self.content_manager = None
         self.models_loaded = False
         self.websocket_handler = WebSocketHandler()
         self.rerun_server = RerunServer()
+        
+        # Add routes
+        self.setup_routes()
+        
+    def setup_routes(self):
+        @self.app.route('/', defaults={'path': ''})
+        @self.app.route('/<path:path>')
+        def serve(path):
+            if path and os.path.exists(self.app.static_folder + '/' + path):
+                return send_from_directory(self.app.static_folder, path)
+            return send_from_directory(self.app.static_folder, 'index.html')
 
     def is_ready(self):
         """Check if backend is ready"""
