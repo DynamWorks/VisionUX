@@ -18,7 +18,7 @@
         "react-dropzone": "^14.2.3",
         "react-router-dom": "^6.21.1",
         "react-scripts": "5.0.1",
-        "@rerun-io/web-viewer-react": "^0.20.0"
+        "@rerun-io/web-viewer": "^0.20.0"
     },
     "scripts": {
         "start": "react-scripts start",

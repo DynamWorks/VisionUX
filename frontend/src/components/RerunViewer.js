@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { WebViewer } from '@rerun-io/web-viewer';
+import WebViewer from '@rerun-io/web-viewer/re_viewer.js';
 
 const RerunViewer = ({ stream, isStreaming }) => {
     const containerRef = useRef(null);
