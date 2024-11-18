@@ -17,7 +17,7 @@ class WebSocketHandler:
         
         # Initialize Rerun with specific configuration
         rr.init("video_analytics")
-        rr.serve(port=9000)  # Start Rerun server on default port 9000
+        rr.serve()  # Start Rerun server on default port (typically 9090)
 
     async def handle_connection(self, websocket):
         self.clients.add(websocket)

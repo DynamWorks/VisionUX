@@ -10,7 +10,7 @@ const RerunViewer = ({ stream, videoFile }) => {
         if (viewerRef.current) {
             const viewer = new WebViewer({
                 container: viewerRef.current,
-                serverUrl: 'ws://localhost:9000',  // Connect to Rerun server
+                serverUrl: 'ws://localhost:9090',  // Connect to Rerun's default port
                 blueprint: {
                     layout: 'horizontal',
                     widgets: [
