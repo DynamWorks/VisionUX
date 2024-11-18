@@ -30,9 +30,11 @@ class WebSocketHandler:
                 try:
                     data = json.loads(message) if isinstance(message, str) else None
                     message_type = data.get('type') if data else None
+                    logging.info(f"Received message type: {message_type}")
                 except:
                     message_type = None
                     data = None
+                    logging.warning("Could not parse message type")
 
                 if message_type == 'video_upload':
                     # Next message will be the video file
@@ -42,6 +44,9 @@ class WebSocketHandler:
                         file_path = self.uploads_path / filename
                         with open(file_path, 'wb') as f:
                             f.write(message)
+                        logging.info(f"Video file saved to: {file_path}")
+                        file_size = len(message) / (1024 * 1024)  # Size in MB
+                        logging.info(f"Video file size: {file_size:.2f} MB")
                         await websocket.send(json.dumps({
                             "type": "upload_complete",
                             "path": str(file_path)
@@ -54,7 +59,12 @@ class WebSocketHandler:
                         # Handle live stream frame
                         nparr = np.frombuffer(message, np.uint8)
                         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                        
+                        if frame is not None:
+                            logging.info(f"Received camera frame: {frame.shape}")
+                        else:
+                            logging.error("Failed to decode camera frame")
+                            continue
+                            
                         # Convert BGR to RGB for Rerun
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         
