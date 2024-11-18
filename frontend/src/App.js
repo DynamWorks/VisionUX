@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Box, Container } from '@mui/material';
 import Header from './components/Header';
@@ -48,9 +48,12 @@ function App() {
     };
 
     // Initialize devices on mount
-    React.useEffect(() => {
+    useEffect(() => {
         refreshDevices();
-    }, []);
+        // Log mount for debugging
+        console.log('App mounted');
+        return () => console.log('App unmounted');
+    }, [refreshDevices]);
 
     return (
         <Router>
