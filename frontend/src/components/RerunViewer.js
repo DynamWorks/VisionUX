@@ -1,26 +1,22 @@
 import React, { useEffect, useRef } from 'react';
-import WebViewer from '@rerun-io/web-viewer/re_viewer.js';
+import { Viewer } from '@rerun-io/web-viewer';
 
 const RerunViewer = ({ stream, isStreaming }) => {
     const containerRef = useRef(null);
     const viewerRef = useRef(null);
 
     useEffect(() => {
-        const initViewer = async () => {
-            if (containerRef.current && !viewerRef.current) {
-                viewerRef.current = new WebViewer();
-                await viewerRef.current.start(null, containerRef.current);
-            }
-        };
-
-        initViewer();
+        if (containerRef.current && !viewerRef.current) {
+            viewerRef.current = new Viewer({
+                container: containerRef.current,
+                onInit: () => console.log('Rerun viewer initialized'),
+                onError: (error) => console.error('Rerun viewer error:', error)
+            });
+        }
 
         return () => {
             if (viewerRef.current) {
-                // Clean up by removing the viewer from the DOM
-                if (containerRef.current) {
-                    containerRef.current.innerHTML = '';
-                }
+                viewerRef.current.destroy();
                 viewerRef.current = null;
             }
         };
@@ -28,9 +24,12 @@ const RerunViewer = ({ stream, isStreaming }) => {
 
     useEffect(() => {
         if (viewerRef.current && stream && isStreaming) {
-            // Handle stream data here
-            // You'll need to implement the appropriate data handling
-            // based on your stream format
+            // TODO: Implement stream handling
+            // viewerRef.current.addImage({
+            //     name: 'camera_feed',
+            //     data: stream,
+            //     timestamp: Date.now()
+            // });
         }
     }, [stream, isStreaming]);
 
