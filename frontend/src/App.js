@@ -33,11 +33,32 @@ function App() {
         }
     };
 
+    const [isPaused, setIsPaused] = useState(false);
+
     const stopCamera = useCallback(() => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
             setIsStreaming(false);
+            setIsPaused(false);
+        }
+    }, [stream]);
+
+    const pauseCamera = useCallback(() => {
+        if (stream) {
+            stream.getTracks().forEach(track => {
+                track.enabled = false;
+            });
+            setIsPaused(true);
+        }
+    }, [stream]);
+
+    const resumeCamera = useCallback(() => {
+        if (stream) {
+            stream.getTracks().forEach(track => {
+                track.enabled = true;
+            });
+            setIsPaused(false);
         }
     }, [stream]);
 
@@ -96,6 +117,9 @@ function App() {
                                 stream={stream}
                                 isStreaming={isStreaming}
                                 videoFile={videoFile}
+                                onPause={pauseCamera}
+                                onResume={resumeCamera}
+                                onStop={stopCamera}
                             />
                         </Box>
                     </Box>

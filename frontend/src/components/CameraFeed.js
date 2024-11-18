@@ -1,13 +1,21 @@
-import React, { useRef, useEffect } from 'react';
-import { Box } from '@mui/material';
+import React, { useRef, useEffect, useState } from 'react';
+import { Box, Button, ButtonGroup } from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
+import StopIcon from '@mui/icons-material/Stop';
+import RerunViewer from './RerunViewer';
 
 const CameraFeed = ({
     stream,
     isStreaming,
     videoFile,
     selectedFeature,
-    onFrame
+    onFrame,
+    onPause,
+    onResume,
+    onStop
 }) => {
+    const [isPaused, setIsPaused] = useState(false);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
 
@@ -62,25 +70,56 @@ const CameraFeed = ({
         };
     }, [isStreaming, onFrame]);
 
+    const handlePause = () => {
+        setIsPaused(true);
+        onPause?.();
+    };
+
+    const handleResume = () => {
+        setIsPaused(false);
+        onResume?.();
+    };
+
+    const handleStop = () => {
+        setIsPaused(false);
+        onStop?.();
+    };
+
     return (
-        <Box sx={{ position: 'relative', width: '100%', bgcolor: 'black', borderRadius: 1, overflow: 'hidden' }}>
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{ width: '100%', height: 'auto' }}
+        <Box sx={{ width: '100%' }}>
+            <RerunViewer 
+                stream={stream} 
+                isStreaming={isStreaming && !isPaused} 
             />
-            <canvas
-                ref={canvasRef}
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%'
-                }}
-            />
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <ButtonGroup variant="contained">
+                    {isPaused ? (
+                        <Button 
+                            onClick={handleResume}
+                            disabled={!isStreaming}
+                            startIcon={<PlayArrowIcon />}
+                        >
+                            Resume
+                        </Button>
+                    ) : (
+                        <Button 
+                            onClick={handlePause}
+                            disabled={!isStreaming}
+                            startIcon={<PauseIcon />}
+                        >
+                            Pause
+                        </Button>
+                    )}
+                    <Button 
+                        onClick={handleStop}
+                        disabled={!isStreaming}
+                        startIcon={<StopIcon />}
+                        color="error"
+                    >
+                        Stop
+                    </Button>
+                </ButtonGroup>
+            </Box>
         </Box>
     );
 };
