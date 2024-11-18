@@ -18,6 +18,10 @@ class BackendApp:
         """Check if backend is ready"""
         return True
 
+    def run(self, host='localhost', port=8502, debug=False):
+        """Run the Flask application"""
+        self.app.run(host=host, port=port, debug=debug)
+
     def start(self, port=8502, config=None):
         """Start the backend server in a separate thread"""
         def run_server():
