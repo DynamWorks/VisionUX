@@ -7,9 +7,13 @@ from utils.websocket_handler import WebSocketHandler
 from utils.rerun_server import RerunServer
 import logging
 import os
+import yaml
+from pathlib import Path
 
 class BackendApp:
     def __init__(self):
+        # Setup logging
+        self.setup_logging()
         self.app = Flask(__name__, static_folder='../frontend/build')
         self.server = None
         self.content_manager = None
@@ -19,6 +23,33 @@ class BackendApp:
         
         # Add routes
         self.setup_routes()
+    
+    def setup_logging(self):
+        """Initialize logging configuration"""
+        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            
+        log_config = config.get('logging', {})
+        log_file = log_config.get('file', 'video_analytics.log')
+        log_level = getattr(logging, log_config.get('level', 'INFO'))
+        log_format = log_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
+        # Create logs directory if it doesn't exist
+        log_dir = Path('logs')
+        log_dir.mkdir(exist_ok=True)
+        log_path = log_dir / log_file
+        
+        # Configure logging
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            handlers=[
+                logging.FileHandler(log_path),
+                logging.StreamHandler()
+            ]
+        )
+        logging.info("Logging initialized")
         
     def setup_routes(self):
         @self.app.route('/', defaults={'path': ''})
