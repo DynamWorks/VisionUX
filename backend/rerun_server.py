@@ -15,7 +15,7 @@ class RerunServer:
         
         # Initialize Rerun
         rr.init("video_analytics")
-        rr.serve(open_browser=False, ws_port=4321, skip_welcome=True)
+        rr.serve(open_browser=False, ws_port=4321)
         
     async def start(self):
         try:
