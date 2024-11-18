@@ -17,7 +17,7 @@ const RerunViewer = ({ stream, isStreaming }) => {
 
         return () => {
             if (viewerRef.current) {
-                viewerRef.current.dispose();
+                viewerRef.current.destroy();
                 viewerRef.current = null;
             }
         };
