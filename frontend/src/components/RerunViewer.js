@@ -11,7 +11,7 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <iframe
-                src={`https://app.rerun.io/version/${process.env.REACT_APP_RERUN_VER}/?ws_url=${process.env.REACT_APP_RERUN_WS_URL}`}
+                src={`https://app.rerun.io/web-viewer/latest/?ws_url=${process.env.REACT_APP_RERUN_WS_URL}&skip_welcome=true`}
                 style={{
                     width: '100%',
                     height: '100%',
