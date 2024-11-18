@@ -13,9 +13,20 @@ class RerunServer:
         self.runner = None
         self.site = None
         
-        # Initialize Rerun
-        rr.init("video_analytics")
-        rr.serve(open_browser=False, ws_port=4321)
+        # Initialize Rerun with recording config
+        rr.init("video_analytics", recording_config=rr.RecordingConfig(
+            save_recording=False,
+            memory_limit="2GB"
+        ))
+        rr.serve(
+            open_browser=False,
+            ws_port=4321,
+            skip_welcome=True,
+            default_blueprint=rr.Blueprint(
+                ["camera/feed"],
+                name="Video Feed"
+            )
+        )
         
     async def start(self):
         try:
