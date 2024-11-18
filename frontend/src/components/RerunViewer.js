@@ -11,7 +11,7 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <iframe
-                src="https://app.rerun.io/web-viewer/0.20.0/?ws_url=ws://localhost:4321"
+                src="https://app.rerun.io/web-viewer/latest/?ws_url=ws://localhost:4321&recording_id=video_analytics"
                 style={{
                     width: '100%',
                     height: '100%',
@@ -19,6 +19,7 @@ const RerunViewer = () => {
                 }}
                 title="Rerun Viewer"
                 allow="camera"
+                sandbox="allow-scripts allow-same-origin"
             />
         </Box>
     );
