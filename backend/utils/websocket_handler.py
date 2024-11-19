@@ -9,7 +9,7 @@ import cv2
 import base64
 import rerun as rr
 from services.edge_detection_service import EdgeDetectionService
-from services.video_streaming_service import VideoStreamingService
+from utils.video_stream import VideoStream
 
 class WebSocketHandler:
     def __init__(self):
@@ -20,7 +20,7 @@ class WebSocketHandler:
         
         # Initialize services
         self.edge_detector = EdgeDetectionService()
-        self.video_streamer = VideoStreamingService()
+        self.video_streamer = None  # Will be initialized when needed
         
         # Initialize Rerun
         rr.init("video_analytics")
@@ -80,9 +80,11 @@ class WebSocketHandler:
                                         # Start streaming the uploaded video
                                         try:
                                             # Stop any existing stream
-                                            self.video_streamer.stop_streaming()
-                                            # Start streaming the new video
-                                            asyncio.create_task(self.video_streamer.stream_video(file_path))
+                                            if self.video_streamer:
+                                                self.video_streamer.stop()
+                                            # Create new video stream
+                                            self.video_streamer = VideoStream(str(file_path))
+                                            self.video_streamer.start()
                                             logging.info(f"Started streaming video: {file_path}")
                                         except Exception as e:
                                             logging.error(f"Failed to start video streaming: {e}")
