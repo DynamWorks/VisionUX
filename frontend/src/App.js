@@ -49,6 +49,11 @@ function App() {
                 
                 websocket.onerror = (error) => {
                     console.error('WebSocket Error:', error);
+                    // Attempt to reconnect on error
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        console.log('Attempting to reconnect due to error...');
+                        setTimeout(connectWebSocket, 3000);
+                    }
                 };
                 
                 setWs(websocket);
@@ -218,7 +223,9 @@ function App() {
                                                                 type: 'video_upload_chunk',
                                                                 offset: offset,
                                                                 size: chunk.size,
+                                                                progress: Math.round((offset / file.size) * 100)
                                                             }));
+                                                            console.log(`Uploading chunk: ${Math.round((offset / file.size) * 100)}%`);
                                                             
                                                             // Send chunk data
                                                             ws.send(reader.result);
@@ -233,8 +240,11 @@ function App() {
                                                             } else {
                                                                 ws.send(JSON.stringify({
                                                                     type: 'video_upload_complete',
-                                                                    filename: file.name
+                                                                    filename: file.name,
+                                                                    totalSize: file.size,
+                                                                    chunks: Math.ceil(file.size / CHUNK_SIZE)
                                                                 }));
+                                                                console.log('Upload completed, waiting for server confirmation...');
                                                             }
                                                             resolve();
                                                         } catch (error) {
