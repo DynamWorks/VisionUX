@@ -38,6 +38,17 @@ function App() {
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket); // Only set ws when connection is established
                 };
+
+                websocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'ping') {
+                            websocket.send('pong');
+                        }
+                    } catch (error) {
+                        console.error('Error processing WebSocket message:', error);
+                    }
+                };
                 
                 websocket.onclose = () => {
                     console.log('WebSocket Closed');

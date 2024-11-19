@@ -22,11 +22,18 @@ class WebSocketHandler:
         
         # Initialize Rerun
         rr.init("video_analytics")
+        
+        # Heartbeat configuration
+        self.heartbeat_interval = 30  # seconds
 
     async def handle_connection(self, websocket):
         self.clients.add(websocket)
+        heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
+        
         try:
             async for message in websocket:
+                if isinstance(message, str) and message == "pong":
+                    continue
                 # Try to parse as JSON first
                 try:
                     if isinstance(message, str):
@@ -193,6 +200,18 @@ class WebSocketHandler:
             pass
         finally:
             self.clients.remove(websocket)
+
+    async def send_heartbeat(self, websocket):
+        """Send periodic heartbeat to keep connection alive"""
+        while True:
+            try:
+                await asyncio.sleep(self.heartbeat_interval)
+                await websocket.send(json.dumps({"type": "ping"}))
+            except websockets.exceptions.ConnectionClosed:
+                break
+            except Exception as e:
+                logging.error(f"Error sending heartbeat: {e}")
+                break
 
     async def start_server(self, host='localhost', port=8001):
         async with websockets.serve(self.handle_connection, host, port):
