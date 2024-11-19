@@ -263,16 +263,6 @@ function App() {
                                                         };
                                                         
                                                         await attemptSend();
-                                                            console.log(`Uploading chunk: ${Math.round((offset / file.size) * 100)}%`);
-                                                            
-                                                            // Send chunk data
-                                                            ws.send(reader.result);
-                                                            
-                                                            offset += chunk.size;
-                                                            
-                                                            // Add small delay between chunks
-                                                            await new Promise(r => setTimeout(r, 100));
-                                                            
                                                             if (offset < file.size) {
                                                                 await sendChunk();
                                                             } else {
@@ -284,10 +274,6 @@ function App() {
                                                                 }));
                                                                 console.log('Upload completed, waiting for server confirmation...');
                                                             }
-                                                            resolve();
-                                                        } catch (error) {
-                                                            reject(error);
-                                                        }
                                                     };
                                                     reader.onerror = reject;
                                                     reader.readAsArrayBuffer(chunk);
