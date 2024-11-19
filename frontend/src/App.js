@@ -289,8 +289,27 @@ function App() {
                                                     };
                                                     reader.onerror = reject;
                                                     reader.readAsArrayBuffer(chunk);
+                                                    
+                                                    if (uploadInProgress) {
+                                                        setTimeout(() => sendChunk(), 1000);
+                                                    } else {
+                                                        waitForConnection();
+                                                    }
                                                 });
                                             };
+                                            
+                                            // Handle WebSocket reconnection during upload
+                                            const handleReconnection = () => {
+                                                if (currentOffset > 0 && currentOffset < file.size) {
+                                                    console.log('Resuming upload after reconnection...');
+                                                    sendChunk().catch(error => {
+                                                        console.error('Failed to resume upload:', error);
+                                                        alert('Upload failed after reconnection. Please try again.');
+                                                    });
+                                                }
+                                            };
+                                            
+                                            ws.addEventListener('open', handleReconnection);
                                             
                                             // Handle upload start acknowledgment
                                             const messageHandler = async (event) => {
