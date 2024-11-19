@@ -214,15 +214,26 @@ function App() {
                                                 chunkSize: CHUNK_SIZE
                                             }));
                                             
+                                            let uploadInProgress = false;
+                                            let currentOffset = 0;
+                                            
                                             const sendChunk = () => {
                                                 return new Promise((resolve, reject) => {
-                                                    if (!ws || ws.readyState !== WebSocket.OPEN) {
-                                                        reject(new Error('WebSocket connection is not open'));
-                                                        return;
-                                                    }
+                                                    const waitForConnection = () => {
+                                                        if (ws && ws.readyState === WebSocket.OPEN) {
+                                                            proceedWithUpload();
+                                                        } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+                                                            setTimeout(waitForConnection, 100);
+                                                        } else {
+                                                            reject(new Error('WebSocket connection failed'));
+                                                        }
+                                                    };
+
+                                                    const proceedWithUpload = () => {
                                                     
-                                                    const chunk = file.slice(offset, offset + CHUNK_SIZE);
-                                                    console.log(`Preparing chunk: offset=${offset}, size=${chunk.size}`);
+                                                        uploadInProgress = true;
+                                                        const chunk = file.slice(currentOffset, currentOffset + CHUNK_SIZE);
+                                                        console.log(`Preparing chunk: offset=${currentOffset}, size=${chunk.size}`);
                                                     reader.onload = async () => {
                                                         const maxRetries = 3;
                                                         let retryCount = 0;
@@ -244,11 +255,12 @@ function App() {
                                                                 // Send chunk data
                                                                 ws.send(reader.result);
                                                                 
-                                                                offset += chunk.size;
-                                                                console.log(`Uploading chunk: ${Math.round((offset / file.size) * 100)}%`);
+                                                                currentOffset += chunk.size;
+                                                                console.log(`Uploading chunk: ${Math.round((currentOffset / file.size) * 100)}%`);
                                                                 
                                                                 // Add small delay between chunks
                                                                 await new Promise(r => setTimeout(r, 100));
+                                                                uploadInProgress = false;
                                                                 resolve();
                                                             } catch (error) {
                                                                 if (retryCount < maxRetries) {
@@ -263,7 +275,7 @@ function App() {
                                                         };
                                                         
                                                         await attemptSend();
-                                                            if (offset < file.size) {
+                                                            if (currentOffset < file.size) {
                                                                 await sendChunk();
                                                             } else {
                                                                 ws.send(JSON.stringify({
