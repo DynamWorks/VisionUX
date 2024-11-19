@@ -18,10 +18,8 @@ class RerunServer:
         rr.serve(
             open_browser=False,
             ws_port=4321,
-            skip_welcome=True,
-            default_blueprint=rr.blueprint(
-                ["camera/feed"],
-                name="Video Feed"
+            default_blueprint=rr.blueprint.Vertical(
+                rr.blueprint.Spatial2DView(origin="camera/original", name="Video")
             )
         )
         
