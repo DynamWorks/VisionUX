@@ -57,14 +57,24 @@ class WebSocketHandler:
                                     
                                     total_size = data.get('size', 0)
                                     bytes_received = 0
+                                    chunk_timeout = 30  # seconds
                                     
                                     logging.info(f"Starting upload of {filename} ({total_size} bytes)")
+                                    
+                                    # Send acknowledgment
+                                    await websocket.send(json.dumps({
+                                        "type": "upload_start_ack",
+                                        "filename": filename
+                                    }))
                                     
                                     # Open file for writing chunks
                                     with open(file_path, 'wb') as f:
                                         while True:
                                             try:
-                                                chunk_meta = await websocket.recv()
+                                                chunk_meta = await asyncio.wait_for(
+                                                    websocket.recv(),
+                                                    timeout=chunk_timeout
+                                                )
                                                 if not isinstance(chunk_meta, str):
                                                     logging.error("Invalid chunk metadata format")
                                                     continue

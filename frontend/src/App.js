@@ -209,29 +209,55 @@ function App() {
                                             }));
                                             
                                             const sendChunk = () => {
-                                                const chunk = file.slice(offset, offset + CHUNK_SIZE);
-                                                reader.onload = () => {
-                                                    ws.send(JSON.stringify({
-                                                        type: 'video_upload_chunk',
-                                                        offset: offset,
-                                                        size: chunk.size,
-                                                    }));
-                                                    ws.send(reader.result);
-                                                    
-                                                    offset += chunk.size;
-                                                    if (offset < file.size) {
-                                                        sendChunk();
-                                                    } else {
-                                                        ws.send(JSON.stringify({
-                                                            type: 'video_upload_complete',
-                                                            filename: file.name
-                                                        }));
-                                                    }
-                                                };
-                                                reader.readAsArrayBuffer(chunk);
+                                                return new Promise((resolve, reject) => {
+                                                    const chunk = file.slice(offset, offset + CHUNK_SIZE);
+                                                    reader.onload = async () => {
+                                                        try {
+                                                            // Send chunk metadata
+                                                            ws.send(JSON.stringify({
+                                                                type: 'video_upload_chunk',
+                                                                offset: offset,
+                                                                size: chunk.size,
+                                                            }));
+                                                            
+                                                            // Send chunk data
+                                                            ws.send(reader.result);
+                                                            
+                                                            offset += chunk.size;
+                                                            
+                                                            // Add small delay between chunks
+                                                            await new Promise(r => setTimeout(r, 100));
+                                                            
+                                                            if (offset < file.size) {
+                                                                await sendChunk();
+                                                            } else {
+                                                                ws.send(JSON.stringify({
+                                                                    type: 'video_upload_complete',
+                                                                    filename: file.name
+                                                                }));
+                                                            }
+                                                            resolve();
+                                                        } catch (error) {
+                                                            reject(error);
+                                                        }
+                                                    };
+                                                    reader.onerror = reject;
+                                                    reader.readAsArrayBuffer(chunk);
+                                                });
                                             };
                                             
-                                            sendChunk();
+                                            // Handle upload start acknowledgment
+                                            ws.onmessage = async (event) => {
+                                                const response = JSON.parse(event.data);
+                                                if (response.type === 'upload_start_ack') {
+                                                    try {
+                                                        await sendChunk();
+                                                        console.log('Upload completed successfully');
+                                                    } catch (error) {
+                                                        console.error('Upload failed:', error);
+                                                    }
+                                                }
+                                            };
                                         }
                                     }}
                                 />
