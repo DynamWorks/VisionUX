@@ -66,13 +66,6 @@ class VideoStream:
                           rr.Image(frame_rgb),
                           timeless=False,
                           timestamp=timestamp)
-                    # Also log to edge detection service
-                    edges_rgb = self.edge_detector.detect_edges(frame) if hasattr(self, 'edge_detector') else None
-                    if edges_rgb is not None:
-                        rr.log("edge_detection/edges",
-                              rr.Image(edges_rgb),
-                              timeless=False,
-                              timestamp=timestamp)
                 except Exception as e:
                     self.logger.warning(f"Failed to log to Rerun: {e}")
                     self.logger.debug(f"Error details: {str(e)}", exc_info=True)
