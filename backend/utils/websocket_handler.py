@@ -58,10 +58,26 @@ class WebSocketHandler:
                             
                         elif message_type == 'video_upload_complete':
                             if hasattr(self, 'current_upload'):
-                                self.current_upload['file_handle'].close()
-                                logging.info(f"Upload completed: {self.current_upload['filename']}")
-                                delattr(self, 'current_upload')
-                                await websocket.send(json.dumps({'type': 'upload_complete_ack'}))
+                                try:
+                                    self.current_upload['file_handle'].close()
+                                    file_path = self.uploads_path / self.current_upload['filename']
+                                    if file_path.exists():
+                                        logging.info(f"Upload completed successfully: {self.current_upload['filename']}")
+                                        await websocket.send(json.dumps({
+                                            'type': 'upload_complete_ack',
+                                            'filename': self.current_upload['filename'],
+                                            'size': file_path.stat().st_size
+                                        }))
+                                    else:
+                                        raise FileNotFoundError(f"Uploaded file not found: {file_path}")
+                                except Exception as e:
+                                    logging.error(f"Error finalizing upload: {str(e)}")
+                                    await websocket.send(json.dumps({
+                                        'type': 'upload_error',
+                                        'error': f"Failed to finalize upload: {str(e)}"
+                                    }))
+                                finally:
+                                    delattr(self, 'current_upload')
                             
                     else:
                         # Handle binary chunk data

@@ -227,18 +227,43 @@ function App() {
                                                     if (!ws || ws.readyState !== WebSocket.OPEN) {
                                                         throw new Error('WebSocket connection lost');
                                                     }
-                                                    
-                                                    // Send the entire file data
+
+                                                    // Set a larger buffer for WebSocket
+                                                    ws.binaryType = 'arraybuffer';
+
+                                                    // Create promise to wait for upload completion
+                                                    const uploadComplete = new Promise((resolve, reject) => {
+                                                        const messageHandler = (event) => {
+                                                            try {
+                                                                const response = JSON.parse(event.data);
+                                                                if (response.type === 'upload_complete_ack') {
+                                                                    ws.removeEventListener('message', messageHandler);
+                                                                    resolve();
+                                                                } else if (response.type === 'upload_error') {
+                                                                    ws.removeEventListener('message', messageHandler);
+                                                                    reject(new Error(response.error));
+                                                                }
+                                                            } catch (error) {
+                                                                console.warn('Non-JSON message received:', event.data);
+                                                            }
+                                                        };
+                                                        ws.addEventListener('message', messageHandler);
+                                                    });
+
+                                                    // Send the file data
                                                     ws.send(reader.result);
-                                                    
+
                                                     // Send upload complete notification
                                                     ws.send(JSON.stringify({
                                                         type: 'video_upload_complete',
                                                         filename: file.name,
                                                         totalSize: file.size
                                                     }));
+
+                                                    console.log('Waiting for upload confirmation...');
+                                                    await uploadComplete;
+                                                    console.log('Upload completed successfully');
                                                     
-                                                    console.log('Upload completed, waiting for server confirmation...');
                                                 } catch (error) {
                                                     console.error('Upload failed:', error);
                                                     alert(`Upload failed: ${error.message}`);
