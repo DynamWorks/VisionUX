@@ -4,6 +4,7 @@ from threading import Thread, Event
 from queue import Queue
 import logging
 from typing import Optional, Generator
+import rerun as rr
 
 class VideoStream:
     """Handles video streaming, either from file or camera"""
@@ -57,12 +58,14 @@ class VideoStream:
                 
                 # Log frame to rerun
                 try:
-                    import rerun as rr
                     if not hasattr(self, '_rerun_initialized'):
-                        rr.init("video_analytics", spawn=True)
-                        rr.connect()
+                        rr.init("video_analytics")
                         self._rerun_initialized = True
-                    rr.log("video/frames", rr.Image(frame_rgb))
+                    timestamp = time.time()
+                    rr.log("video/playback",
+                          rr.Image(frame_rgb),
+                          timeless=False,
+                          timestamp=timestamp)
                 except Exception as e:
                     self.logger.warning(f"Failed to log to Rerun: {e}")
                 
