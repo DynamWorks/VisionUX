@@ -29,7 +29,7 @@ class WebSocketHandler:
         self.heartbeat_interval = 30  # seconds
         
     def _init_rerun(self):
-        """Initialize Rerun for video streaming"""
+        """Initialize Rerun for websocket handling"""
         from .rerun_manager import RerunManager
         RerunManager().initialize()
 
