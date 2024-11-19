@@ -59,15 +59,19 @@ class WebSocketHandler:
                         elif message_type == 'video_upload_complete':
                             if hasattr(self, 'current_upload'):
                                 try:
+                                    self.current_upload['file_handle'].flush()
                                     self.current_upload['file_handle'].close()
                                     file_path = self.uploads_path / self.current_upload['filename']
                                     if file_path.exists():
-                                        logging.info(f"Upload completed successfully: {self.current_upload['filename']}")
+                                        file_size = file_path.stat().st_size
+                                        logging.info(f"Upload completed successfully: {self.current_upload['filename']} ({file_size} bytes)")
                                         await websocket.send(json.dumps({
                                             'type': 'upload_complete_ack',
                                             'filename': self.current_upload['filename'],
-                                            'size': file_path.stat().st_size
+                                            'size': file_size
                                         }))
+                                        # Keep connection alive for a moment to ensure client receives the acknowledgment
+                                        await asyncio.sleep(1)
                                     else:
                                         raise FileNotFoundError(f"Uploaded file not found: {file_path}")
                                 except Exception as e:
@@ -76,6 +80,7 @@ class WebSocketHandler:
                                         'type': 'upload_error',
                                         'error': f"Failed to finalize upload: {str(e)}"
                                     }))
+                                    await asyncio.sleep(1)  # Give time for error message to be sent
                                 finally:
                                     delattr(self, 'current_upload')
                             

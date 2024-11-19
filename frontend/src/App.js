@@ -233,13 +233,19 @@ function App() {
 
                                                     // Create promise to wait for upload completion
                                                     const uploadComplete = new Promise((resolve, reject) => {
+                                                        let timeoutId;
+                                                        
                                                         const messageHandler = (event) => {
                                                             try {
                                                                 const response = JSON.parse(event.data);
+                                                                console.log('Received upload response:', response);
+                                                                
                                                                 if (response.type === 'upload_complete_ack') {
+                                                                    clearTimeout(timeoutId);
                                                                     ws.removeEventListener('message', messageHandler);
-                                                                    resolve();
+                                                                    resolve(response);
                                                                 } else if (response.type === 'upload_error') {
+                                                                    clearTimeout(timeoutId);
                                                                     ws.removeEventListener('message', messageHandler);
                                                                     reject(new Error(response.error));
                                                                 }
@@ -247,6 +253,13 @@ function App() {
                                                                 console.warn('Non-JSON message received:', event.data);
                                                             }
                                                         };
+                                                        
+                                                        // Set timeout for upload confirmation
+                                                        timeoutId = setTimeout(() => {
+                                                            ws.removeEventListener('message', messageHandler);
+                                                            reject(new Error('Upload confirmation timeout'));
+                                                        }, 30000); // 30 second timeout
+                                                        
                                                         ws.addEventListener('message', messageHandler);
                                                     });
 
