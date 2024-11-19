@@ -21,7 +21,8 @@ class RerunServer:
             ws_port=4321,
             default_blueprint=rr.blueprint.Vertical(
                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-            )
+            ),
+            blocking=False  # Add non-blocking mode
         )
         
     async def start(self):
