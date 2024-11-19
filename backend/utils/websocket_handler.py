@@ -29,15 +29,9 @@ class WebSocketHandler:
         self.heartbeat_interval = 30  # seconds
         
     def _init_rerun(self):
-        """Initialize or reinitialize Rerun"""
-        rr.init("video_analytics")
-        rr.serve(
-            open_browser=False,
-            ws_port=4321,
-            default_blueprint=rr.blueprint.Vertical(
-                rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-            )
-        )
+        """Initialize Rerun for video streaming"""
+        from .rerun_manager import RerunManager
+        RerunManager().initialize()
 
     async def handle_connection(self, websocket):
         """Handle incoming WebSocket connections"""

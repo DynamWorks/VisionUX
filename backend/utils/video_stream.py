@@ -134,8 +134,8 @@ class VideoStream:
                 self.buffer.get_nowait()
             except:
                 pass
-        # Reset Rerun
+        # Reset Rerun state
         if hasattr(self, '_rerun_initialized'):
             delattr(self, '_rerun_initialized')
-            rr.init("video_analytics")
-            rr.clear()
+            from .rerun_manager import RerunManager
+            RerunManager().reset()

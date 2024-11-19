@@ -1,8 +1,8 @@
 import logging
 import numpy as np
 import cv2
-import rerun as rr
 import time
+from .rerun_manager import RerunManager
 
 class CameraFrameHandler:
     def __init__(self):
