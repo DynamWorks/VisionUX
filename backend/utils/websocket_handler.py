@@ -15,6 +15,7 @@ class WebSocketHandler:
         self.clients = set()
         self.uploads_path = Path("tmp_content/uploads")
         self.uploads_path.mkdir(parents=True, exist_ok=True)
+        logging.info(f"Initialized WebSocket handler with uploads path: {self.uploads_path}")
         
         # Initialize services
         self.edge_detector = EdgeDetectionService()
@@ -51,20 +52,48 @@ class WebSocketHandler:
                                     filename = data.get('filename', f"video_{len(self.clients)}_{int(time.time())}.mp4")
                                     file_path = self.uploads_path / filename
                                 
+                                    # Create uploads directory if it doesn't exist
+                                    self.uploads_path.mkdir(parents=True, exist_ok=True)
+                                    
+                                    total_size = data.get('size', 0)
+                                    bytes_received = 0
+                                    
+                                    logging.info(f"Starting upload of {filename} ({total_size} bytes)")
+                                    
                                     # Open file for writing chunks
                                     with open(file_path, 'wb') as f:
                                         while True:
-                                            chunk_meta = await websocket.recv()
-                                            if isinstance(chunk_meta, str):
+                                            try:
+                                                chunk_meta = await websocket.recv()
+                                                if not isinstance(chunk_meta, str):
+                                                    logging.error("Invalid chunk metadata format")
+                                                    continue
+                                                    
                                                 chunk_data = json.loads(chunk_meta)
                                                 if chunk_data.get('type') == 'video_upload_complete':
+                                                    logging.info(f"Upload complete: {filename}")
                                                     break
                                             
                                                 if chunk_data.get('type') == 'video_upload_chunk':
                                                     chunk = await websocket.recv()
                                                     if isinstance(chunk, bytes):
+                                                        offset = chunk_data.get('offset', 0)
+                                                        size = chunk_data.get('size', 0)
+                                                        
                                                         f.write(chunk)
-                                                        logging.debug(f"Wrote chunk at offset {chunk_data.get('offset')}")
+                                                        bytes_received += len(chunk)
+                                                        
+                                                        progress = (bytes_received / total_size) * 100
+                                                        logging.info(f"Progress: {progress:.1f}% ({bytes_received}/{total_size} bytes)")
+                                                    else:
+                                                        logging.error("Invalid chunk data format")
+                                            except Exception as e:
+                                                logging.error(f"Error during upload: {str(e)}")
+                                                await websocket.send(json.dumps({
+                                                    "type": "upload_error",
+                                                    "error": str(e)
+                                                }))
+                                                break
                                 
                                     file_size = file_path.stat().st_size / (1024 * 1024)  # Size in MB
                                     logging.info(f"Video file saved to: {file_path}")
