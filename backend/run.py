@@ -11,7 +11,7 @@ if __name__ == "__main__":
     # Get server config
     backend_config = config.get("backend", {})
     host = backend_config.get("host", "localhost")
-    port = backend_config.get("port", 8502)
+    port = backend_config.get("port", 8000)
     debug = backend_config.get("debug", False)
     
     # Run server

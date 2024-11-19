@@ -63,7 +63,7 @@ class BackendApp:
         """Check if backend is ready"""
         return True
 
-    def run(self, host='localhost', port=8502, debug=False):
+    def run(self, host='localhost', port=8000, debug=False):
         """Run the Flask application"""
         self.app.run(host=host, port=port, debug=debug)
 
