@@ -63,8 +63,8 @@ class VideoStream:
                         rr.connect()
                         self._rerun_initialized = True
                     
-                    # Create a space for the video stream
-                    rr.log("world/video", rr.ViewCoordinates.RIGHT_HANDED_Y_UP)
+                    # Create a space for the video stream with proper coordinates
+                    rr.log("world/video", rr.ViewCoordinates2D.RIGHT_HANDED_Y_UP)
                     
                     # Log the frame with proper coordinates
                     timestamp = time.time_ns()  # Use nanosecond precision
