@@ -210,163 +210,56 @@ function App() {
                                         }
                                         setVideoFile(file);
                                     
-                                        // Send video file through WebSocket with chunking
+                                        // Send video file through WebSocket
                                         if (ws && ws.readyState === WebSocket.OPEN) {
-                                            const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
                                             const reader = new FileReader();
-                                            let offset = 0;
                                             
                                             // Send metadata first
                                             ws.send(JSON.stringify({ 
                                                 type: 'video_upload_start',
                                                 filename: file.name,
                                                 size: file.size,
-                                                contentType: file.type,
-                                                chunkSize: CHUNK_SIZE
+                                                contentType: file.type
                                             }));
                                             
-                                            let uploadInProgress = false;
-                                            let currentOffset = 0;
-                                            
-                                            const sendChunk = () => {
-                                                return new Promise((resolve, reject) => {
-                                                    const maxConnectionAttempts = 5;
-                                                    let connectionAttempts = 0;
-
-                                                    const waitForConnection = () => {
-                                                        if (ws && ws.readyState === WebSocket.OPEN) {
-                                                            proceedWithUpload();
-                                                        } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-                                                            if (connectionAttempts < maxConnectionAttempts) {
-                                                                connectionAttempts++;
-                                                                setTimeout(waitForConnection, 1000);
-                                                            } else {
-                                                                reject(new Error('WebSocket connection timeout'));
-                                                            }
-                                                        } else {
-                                                            reject(new Error('WebSocket connection failed'));
-                                                        }
-                                                    };
-
-                                                    const proceedWithUpload = () => {
-                                                        if (!ws || ws.readyState !== WebSocket.OPEN) {
-                                                            reject(new Error('WebSocket not connected'));
-                                                            return;
-                                                        }
-                                                        
-                                                        uploadInProgress = true;
-                                                        const chunk = file.slice(currentOffset, currentOffset + CHUNK_SIZE);
-                                                        console.log(`Preparing chunk: offset=${currentOffset}, size=${chunk.size}`);
-                                                        reader.onload = async () => {
-                                                            const maxRetries = 3;
-                                                            let retryCount = 0;
-                                                            
-                                                            const attemptSend = async () => {
-                                                            try {
-                                                                if (!ws || ws.readyState !== WebSocket.OPEN) {
-                                                                    throw new Error('WebSocket connection lost');
-                                                                }
-                                                                
-                                                                // Send chunk metadata
-                                                                ws.send(JSON.stringify({
-                                                                    type: 'video_upload_chunk',
-                                                                    offset: offset,
-                                                                    size: chunk.size,
-                                                                    progress: Math.round((offset / file.size) * 100)
-                                                                }));
-                                                                
-                                                                // Send chunk data
-                                                                ws.send(reader.result);
-                                                                
-                                                                currentOffset += chunk.size;
-                                                                console.log(`Uploading chunk: ${Math.round((currentOffset / file.size) * 100)}%`);
-                                                                
-                                                                // Add small delay between chunks
-                                                                await new Promise(r => setTimeout(r, 100));
-                                                                uploadInProgress = false;
-                                                                resolve();
-                                                            } catch (error) {
-                                                                if (retryCount < maxRetries) {
-                                                                    retryCount++;
-                                                                    console.log(`Retrying chunk upload (${retryCount}/${maxRetries})`);
-                                                                    await new Promise(r => setTimeout(r, 1000 * retryCount));
-                                                                    await attemptSend();
-                                                                } else {
-                                                                    reject(error);
-                                                                }
-                                                            }
-                                                        };
-                                                        
-                                                        await attemptSend();
-                                                            if (currentOffset < file.size) {
-                                                                await sendChunk();
-                                                            } else {
-                                                                ws.send(JSON.stringify({
-                                                                    type: 'video_upload_complete',
-                                                                    filename: file.name,
-                                                                    totalSize: file.size,
-                                                                    chunks: Math.ceil(file.size / CHUNK_SIZE)
-                                                                }));
-                                                                console.log('Upload completed, waiting for server confirmation...');
-                                                            }
-                                                    };
-                                                    reader.onerror = reject;
-                                                    reader.readAsArrayBuffer(chunk);
-                                                    
-                                                    if (uploadInProgress) {
-                                                        setTimeout(() => sendChunk(), 1000);
+                                            reader.onload = async () => {
+                                                try {
+                                                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+                                                        throw new Error('WebSocket connection lost');
                                                     }
-                                                };
-                                                
-                                                if (uploadInProgress) {
-                                                    setTimeout(() => sendChunk(), 1000);
-                                                } else {
-                                                    waitForConnection();
-                                                }
-                                            });
-                                            };
-                                            
-                                            // Handle WebSocket reconnection during upload
-                                            const handleReconnection = () => {
-                                                if (currentOffset > 0 && currentOffset < file.size) {
-                                                    console.log('Resuming upload after reconnection...');
-                                                    setTimeout(() => {
-                                                        sendChunk().catch(error => {
-                                                            console.error('Failed to resume upload:', error);
-                                                            if (error.message.includes('timeout')) {
-                                                                alert('Upload timed out. Please try again.');
-                                                            } else {
-                                                                alert('Upload failed after reconnection. Please try again.');
-                                                            }
-                                                        });
-                                                    }, 1000); // Give WebSocket time to stabilize
+                                                    
+                                                    // Send the entire file data
+                                                    ws.send(reader.result);
+                                                    
+                                                    // Send upload complete notification
+                                                    ws.send(JSON.stringify({
+                                                        type: 'video_upload_complete',
+                                                        filename: file.name,
+                                                        totalSize: file.size
+                                                    }));
+                                                    
+                                                    console.log('Upload completed, waiting for server confirmation...');
+                                                } catch (error) {
+                                                    console.error('Upload failed:', error);
+                                                    alert(`Upload failed: ${error.message}`);
                                                 }
                                             };
                                             
-                                            const reconnectionHandler = () => {
-                                                if (uploadInProgress) {
-                                                    handleReconnection();
-                                                }
+                                            reader.onerror = (error) => {
+                                                console.error('Error reading file:', error);
+                                                alert('Failed to read file');
                                             };
                                             
-                                            ws.addEventListener('open', reconnectionHandler);
+                                            // Read the entire file as ArrayBuffer
+                                            reader.readAsArrayBuffer(file);
                                             
-                                            // Handle upload start acknowledgment
-                                            const messageHandler = async (event) => {
+                                            // Handle WebSocket messages
+                                            const messageHandler = (event) => {
                                                 try {
                                                     const response = JSON.parse(event.data);
                                                     console.log('Received WebSocket response:', response);
                                                     
-                                                    if (response.type === 'upload_start_ack') {
-                                                        try {
-                                                            await sendChunk();
-                                                            console.log('Upload completed successfully');
-                                                        } catch (error) {
-                                                            console.error('Upload failed:', error);
-                                                            // Notify user of failure
-                                                            alert(`Upload failed: ${error.message}`);
-                                                        }
-                                                    } else if (response.type === 'upload_error') {
+                                                    if (response.type === 'upload_error') {
                                                         throw new Error(response.error);
                                                     }
                                                 } catch (error) {
