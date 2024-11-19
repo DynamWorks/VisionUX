@@ -18,7 +18,6 @@ class RerunServer:
         rr.connect()
         rr.serve(
             open_browser=False,
-            port=9090,
             ws_port=4321,
             default_blueprint=rr.blueprint.Vertical(
                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
