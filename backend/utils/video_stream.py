@@ -128,3 +128,6 @@ class VideoStream:
         self.stop_event.set()
         if self._stream_thread:
             self._stream_thread.join()
+        if hasattr(self, '_rerun_initialized'):
+            delattr(self, '_rerun_initialized')
+            rr.init("video_analytics")
