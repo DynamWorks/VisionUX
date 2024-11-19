@@ -59,8 +59,15 @@ class VideoStream:
                 # Log video to rerun
                 try:
                     if not hasattr(self, '_rerun_initialized'):
-                        rr.init("video_analytics", spawn=True)
-                        rr.connect()
+                        rr.init("video_analytics")#, spawn=True)
+                        #rr.connect()
+                        rr.serve(
+                            open_browser=False,
+                            ws_port=4321,
+                            default_blueprint=rr.blueprint.Vertical(
+                                rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                            )
+                        )
                         self._rerun_initialized = True
                         
                         if isinstance(self.source, str):
