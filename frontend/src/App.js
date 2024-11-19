@@ -311,10 +311,6 @@ function App() {
                                                         console.log('Waiting for upload confirmation...');
                                                         await uploadComplete;
                                                         console.log('Upload completed successfully');
-                                                    } else {
-                                                        throw new Error('WebSocket connection lost during upload');
-                                                    }
-                                                    
                                                 } catch (error) {
                                                     console.error('Upload failed:', error);
                                                     alert(`Upload failed: ${error.message}`);
