@@ -3,6 +3,7 @@ import numpy as np
 import rerun as rr
 import time
 import logging
+import asyncio
 from pathlib import Path
 
 class VideoStreamingService:
