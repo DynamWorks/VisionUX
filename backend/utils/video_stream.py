@@ -81,10 +81,10 @@ class VideoStream:
                     else:
                         # For live camera feed, log frames directly
                         timestamp = time.time_ns()
-                        rr.log("world/video/frame",
+                        rr.log("world/video",
                               rr.Image(frame_rgb),
-                              timeless=False,
-                              timestamp=timestamp)
+                              timeless=False,)
+                              #timestamp=timestamp)
                 except Exception as e:
                     self.logger.warning(f"Failed to log to Rerun: {e}")
                     self.logger.debug(f"Error details: {str(e)}", exc_info=True)
