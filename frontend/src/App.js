@@ -8,6 +8,7 @@ import RerunViewer from './components/RerunViewer';
 import VideoDisplay from './components/VideoDisplay';
 import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
+import FileList from './components/FileList';
 
 function App() {
     const [inputType, setInputType] = useState('camera');
@@ -16,6 +17,7 @@ function App() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [stream, setStream] = useState(null);
     const [videoFile, setVideoFile] = useState(null);
+    const [uploadedFiles, setUploadedFiles] = useState([]);
 
     const [ws, setWs] = useState(null);
 
@@ -216,7 +218,9 @@ function App() {
                                             stopCamera();
                                         }
                                         setVideoFile(file);
-                                    
+                                        // Add file to uploaded files list
+                                        setUploadedFiles(prev => [...prev, file]);
+                                        
                                         // Send video file through WebSocket
                                         if (ws && ws.readyState === WebSocket.OPEN) {
                                             const reader = new FileReader();
@@ -349,6 +353,12 @@ function App() {
                                     }}
                                 />
                             )}
+                            <FileList 
+                                files={uploadedFiles}
+                                onFileSelect={(file) => {
+                                    setVideoFile(file);
+                                }}
+                            />
                         </Box>
                         <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <RerunViewer />
