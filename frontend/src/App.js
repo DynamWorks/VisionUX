@@ -230,18 +230,30 @@ function App() {
                                             
                                             const sendChunk = () => {
                                                 return new Promise((resolve, reject) => {
+                                                    const maxConnectionAttempts = 5;
+                                                    let connectionAttempts = 0;
+
                                                     const waitForConnection = () => {
                                                         if (ws && ws.readyState === WebSocket.OPEN) {
                                                             proceedWithUpload();
                                                         } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-                                                            setTimeout(waitForConnection, 100);
+                                                            if (connectionAttempts < maxConnectionAttempts) {
+                                                                connectionAttempts++;
+                                                                setTimeout(waitForConnection, 1000);
+                                                            } else {
+                                                                reject(new Error('WebSocket connection timeout'));
+                                                            }
                                                         } else {
                                                             reject(new Error('WebSocket connection failed'));
                                                         }
                                                     };
 
                                                     const proceedWithUpload = () => {
-                                                    
+                                                        if (!ws || ws.readyState !== WebSocket.OPEN) {
+                                                            reject(new Error('WebSocket not connected'));
+                                                            return;
+                                                        }
+                                                        
                                                         uploadInProgress = true;
                                                         const chunk = file.slice(currentOffset, currentOffset + CHUNK_SIZE);
                                                         console.log(`Preparing chunk: offset=${currentOffset}, size=${chunk.size}`);
@@ -318,14 +330,26 @@ function App() {
                                             const handleReconnection = () => {
                                                 if (currentOffset > 0 && currentOffset < file.size) {
                                                     console.log('Resuming upload after reconnection...');
-                                                    sendChunk().catch(error => {
-                                                        console.error('Failed to resume upload:', error);
-                                                        alert('Upload failed after reconnection. Please try again.');
-                                                    });
+                                                    setTimeout(() => {
+                                                        sendChunk().catch(error => {
+                                                            console.error('Failed to resume upload:', error);
+                                                            if (error.message.includes('timeout')) {
+                                                                alert('Upload timed out. Please try again.');
+                                                            } else {
+                                                                alert('Upload failed after reconnection. Please try again.');
+                                                            }
+                                                        });
+                                                    }, 1000); // Give WebSocket time to stabilize
                                                 }
                                             };
                                             
-                                            ws.addEventListener('open', handleReconnection);
+                                            const reconnectionHandler = () => {
+                                                if (uploadInProgress) {
+                                                    handleReconnection();
+                                                }
+                                            };
+                                            
+                                            ws.addEventListener('open', reconnectionHandler);
                                             
                                             // Handle upload start acknowledgment
                                             const messageHandler = async (event) => {
