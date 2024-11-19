@@ -258,8 +258,10 @@ function App() {
                                             
                                             // Handle upload start acknowledgment
                                             ws.onmessage = async (event) => {
-                                                const response = JSON.parse(event.data);
-                                                if (response.type === 'upload_start_ack') {
+                                                try {
+                                                    const response = JSON.parse(event.data);
+                                                    console.log('Received WebSocket response:', response);
+                                                    if (response.type === 'upload_start_ack') {
                                                     try {
                                                         await sendChunk();
                                                         console.log('Upload completed successfully');
