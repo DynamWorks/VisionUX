@@ -38,8 +38,7 @@ function App() {
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket); // Only set ws when connection is established
                     
-                    // Set larger buffer size
-                    websocket.bufferedAmount = 1024 * 1024 * 50; // 50MB buffer
+                    // WebSocket is now connected and ready
                 };
 
                 websocket.onmessage = (event) => {
