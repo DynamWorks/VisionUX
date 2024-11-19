@@ -64,9 +64,9 @@ class VideoStream:
                         self._rerun_initialized = True
                         
                         if isinstance(self.source, str):
-                            # For video files, use AssetVideo
+                            # For video files, use AssetVideo with looping enabled
                             video_asset = rr.AssetVideo(path=self.source)
-                            rr.log("world/video", video_asset, static=True)
+                            rr.log("world/video", video_asset, static=True, loop=True)
                             
                             # Get frame timestamps and send them
                             frame_timestamps_ns = video_asset.read_frame_timestamps_ns()
