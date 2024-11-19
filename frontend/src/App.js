@@ -314,6 +314,16 @@ function App() {
                                                         console.log('Waiting for upload confirmation...');
                                                         await uploadComplete;
                                                         console.log('Upload completed successfully');
+                                        
+                                                        // Reset Rerun viewer
+                                                        const rerunViewer = document.querySelector('iframe');
+                                                        if (rerunViewer) {
+                                                            rerunViewer.src = rerunViewer.src;
+                                                        }
+                                                        // Reset Rerun after successful upload
+                                                        ws.send(JSON.stringify({
+                                                            type: 'reset_rerun'
+                                                        }));
                                                 } catch (error) {
                                                     console.error('Upload failed:', error);
                                                     alert(`Upload failed: ${error.message}`);
