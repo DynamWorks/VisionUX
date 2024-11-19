@@ -1,12 +1,12 @@
 # Server Configuration
 api:
-  host: ${API_HOST:-localhost}
-  port: ${API_PORT:-8000}
+  host: localhost
+  port: 8000
   debug: false
 
 websocket:
-  host: ${WS_HOST:-localhost}
-  port: ${WS_PORT:-8001}
+  host: localhost
+  port: 8001
   debug: false
 
 frontend:
