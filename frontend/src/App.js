@@ -192,11 +192,23 @@ function App() {
                                             stopCamera();
                                         }
                                         setVideoFile(file);
-                                        
-                                        // Send video file through WebSocket
+                                    
+                                        // Send video file through WebSocket with proper chunking
                                         if (ws && ws.readyState === WebSocket.OPEN) {
-                                            ws.send(JSON.stringify({ type: 'video_upload' }));
-                                            ws.send(file);
+                                            const reader = new FileReader();
+                                            reader.onload = () => {
+                                                // Send metadata first
+                                                ws.send(JSON.stringify({ 
+                                                    type: 'video_upload',
+                                                    filename: file.name,
+                                                    size: file.size,
+                                                    contentType: file.type
+                                                }));
+                                            
+                                                // Send the binary data
+                                                ws.send(reader.result);
+                                            };
+                                            reader.readAsArrayBuffer(file);
                                         }
                                     }}
                                 />
