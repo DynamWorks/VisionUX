@@ -14,12 +14,13 @@ class RerunServer:
         self.site = None
         
         # Initialize Rerun
-        rr.init("video_analytics")
+        rr.init("video_analytics", spawn=True)
+        rr.connect()
         rr.serve(
             open_browser=False,
             ws_port=4321,
             default_blueprint=rr.blueprint.Vertical(
-                rr.blueprint.Spatial2DView(origin="video/playback", name="Video Stream"),
+                rr.blueprint.Spatial2DView(origin="world/video/frame", name="Video Stream"),
                 rr.blueprint.Spatial2DView(origin="edge_detection/edges", name="Edge Detection")
             )
         )

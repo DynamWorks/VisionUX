@@ -59,10 +59,16 @@ class VideoStream:
                 # Log frame to rerun
                 try:
                     if not hasattr(self, '_rerun_initialized'):
-                        rr.init("video_analytics")
+                        rr.init("video_analytics", spawn=True)
+                        rr.connect()
                         self._rerun_initialized = True
-                    timestamp = time.time()
-                    rr.log("video/playback",
+                    
+                    # Create a space for the video stream
+                    rr.log("world/video", rr.ViewCoordinates.RIGHT_HANDED_Y_UP)
+                    
+                    # Log the frame with proper coordinates
+                    timestamp = time.time_ns()  # Use nanosecond precision
+                    rr.log("world/video/frame",
                           rr.Image(frame_rgb),
                           timeless=False,
                           timestamp=timestamp)
