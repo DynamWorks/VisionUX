@@ -29,9 +29,16 @@ class WebSocketHandler:
             async for message in websocket:
                 # Try to parse as JSON first
                 try:
-                    data = json.loads(message) if isinstance(message, str) else None
-                    message_type = data.get('type') if data else None
-                    logging.info(f"Received message type: {message_type}")
+                    if isinstance(message, str):
+                        data = json.loads(message)
+                        message_type = data.get('type')
+                        logging.info(f"Received message type: {message_type}")
+                        if message_type == 'video_upload_start':
+                            logging.info(f"Starting video upload: {data.get('filename')} ({data.get('size')} bytes)")
+                        elif message_type == 'video_upload_chunk':
+                            logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
+                    else:
+                        logging.info(f"Received binary data: {len(message)} bytes")
                 except:
                     message_type = None
                     data = None

@@ -216,6 +216,7 @@ function App() {
                                             const sendChunk = () => {
                                                 return new Promise((resolve, reject) => {
                                                     const chunk = file.slice(offset, offset + CHUNK_SIZE);
+                                                    console.log(`Preparing chunk: offset=${offset}, size=${chunk.size}`);
                                                     reader.onload = async () => {
                                                         try {
                                                             // Send chunk metadata
