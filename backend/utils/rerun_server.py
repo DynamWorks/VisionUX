@@ -13,11 +13,13 @@ class RerunServer:
         self.runner = None
         self.site = None
         
-        # Initialize Rerun
-        rr.init("video_analytics", spawn=True)
+        # Initialize Rerun with web viewer
+        rr.init("video_analytics", spawn=False)
         rr.connect()
         rr.serve(
             open_browser=False,
+            host="localhost",
+            port=9090,
             ws_port=4321,
             default_blueprint=rr.blueprint.Vertical(
                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")

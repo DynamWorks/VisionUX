@@ -59,7 +59,7 @@ class VideoStream:
                 # Log video to rerun
                 try:
                     if not hasattr(self, '_rerun_initialized'):
-                        rr.init("video_analytics", spawn=True)
+                        rr.init("video_analytics", spawn=False)
                         rr.connect()
                         self._rerun_initialized = True
                         
