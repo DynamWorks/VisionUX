@@ -217,9 +217,21 @@ function App() {
                                         if (isStreaming) {
                                             stopCamera();
                                         }
+                                        // Clear previous video file and update with new one
+                                        if (videoFile) {
+                                            URL.revokeObjectURL(URL.createObjectURL(videoFile));
+                                        }
                                         setVideoFile(file);
-                                        // Add file to uploaded files list
-                                        setUploadedFiles(prev => [...prev, file]);
+                                        // Update uploaded files list, keeping only recent files
+                                        setUploadedFiles(prev => {
+                                            // Keep only the 5 most recent files
+                                            const newFiles = [file, ...prev.slice(0, 4)];
+                                            // Clean up old URLs
+                                            prev.slice(5).forEach(oldFile => {
+                                                URL.revokeObjectURL(URL.createObjectURL(oldFile));
+                                            });
+                                            return newFiles;
+                                        });
                                         
                                         // Send video file through WebSocket
                                         if (ws && ws.readyState === WebSocket.OPEN) {

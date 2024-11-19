@@ -324,9 +324,21 @@ class WebSocketHandler:
     async def handle_new_video(self, file_path):
         """Handle setup for a newly uploaded video"""
         try:
-            # Stop any existing video stream
+            # Stop and clean up any existing video stream
             if self.video_streamer:
                 self.video_streamer.stop()
+                self.video_streamer = None
+            
+            # Clean up old video files
+            uploads_dir = Path("tmp_content/uploads")
+            if uploads_dir.exists():
+                for old_file in uploads_dir.glob("*.mp4"):
+                    if old_file != file_path:
+                        try:
+                            old_file.unlink()
+                            self.logger.info(f"Removed old video: {old_file}")
+                        except Exception as e:
+                            self.logger.warning(f"Failed to remove old video {old_file}: {e}")
                 
             # Create new video stream
             self.video_streamer = VideoStream(str(file_path))

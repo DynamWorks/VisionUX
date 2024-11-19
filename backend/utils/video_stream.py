@@ -124,10 +124,18 @@ class VideoStream:
             yield frame
             
     def stop(self):
-        """Stop video streaming"""
+        """Stop video streaming and clean up resources"""
         self.stop_event.set()
         if self._stream_thread:
             self._stream_thread.join()
+        # Clear buffer
+        while not self.buffer.empty():
+            try:
+                self.buffer.get_nowait()
+            except:
+                pass
+        # Reset Rerun
         if hasattr(self, '_rerun_initialized'):
             delattr(self, '_rerun_initialized')
             rr.init("video_analytics")
+            rr.clear()
