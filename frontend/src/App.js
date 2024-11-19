@@ -262,12 +262,15 @@ function App() {
                                                     const response = JSON.parse(event.data);
                                                     console.log('Received WebSocket response:', response);
                                                     if (response.type === 'upload_start_ack') {
-                                                    try {
-                                                        await sendChunk();
-                                                        console.log('Upload completed successfully');
-                                                    } catch (error) {
-                                                        console.error('Upload failed:', error);
+                                                        try {
+                                                            await sendChunk();
+                                                            console.log('Upload completed successfully');
+                                                        } catch (error) {
+                                                            console.error('Upload failed:', error);
+                                                        }
                                                     }
+                                                } catch (error) {
+                                                    console.error('Error processing WebSocket message:', error);
                                                 }
                                             };
                                         }
