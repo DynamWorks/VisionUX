@@ -56,22 +56,35 @@ class VideoStream:
                 # Convert BGR to RGB for rerun
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                # Log frame to rerun
+                # Log video to rerun
                 try:
                     if not hasattr(self, '_rerun_initialized'):
                         rr.init("video_analytics", spawn=True)
                         rr.connect()
                         self._rerun_initialized = True
-                    
-                    # Create a space for the video stream with proper coordinates
-                    rr.log("world/video", rr.ViewCoordinates2D.RIGHT_HANDED_Y_UP)
-                    
-                    # Log the frame with proper coordinates
-                    timestamp = time.time_ns()  # Use nanosecond precision
-                    rr.log("world/video/frame",
-                          rr.Image(frame_rgb),
-                          timeless=False,
-                          timestamp=timestamp)
+                        
+                        if isinstance(self.source, str):
+                            # For video files, use AssetVideo
+                            video_asset = rr.AssetVideo(path=self.source)
+                            rr.log("world/video", video_asset, static=True)
+                            
+                            # Get frame timestamps and send them
+                            frame_timestamps_ns = video_asset.read_frame_timestamps_ns()
+                            rr.send_columns(
+                                "world/video",
+                                times=[rr.TimeNanosColumn("video_time", frame_timestamps_ns)],
+                                components=[
+                                    rr.VideoFrameReference.indicator(),
+                                    rr.components.VideoTimestamp.nanoseconds(frame_timestamps_ns)
+                                ],
+                            )
+                    else:
+                        # For live camera feed, log frames directly
+                        timestamp = time.time_ns()
+                        rr.log("world/video/frame",
+                              rr.Image(frame_rgb),
+                              timeless=False,
+                              timestamp=timestamp)
                 except Exception as e:
                     self.logger.warning(f"Failed to log to Rerun: {e}")
                     self.logger.debug(f"Error details: {str(e)}", exc_info=True)
