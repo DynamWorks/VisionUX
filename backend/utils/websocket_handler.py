@@ -2,39 +2,48 @@ import asyncio
 import websockets
 import json
 import logging
-import time
-from pathlib import Path
-import numpy as np
-import cv2
-import base64
 import rerun as rr
-from services.edge_detection_service import EdgeDetectionService
+from pathlib import Path
+from .video_upload_handler import VideoUploadHandler
+from .camera_frame_handler import CameraFrameHandler
 from utils.video_stream import VideoStream
 
 class WebSocketHandler:
     def __init__(self):
         self.clients = set()
         self.uploads_path = Path("tmp_content/uploads")
-        self.uploads_path.mkdir(parents=True, exist_ok=True)
-        logging.info(f"Initialized WebSocket handler with uploads path: {self.uploads_path}")
+        self.logger = logging.getLogger(__name__)
         
-        # Initialize services
-        self.edge_detector = EdgeDetectionService()
-        self.video_streamer = None  # Will be initialized when needed
+        # Initialize handlers and services
+        self.upload_handler = VideoUploadHandler(self.uploads_path)
+        self.frame_handler = CameraFrameHandler()
+        self.video_streamer = None
         
         # Initialize Rerun
-        rr.init("video_analytics")
+        self._init_rerun()
         
         # Heartbeat configuration
         self.heartbeat_interval = 30  # seconds
+        
+    def _init_rerun(self):
+        """Initialize or reinitialize Rerun"""
+        rr.init("video_analytics")
+        rr.serve(
+            open_browser=False,
+            ws_port=4321,
+            default_blueprint=rr.blueprint.Vertical(
+                rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+            ),
+            blocking=False
+        )
 
     async def handle_connection(self, websocket):
+        """Handle incoming WebSocket connections"""
         self.clients.add(websocket)
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
-        upload_timeout = 300  # 5 minutes timeout for uploads
         
-        # Increase WebSocket message size limit
-        websocket.max_size = 1024 * 1024 * 100  # 100MB
+        # Increase WebSocket message size limit (100MB)
+        websocket.max_size = 1024 * 1024 * 100
         
         try:
             async for message in websocket:
@@ -272,3 +281,56 @@ class WebSocketHandler:
     async def start_server(self, host='localhost', port=8001):
         async with websockets.serve(self.handle_connection, host, port):
             await asyncio.Future()  # run forever
+    async def handle_message(self, websocket, message):
+        """Route incoming messages to appropriate handlers"""
+        try:
+            if isinstance(message, str):
+                if message == "pong":
+                    return
+                    
+                data = json.loads(message)
+                message_type = data.get('type')
+                self.logger.info(f"Received message type: {message_type}")
+                
+                if message_type == 'video_upload_start':
+                    await self.upload_handler.handle_upload_start(websocket, data)
+                    
+                elif message_type == 'video_upload_complete':
+                    file_path = await self.upload_handler.handle_upload_complete(websocket)
+                    if file_path:
+                        await self.handle_new_video(file_path)
+                        
+                elif message_type == 'reset_rerun':
+                    self._init_rerun()
+                    await websocket.send(json.dumps({
+                        'type': 'rerun_reset_complete'
+                    }))
+                    
+            else:  # Binary message
+                if hasattr(self.upload_handler, 'current_upload'):
+                    await self.upload_handler.handle_upload_chunk(message)
+                else:
+                    await self.frame_handler.handle_frame(message)
+                    
+        except Exception as e:
+            self.logger.error(f"Error handling message: {e}")
+            await websocket.send(json.dumps({
+                'type': 'error',
+                'error': str(e)
+            }))
+            
+    async def handle_new_video(self, file_path):
+        """Handle setup for a newly uploaded video"""
+        try:
+            # Stop any existing video stream
+            if self.video_streamer:
+                self.video_streamer.stop()
+                
+            # Create new video stream
+            self.video_streamer = VideoStream(str(file_path))
+            self.video_streamer.start()
+            self.logger.info(f"Started streaming video: {file_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start video streaming: {e}")
+            raise
