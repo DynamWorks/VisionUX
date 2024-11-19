@@ -193,22 +193,45 @@ function App() {
                                         }
                                         setVideoFile(file);
                                     
-                                        // Send video file through WebSocket with proper chunking
+                                        // Send video file through WebSocket with chunking
                                         if (ws && ws.readyState === WebSocket.OPEN) {
+                                            const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
                                             const reader = new FileReader();
-                                            reader.onload = () => {
-                                                // Send metadata first
-                                                ws.send(JSON.stringify({ 
-                                                    type: 'video_upload',
-                                                    filename: file.name,
-                                                    size: file.size,
-                                                    contentType: file.type
-                                                }));
+                                            let offset = 0;
                                             
-                                                // Send the binary data
-                                                ws.send(reader.result);
+                                            // Send metadata first
+                                            ws.send(JSON.stringify({ 
+                                                type: 'video_upload_start',
+                                                filename: file.name,
+                                                size: file.size,
+                                                contentType: file.type,
+                                                chunkSize: CHUNK_SIZE
+                                            }));
+                                            
+                                            const sendChunk = () => {
+                                                const chunk = file.slice(offset, offset + CHUNK_SIZE);
+                                                reader.onload = () => {
+                                                    ws.send(JSON.stringify({
+                                                        type: 'video_upload_chunk',
+                                                        offset: offset,
+                                                        size: chunk.size,
+                                                    }));
+                                                    ws.send(reader.result);
+                                                    
+                                                    offset += chunk.size;
+                                                    if (offset < file.size) {
+                                                        sendChunk();
+                                                    } else {
+                                                        ws.send(JSON.stringify({
+                                                            type: 'video_upload_complete',
+                                                            filename: file.name
+                                                        }));
+                                                    }
+                                                };
+                                                reader.readAsArrayBuffer(chunk);
                                             };
-                                            reader.readAsArrayBuffer(file);
+                                            
+                                            sendChunk();
                                         }
                                     }}
                                 />

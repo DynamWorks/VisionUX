@@ -43,7 +43,7 @@ class WebSocketHandler:
                         if isinstance(message, str):
                             try:
                                 data = json.loads(message)
-                                if data.get('type') == 'video_upload':
+                                if data.get('type') == 'video_upload_start':
                                     # Ensure uploads directory exists
                                     self.uploads_path.mkdir(parents=True, exist_ok=True)
                                 
@@ -51,28 +51,30 @@ class WebSocketHandler:
                                     filename = data.get('filename', f"video_{len(self.clients)}_{int(time.time())}.mp4")
                                     file_path = self.uploads_path / filename
                                 
-                                    # Receive binary data
-                                    binary_data = await websocket.recv()
-                                    if isinstance(binary_data, bytes):
-                                        try:
-                                            with open(file_path, 'wb') as f:
-                                                f.write(binary_data)
-                                            file_size = len(binary_data) / (1024 * 1024)  # Size in MB
-                                            logging.info(f"Video file saved to: {file_path}")
-                                            logging.info(f"Video file size: {file_size:.2f} MB")
-                                        
-                                            await websocket.send(json.dumps({
-                                                "type": "upload_complete",
-                                                "path": str(file_path),
-                                                "success": True
-                                            }))
-                                        except IOError as e:
-                                            logging.error(f"Failed to save video file: {e}")
-                                            await websocket.send(json.dumps({
-                                                "type": "upload_complete",
-                                                "success": False,
-                                                "error": f"Failed to save video file: {str(e)}"
-                                            }))
+                                    # Open file for writing chunks
+                                    with open(file_path, 'wb') as f:
+                                        while True:
+                                            chunk_meta = await websocket.recv()
+                                            if isinstance(chunk_meta, str):
+                                                chunk_data = json.loads(chunk_meta)
+                                                if chunk_data.get('type') == 'video_upload_complete':
+                                                    break
+                                            
+                                                if chunk_data.get('type') == 'video_upload_chunk':
+                                                    chunk = await websocket.recv()
+                                                    if isinstance(chunk, bytes):
+                                                        f.write(chunk)
+                                                        logging.debug(f"Wrote chunk at offset {chunk_data.get('offset')}")
+                                
+                                    file_size = file_path.stat().st_size / (1024 * 1024)  # Size in MB
+                                    logging.info(f"Video file saved to: {file_path}")
+                                    logging.info(f"Video file size: {file_size:.2f} MB")
+                                
+                                    await websocket.send(json.dumps({
+                                        "type": "upload_complete",
+                                        "path": str(file_path),
+                                        "success": True
+                                    }))
                             except IOError as e:
                                 logging.error(f"Failed to save video file: {e}")
                                 await websocket.send(json.dumps({
