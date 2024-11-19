@@ -64,6 +64,9 @@ class BackendApp:
         return True
 
     def run(self, host='localhost', port=8000, ws_port=8001, debug=False):
+        # Ensure port numbers are integers
+        port = int(port)
+        ws_port = int(ws_port)
         """Run the Flask application and WebSocket server"""
         # Start WebSocket server in a separate thread
         ws_thread = threading.Thread(

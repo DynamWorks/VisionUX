@@ -12,8 +12,8 @@ if __name__ == "__main__":
     api_config = config.get("api", {})
     ws_config = config.get("websocket", {})
     host = api_config.get("host", "localhost")
-    port = api_config.get("port", 8000)
-    ws_port = ws_config.get("port", 8001)
+    port = int(api_config.get("port", 8000))
+    ws_port = int(ws_config.get("port", 8001))
     debug = api_config.get("debug", False)
     
     # Run server
