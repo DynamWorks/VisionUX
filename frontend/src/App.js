@@ -234,11 +234,11 @@ function App() {
                                                         uploadInProgress = true;
                                                         const chunk = file.slice(currentOffset, currentOffset + CHUNK_SIZE);
                                                         console.log(`Preparing chunk: offset=${currentOffset}, size=${chunk.size}`);
-                                                    reader.onload = async () => {
-                                                        const maxRetries = 3;
-                                                        let retryCount = 0;
-                                                        
-                                                        const attemptSend = async () => {
+                                                        reader.onload = async () => {
+                                                            const maxRetries = 3;
+                                                            let retryCount = 0;
+                                                            
+                                                            const attemptSend = async () => {
                                                             try {
                                                                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                                                                     throw new Error('WebSocket connection lost');
@@ -292,10 +292,15 @@ function App() {
                                                     
                                                     if (uploadInProgress) {
                                                         setTimeout(() => sendChunk(), 1000);
-                                                    } else {
-                                                        waitForConnection();
                                                     }
-                                                });
+                                                };
+                                                
+                                                if (uploadInProgress) {
+                                                    setTimeout(() => sendChunk(), 1000);
+                                                } else {
+                                                    waitForConnection();
+                                                }
+                                            });
                                             };
                                             
                                             // Handle WebSocket reconnection during upload
