@@ -36,6 +36,7 @@ function App() {
                 websocket.onopen = () => {
                     console.log('WebSocket Connected');
                     reconnectAttempts = 0; // Reset attempts on successful connection
+                    setWs(websocket); // Only set ws when connection is established
                 };
                 
                 websocket.onclose = () => {
@@ -215,17 +216,53 @@ function App() {
                                             
                                             const sendChunk = () => {
                                                 return new Promise((resolve, reject) => {
+                                                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+                                                        reject(new Error('WebSocket connection is not open'));
+                                                        return;
+                                                    }
+                                                    
                                                     const chunk = file.slice(offset, offset + CHUNK_SIZE);
                                                     console.log(`Preparing chunk: offset=${offset}, size=${chunk.size}`);
                                                     reader.onload = async () => {
-                                                        try {
-                                                            // Send chunk metadata
-                                                            ws.send(JSON.stringify({
-                                                                type: 'video_upload_chunk',
-                                                                offset: offset,
-                                                                size: chunk.size,
-                                                                progress: Math.round((offset / file.size) * 100)
-                                                            }));
+                                                        const maxRetries = 3;
+                                                        let retryCount = 0;
+                                                        
+                                                        const attemptSend = async () => {
+                                                            try {
+                                                                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                                                                    throw new Error('WebSocket connection lost');
+                                                                }
+                                                                
+                                                                // Send chunk metadata
+                                                                ws.send(JSON.stringify({
+                                                                    type: 'video_upload_chunk',
+                                                                    offset: offset,
+                                                                    size: chunk.size,
+                                                                    progress: Math.round((offset / file.size) * 100)
+                                                                }));
+                                                                
+                                                                // Send chunk data
+                                                                ws.send(reader.result);
+                                                                
+                                                                offset += chunk.size;
+                                                                console.log(`Uploading chunk: ${Math.round((offset / file.size) * 100)}%`);
+                                                                
+                                                                // Add small delay between chunks
+                                                                await new Promise(r => setTimeout(r, 100));
+                                                                resolve();
+                                                            } catch (error) {
+                                                                if (retryCount < maxRetries) {
+                                                                    retryCount++;
+                                                                    console.log(`Retrying chunk upload (${retryCount}/${maxRetries})`);
+                                                                    await new Promise(r => setTimeout(r, 1000 * retryCount));
+                                                                    await attemptSend();
+                                                                } else {
+                                                                    reject(error);
+                                                                }
+                                                            }
+                                                        };
+                                                        
+                                                        await attemptSend();
                                                             console.log(`Uploading chunk: ${Math.round((offset / file.size) * 100)}%`);
                                                             
                                                             // Send chunk data
@@ -258,21 +295,34 @@ function App() {
                                             };
                                             
                                             // Handle upload start acknowledgment
-                                            ws.onmessage = async (event) => {
+                                            const messageHandler = async (event) => {
                                                 try {
                                                     const response = JSON.parse(event.data);
                                                     console.log('Received WebSocket response:', response);
+                                                    
                                                     if (response.type === 'upload_start_ack') {
                                                         try {
                                                             await sendChunk();
                                                             console.log('Upload completed successfully');
                                                         } catch (error) {
                                                             console.error('Upload failed:', error);
+                                                            // Notify user of failure
+                                                            alert(`Upload failed: ${error.message}`);
                                                         }
+                                                    } else if (response.type === 'upload_error') {
+                                                        throw new Error(response.error);
                                                     }
                                                 } catch (error) {
                                                     console.error('Error processing WebSocket message:', error);
+                                                    alert(`Upload error: ${error.message}`);
                                                 }
+                                            };
+                                            
+                                            ws.addEventListener('message', messageHandler);
+                                            
+                                            // Cleanup
+                                            return () => {
+                                                ws.removeEventListener('message', messageHandler);
                                             };
                                         }
                                     }}
