@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 from content_manager import ContentManager
 from utils.websocket_handler import WebSocketHandler
-from utils.rerun_server import RerunServer
+from utils.rerun_manager import RerunManager
 import logging
 import os
 import yaml
@@ -23,7 +23,7 @@ class BackendApp:
         self.content_manager = None
         self.models_loaded = False
         self.websocket_handler = WebSocketHandler()
-        self.rerun_server = RerunServer()
+        self.rerun_manager = RerunManager()
         
         # Add routes
         self.setup_routes()
@@ -116,7 +116,7 @@ class BackendApp:
                 async def start_servers():
                     await asyncio.gather(
                         self.websocket_handler.start_server(port=port),
-                        self.rerun_server.start()
+                        self.rerun_manager.start_web_server()
                     )
                 asyncio.run(start_servers())
             except Exception as e:
