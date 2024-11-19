@@ -14,7 +14,7 @@ class RerunServer:
         self.site = None
         
         # Initialize Rerun with web viewer
-        rr.init("video_analytics", spawn=False)
+        rr.init("video_analytics", spawn=True)
         rr.connect()
         rr.serve(
             open_browser=False,
