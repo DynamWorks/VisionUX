@@ -9,6 +9,7 @@ pyyaml==6.0.1
 python-dotenv==1.0.0
 sseclient-py==1.8.0
 pydantic>=2.5.0,<3.0.0
+ffmpeg-python==0.2.0
 
 # Machine Learning & Vision
 ultralytics==8.0.196
