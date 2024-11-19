@@ -37,6 +37,9 @@ function App() {
                     console.log('WebSocket Connected');
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket); // Only set ws when connection is established
+                    
+                    // Set larger buffer size
+                    websocket.bufferedAmount = 1024 * 1024 * 50; // 50MB buffer
                 };
 
                 websocket.onmessage = (event) => {
@@ -233,8 +236,17 @@ function App() {
                                                         throw new Error('WebSocket connection lost');
                                                     }
 
-                                                    // Set a larger buffer for WebSocket
-                                                    ws.binaryType = 'arraybuffer';
+                                                    // Set binary type to blob for better memory handling
+                                                    ws.binaryType = 'blob';
+                                                    
+                                                    // Split file into chunks
+                                                    const chunkSize = 1024 * 1024; // 1MB chunks
+                                                    const fileData = reader.result;
+                                                    const chunks = [];
+                                                    
+                                                    for (let i = 0; i < fileData.byteLength; i += chunkSize) {
+                                                        chunks.push(fileData.slice(i, i + chunkSize));
+                                                    }
 
                                                     // Create promise to wait for upload completion
                                                     const uploadComplete = new Promise((resolve, reject) => {
@@ -268,12 +280,26 @@ function App() {
                                                         ws.addEventListener('message', messageHandler);
                                                     });
 
-                                                    // Send the file data with error handling
-                                                    if (ws.readyState === WebSocket.OPEN) {
-                                                        ws.send(reader.result);
+                                                    // Send chunks with progress tracking
+                                                    for (let i = 0; i < chunks.length; i++) {
+                                                        if (ws.readyState !== WebSocket.OPEN) {
+                                                            throw new Error('WebSocket connection lost during upload');
+                                                        }
                                                         
-                                                        // Add small delay to ensure data is sent
-                                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                                        // Send chunk
+                                                        ws.send(chunks[i]);
+                                                        
+                                                        // Send progress update
+                                                        ws.send(JSON.stringify({
+                                                            type: 'upload_progress',
+                                                            chunk: i + 1,
+                                                            totalChunks: chunks.length,
+                                                            progress: Math.round(((i + 1) / chunks.length) * 100)
+                                                        }));
+                                                        
+                                                        // Small delay between chunks
+                                                        await new Promise(resolve => setTimeout(resolve, 100));
+                                                    }
                                                         
                                                         // Send upload complete notification
                                                         ws.send(JSON.stringify({

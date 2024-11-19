@@ -31,6 +31,9 @@ class WebSocketHandler:
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
         upload_timeout = 300  # 5 minutes timeout for uploads
         
+        # Increase WebSocket message size limit
+        websocket.max_size = 1024 * 1024 * 100  # 100MB
+        
         try:
             async for message in websocket:
                 if isinstance(message, str) and message == "pong":
