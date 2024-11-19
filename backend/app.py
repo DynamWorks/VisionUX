@@ -63,11 +63,19 @@ class BackendApp:
         """Check if backend is ready"""
         return True
 
-    def run(self, host='localhost', port=8000, debug=False):
-        """Run the Flask application"""
+    def run(self, host='localhost', port=8000, ws_port=8001, debug=False):
+        """Run the Flask application and WebSocket server"""
+        # Start WebSocket server in a separate thread
+        ws_thread = threading.Thread(
+            target=lambda: asyncio.run(self.websocket_handler.start_server(host=host, port=ws_port)),
+            daemon=True
+        )
+        ws_thread.start()
+        
+        # Run Flask app
         self.app.run(host=host, port=port, debug=debug)
 
-    def start(self, port=8502, config=None):
+    def start(self, port=8000, ws_port=8001, config=None):
         """Start the backend server in a separate thread"""
         def run_server():
             try:
