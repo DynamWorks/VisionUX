@@ -33,16 +33,44 @@ class WebSocketHandler:
                         data = json.loads(message)
                         message_type = data.get('type')
                         logging.info(f"Received message type: {message_type}")
+                        
                         if message_type == 'video_upload_start':
+                            self.current_upload = {
+                                'filename': data.get('filename'),
+                                'size': data.get('size'),
+                                'file_handle': open(self.uploads_path / data.get('filename'), 'wb'),
+                                'bytes_received': 0
+                            }
                             logging.info(f"Starting video upload: {data.get('filename')} ({data.get('size')} bytes)")
+                            await websocket.send(json.dumps({'type': 'upload_start_ack'}))
+                            
                         elif message_type == 'video_upload_chunk':
+                            if not hasattr(self, 'current_upload'):
+                                raise ValueError("No active upload session")
                             logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
+                            
+                        elif message_type == 'video_upload_complete':
+                            if hasattr(self, 'current_upload'):
+                                self.current_upload['file_handle'].close()
+                                logging.info(f"Upload completed: {self.current_upload['filename']}")
+                                delattr(self, 'current_upload')
+                                await websocket.send(json.dumps({'type': 'upload_complete_ack'}))
+                            
                     else:
-                        logging.info(f"Received binary data: {len(message)} bytes")
-                except:
-                    message_type = None
-                    data = None
-                    logging.warning("Could not parse message type")
+                        # Handle binary chunk data
+                        if hasattr(self, 'current_upload'):
+                            self.current_upload['file_handle'].write(message)
+                            self.current_upload['bytes_received'] += len(message)
+                            logging.info(f"Wrote {len(message)} bytes to {self.current_upload['filename']}")
+                except Exception as e:
+                    logging.error(f"Error processing message: {str(e)}")
+                    if hasattr(self, 'current_upload'):
+                        self.current_upload['file_handle'].close()
+                        delattr(self, 'current_upload')
+                    await websocket.send(json.dumps({
+                        'type': 'upload_error',
+                        'error': str(e)
+                    }))
 
                 if message_type == 'video_upload':
                     # Next message will be the video file
