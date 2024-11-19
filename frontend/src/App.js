@@ -50,12 +50,17 @@ function App() {
                     }
                 };
                 
-                websocket.onclose = () => {
-                    console.log('WebSocket Closed');
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        reconnectAttempts++;
-                        console.log(`Reconnecting... Attempt ${reconnectAttempts}`);
-                        reconnectTimeout = setTimeout(connectWebSocket, 3000);
+                websocket.onclose = (event) => {
+                    console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
+                    if (!event.wasClean) {
+                        if (reconnectAttempts < maxReconnectAttempts) {
+                            reconnectAttempts++;
+                            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+                            console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
+                            reconnectTimeout = setTimeout(connectWebSocket, delay);
+                        } else {
+                            console.error('Max reconnection attempts reached');
+                        }
                     }
                 };
                 
@@ -263,19 +268,26 @@ function App() {
                                                         ws.addEventListener('message', messageHandler);
                                                     });
 
-                                                    // Send the file data
-                                                    ws.send(reader.result);
+                                                    // Send the file data with error handling
+                                                    if (ws.readyState === WebSocket.OPEN) {
+                                                        ws.send(reader.result);
+                                                        
+                                                        // Add small delay to ensure data is sent
+                                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                                        
+                                                        // Send upload complete notification
+                                                        ws.send(JSON.stringify({
+                                                            type: 'video_upload_complete',
+                                                            filename: file.name,
+                                                            totalSize: file.size
+                                                        }));
 
-                                                    // Send upload complete notification
-                                                    ws.send(JSON.stringify({
-                                                        type: 'video_upload_complete',
-                                                        filename: file.name,
-                                                        totalSize: file.size
-                                                    }));
-
-                                                    console.log('Waiting for upload confirmation...');
-                                                    await uploadComplete;
-                                                    console.log('Upload completed successfully');
+                                                        console.log('Waiting for upload confirmation...');
+                                                        await uploadComplete;
+                                                        console.log('Upload completed successfully');
+                                                    } else {
+                                                        throw new Error('WebSocket connection lost during upload');
+                                                    }
                                                     
                                                 } catch (error) {
                                                     console.error('Upload failed:', error);

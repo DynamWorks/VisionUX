@@ -29,6 +29,7 @@ class WebSocketHandler:
     async def handle_connection(self, websocket):
         self.clients.add(websocket)
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
+        upload_timeout = 300  # 5 minutes timeout for uploads
         
         try:
             async for message in websocket:
