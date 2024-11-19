@@ -12,9 +12,13 @@ from pathlib import Path
 
 class BackendApp:
     def __init__(self):
+        # Create logs directory
+        Path('logs').mkdir(exist_ok=True)
+        
         # Setup logging
         self.setup_logging()
         self.app = Flask(__name__, static_folder='../frontend/build')
+        logging.info("Flask app initialized")
         self.server = None
         self.content_manager = None
         self.models_loaded = False
@@ -40,16 +44,29 @@ class BackendApp:
         log_dir.mkdir(exist_ok=True)
         log_path = log_dir / log_file
         
-        # Configure logging
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            handlers=[
-                logging.FileHandler(log_path),
-                logging.StreamHandler()
-            ]
-        )
-        logging.info("Logging initialized")
+        # Configure root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(log_level)
+        
+        # Create formatters and handlers
+        formatter = logging.Formatter(log_format)
+        
+        # File handler
+        file_handler = logging.FileHandler(log_path)
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(log_level)
+        
+        # Console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(log_level)
+        
+        # Add handlers to root logger
+        root_logger.addHandler(file_handler)
+        root_logger.addHandler(console_handler)
+        
+        logging.info("Logging system initialized")
+        logging.info(f"Log file created at: {log_path}")
         
     def setup_routes(self):
         @self.app.route('/', defaults={'path': ''})
