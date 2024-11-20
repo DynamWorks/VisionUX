@@ -131,10 +131,19 @@ function App() {
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
                     canvas.toBlob(
                         (blob) => {
-                            // Send frame type indicator first
-                            ws.send(JSON.stringify({ type: 'camera_frame' }));
-                            // Then send the actual frame data
-                            ws.send(blob);
+                            try {
+                                // Reset Rerun if this is the first frame
+                                if (!window.framesSent) {
+                                    ws.send(JSON.stringify({ type: 'reset_rerun' }));
+                                    window.framesSent = true;
+                                }
+                                // Send frame type indicator first
+                                ws.send(JSON.stringify({ type: 'camera_frame' }));
+                                // Then send the actual frame data
+                                ws.send(blob);
+                            } catch (error) {
+                                console.error('Error sending frame:', error);
+                            }
                         },
                         'image/jpeg',
                         0.8
@@ -161,6 +170,12 @@ function App() {
             setStream(null);
             setIsStreaming(false);
             setIsPaused(false);
+            // Reset frame counter
+            window.framesSent = false;
+            // Reset Rerun when stopping camera
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'reset_rerun' }));
+            }
         }
     }, [stream]);
 
