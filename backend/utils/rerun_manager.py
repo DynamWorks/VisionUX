@@ -50,10 +50,12 @@ class RerunManager:
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                            )
+                            ),
+                            shutdown_after=3600,  # Keep server alive for 1 hour
+                            blocking=False  # Don't block the main thread
                         )
-                        # Add small delay to ensure server is ready
-                        time.sleep(1)
+                        # Add delay to ensure server is ready
+                        time.sleep(2)
                         self._server_started = True
                         self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
                 except Exception as port_error:
