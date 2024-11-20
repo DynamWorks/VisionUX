@@ -46,6 +46,10 @@ function App() {
                     // Send initial connection message
                     websocket.send(JSON.stringify({ type: 'connection_established' }));
                     
+                    // Immediately request file list
+                    console.log('Requesting initial file list...');
+                    websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
+                    
                     // Request file list on initial connection and reconnects
                     websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
                     console.log('Requested initial file list');
@@ -254,14 +258,13 @@ function App() {
                             lastModified: file.modified * 1000,
                             type: 'video/mp4'
                         }));
-                        setUploadedFiles(prev => {
-                            // Compare new files with previous to avoid unnecessary updates
-                            const hasChanges = JSON.stringify(prev) !== JSON.stringify(files);
-                            return hasChanges ? files : prev;
-                        });
+                        console.log('Updating file list with:', files);
+                        setUploadedFiles(files);
                     } else {
                         console.warn('Received invalid file list format:', data.files);
                     }
+                } else if (data.type === 'error') {
+                    console.error('Server error:', data.error);
                 } else if (data.type === 'upload_complete_ack') {
                     console.log('Upload complete, refreshing file list');
                     fetchUploadedFiles();
