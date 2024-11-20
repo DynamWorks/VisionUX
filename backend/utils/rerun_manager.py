@@ -51,9 +51,7 @@ class RerunManager:
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                            ),
-                            blocking=False  # Don't block so frontend can control lifecycle
-                        )
+                            ))
                         # Add delay to ensure server is ready
                         time.sleep(2)
                         self._server_started = True
