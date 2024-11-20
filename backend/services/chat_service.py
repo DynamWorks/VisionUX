@@ -1,10 +1,10 @@
 from pathlib import Path
 import logging
 from typing import Dict, List, Optional
-from ..content_manager import ContentManager
-from ...core.swarm_agents import SwarmCoordinator
+from backend.content_manager import ContentManager
+from backend.core.swarm_agents import SwarmCoordinator
 from .rag_service import RAGService
-from ...utils.memory_manager import MemoryManager
+from backend.utils.memory_manager import MemoryManager
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 import json
 import time
