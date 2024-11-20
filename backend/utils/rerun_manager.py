@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 import asyncio
 from aiohttp import web
+import time
 
 class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
@@ -49,8 +50,11 @@ class RerunManager:
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                            )
+                            ),
+                            shutdown_after=300  # Keep server alive for 5 minutes without clients
                         )
+                        # Add small delay to ensure server is ready
+                        time.sleep(1)
                         self._server_started = True
                         self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
                 except Exception as port_error:
