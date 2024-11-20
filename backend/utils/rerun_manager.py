@@ -50,13 +50,12 @@ class RerunManager:
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics", spawn=False)  # Don't spawn new process
+                rr.init("video_analytics")#, spawn=False)  # Don't spawn new process
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
                             open_browser=False,
                             ws_port=self._ws_port,
-                            blocking=False,  # Prevent blocking
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
                             ))
