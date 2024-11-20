@@ -70,9 +70,9 @@ class WebSocketHandler:
                             logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
                             
                         elif message_type == 'reset_rerun':
-                            # Just clear the logs without reinitializing
-                            rr.clear()
-                            self.logger.info("Cleared Rerun logs on frontend refresh")
+                            # Just reset the logs without reinitializing
+                            rr.reset()
+                            self.logger.info("Reset Rerun logs on frontend refresh")
                             await websocket.send(json.dumps({
                                 'type': 'rerun_reset_complete'
                             }))
