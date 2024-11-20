@@ -103,13 +103,13 @@ function App() {
                 setVideoFile(null);
                 setIsStreaming(false);
             }
-            
-            // Reset Rerun video topic before starting camera
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'reset_rerun'
-                }));
-            }
+
+            // // Reset Rerun video topic before starting camera
+            // if (ws && ws.readyState === WebSocket.OPEN) {
+            //     ws.send(JSON.stringify({
+            //         type: 'reset_rerun'
+            //     }));
+            // }
 
             const constraints = {
                 video: {
@@ -138,11 +138,11 @@ function App() {
                     canvas.toBlob(
                         (blob) => {
                             try {
-                                // Reset Rerun if this is the first frame
-                                if (!window.framesSent) {
-                                    ws.send(JSON.stringify({ type: 'reset_rerun' }));
-                                    window.framesSent = true;
-                                }
+                                // // Reset Rerun if this is the first frame
+                                // if (!window.framesSent) {
+                                //     ws.send(JSON.stringify({ type: 'reset_rerun' }));
+                                //     window.framesSent = true;
+                                // }
                                 // Send frame type indicator first
                                 ws.send(JSON.stringify({ type: 'camera_frame' }));
                                 // Then send the actual frame data
@@ -216,7 +216,7 @@ function App() {
     // Initialize devices on mount
     useEffect(() => {
         refreshDevices();
-        
+
         // Fetch uploaded files on mount
         const fetchUploadedFiles = () => {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -264,7 +264,7 @@ function App() {
         if (ws && ws.readyState === WebSocket.OPEN) {
             fetchUploadedFiles();
         }
-        
+
         // Log mount for debugging
         console.log('App mounted');
         return () => console.log('App unmounted');
@@ -306,15 +306,15 @@ function App() {
                                         // Update uploaded files list, checking for duplicates
                                         setUploadedFiles(prev => {
                                             // Check if file already exists
-                                            const fileExists = prev.some(existingFile => 
+                                            const fileExists = prev.some(existingFile =>
                                                 existingFile.name === file.name
                                             );
-                                            
+
                                             if (fileExists) {
                                                 console.log(`File ${file.name} already exists in the list`);
                                                 return prev;
                                             }
-                                            
+
                                             // Add new file and keep only 5 most recent
                                             const newFiles = [file, ...prev.slice(0, 4)];
                                             // Clean up old URLs
