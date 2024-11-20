@@ -229,87 +229,28 @@ class WebSocketHandler:
                     }))
 
                 if message_type == 'video_upload':
-                    # Delegate to upload handler
                     try:
-                        message = await websocket.recv()
-                        if isinstance(message, str):
-                            data = json.loads(message)
-                            if data.get('type') == 'video_upload_start':
-                                filename = data.get('filename')
-                                total_size = data.get('size', 0)
-                                bytes_received = 0
-                                
-                                await self.upload_handler.handle_upload_start(websocket, data)
-                                
-                                # Open file for writing chunks
-                                with open(file_path, 'wb') as f:
-                                    while True:
-                                        try:
-                                            # Receive chunk metadata
-                                            chunk_meta = await asyncio.wait_for(
-                                                websocket.recv(),
-                                                timeout=self.chunk_timeout
-                                            )
-                                            if not isinstance(chunk_meta, str):
-                                                logging.error("Invalid chunk metadata format")
-                                                continue
-                                                
-                                            chunk_data = json.loads(chunk_meta)
-                                            if chunk_data.get('type') == 'video_upload_complete':
-                                                logging.info(f"Upload complete: {filename}")
-                                                break
-                                                    
-                                            # Send progress acknowledgment
-                                            await websocket.send(json.dumps({
-                                                'type': 'upload_progress',
-                                                'progress': chunk_data.get('progress', 0),
-                                                'chunk': chunk_data.get('chunk', 0),
-                                                'totalChunks': chunk_data.get('totalChunks', 0)
-                                            }))
-                                        
-                                            if chunk_data.get('type') == 'video_upload_chunk':
-                                                chunk = await websocket.recv()
-                                                if isinstance(chunk, bytes):
-                                                    offset = chunk_data.get('offset', 0)
-                                                    size = chunk_data.get('size', 0)
-                                                    
-                                                    f.write(chunk)
-                                                    bytes_received += len(chunk)
-                                                    
-                                                    progress = (bytes_received / total_size) * 100
-                                                    logging.info(f"Progress: {progress:.1f}% ({bytes_received}/{total_size} bytes)")
-                                                else:
-                                                    logging.error("Invalid chunk data format")
-                                        except Exception as e:
-                                                logging.error(f"Error during upload: {str(e)}")
-                                                await websocket.send(json.dumps({
-                                                    "type": "upload_error",
-                                                    "error": str(e)
-                                                }))
-                                                break
-                                
-                                    file_size = file_path.stat().st_size / (1024 * 1024)  # Size in MB
-                                    logging.info(f"Video file saved to: {file_path}")
-                                    logging.info(f"Video file size: {file_size:.2f} MB")
-                                
-                                    await websocket.send(json.dumps({
-                                        "type": "upload_complete",
-                                        "path": str(file_path),
-                                        "success": True
-                                    }))
-                    except IOError as e:
-                        logging.error(f"Failed to save video file: {e}")
-                        await websocket.send(json.dumps({
-                            "type": "upload_complete",
-                                    "success": False,
-                                    "error": "Failed to save video file"
-                                }))
+                        # Delegate upload handling to upload handler
+                        file_path = await self.upload_handler.handle_upload(websocket)
+                        if file_path:
+                            # Handle successful upload
+                            await self.handle_new_video(file_path)
+                            await websocket.send(json.dumps({
+                                "type": "upload_complete",
+                                "path": str(file_path),
+                                "success": True
+                            }))
+                            # Refresh file list
+                            files = await self.get_uploaded_files()
+                            await websocket.send(json.dumps({
+                                'type': 'uploaded_files',
+                                'files': files
+                            }))
                     except Exception as e:
-                        logging.error(f"Error handling video upload: {e}")
+                        self.logger.error(f"Error handling video upload: {e}")
                         await websocket.send(json.dumps({
-                            "type": "upload_complete",
-                            "success": False,
-                            "error": "Upload failed"
+                            "type": "upload_error",
+                            "error": str(e)
                         }))
                 
                 elif message_type == 'start_video_stream':
