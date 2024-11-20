@@ -214,38 +214,35 @@ function App() {
     }, []);
 
     // Initialize devices on mount
+    const fetchUploadedFiles = useCallback(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            console.log('Requesting file list...');
+            ws.send(JSON.stringify({
+                type: 'get_uploaded_files'
+            }));
+        }
+    }, [ws]);
+
     useEffect(() => {
         refreshDevices();
-
-        // Fetch uploaded files on mount
-        const fetchUploadedFiles = () => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                // Request file list
-                ws.send(JSON.stringify({
-                    type: 'get_uploaded_files'
-                }));
-            }
-        };
 
         // Handle WebSocket messages for file list updates
         const handleFileListMessages = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                console.log('Received WebSocket message:', data);
+                
                 if (data.type === 'uploaded_files') {
-                    console.log('Received uploaded files:', data.files);
+                    console.log('Processing uploaded files:', data.files);
                     const files = data.files.map(file => ({
                         name: file.name,
                         size: file.size,
                         lastModified: file.modified * 1000,
                         type: 'video/mp4'
                     }));
-                    setUploadedFiles(prev => {
-                        console.log('Previous files:', prev);
-                        console.log('New files:', files);
-                        return files;
-                    });
+                    setUploadedFiles(files);
                 } else if (data.type === 'upload_complete_ack') {
-                    // Refresh file list after successful upload
+                    console.log('Upload complete, refreshing file list');
                     fetchUploadedFiles();
                 }
             } catch (error) {
@@ -253,27 +250,27 @@ function App() {
             }
         };
 
-        // Add message listener
         if (ws) {
             ws.addEventListener('message', handleFileListMessages);
+            
+            // Request file list when WebSocket connects
+            if (ws.readyState === WebSocket.OPEN) {
+                console.log('WebSocket ready, fetching files');
+                fetchUploadedFiles();
+            } else {
+                ws.addEventListener('open', () => {
+                    console.log('WebSocket opened, fetching files');
+                    fetchUploadedFiles();
+                }, { once: true });
+            }
         }
 
-        // Cleanup listener on unmount
         return () => {
             if (ws) {
                 ws.removeEventListener('message', handleFileListMessages);
             }
         };
-
-        // Call fetchUploadedFiles when WebSocket is ready
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            fetchUploadedFiles();
-        }
-
-        // Log mount for debugging
-        console.log('App mounted');
-        return () => console.log('App unmounted');
-    }, [refreshDevices, ws]);
+    }, [refreshDevices, ws, fetchUploadedFiles]);
 
     return (
         <Router>
