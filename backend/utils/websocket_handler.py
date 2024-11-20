@@ -70,17 +70,9 @@ class WebSocketHandler:
                             logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
                             
                         elif message_type == 'reset_rerun':
-                            # Reinitialize Rerun
-                            if hasattr(self, '_rerun_initialized'):
-                                delattr(self, '_rerun_initialized')
-                            rr.init("video_analytics")#, spawn=True)
-                            rr.serve(
-                                open_browser=False,
-                                ws_port=4321,
-                                default_blueprint=rr.blueprint.Vertical(
-                                    rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                                )
-                            )
+                            # Just clear the logs without reinitializing
+                            rr.clear()
+                            self.logger.info("Cleared Rerun logs on frontend refresh")
                             await websocket.send(json.dumps({
                                 'type': 'rerun_reset_complete'
                             }))

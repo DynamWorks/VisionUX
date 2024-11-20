@@ -40,20 +40,27 @@ class RerunManager:
     def initialize(self):
         """Initialize Rerun if not already initialized"""
         try:
+            # Only clear and reinitialize if not already recording
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")#, spawn=True)  # Use spawn=True for better process isolation
-                rr.serve(
-                    open_browser=False,
-                    ws_port=self._ws_port,  # Use fixed port
-                    default_blueprint=rr.blueprint.Vertical(
-                        rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                rr.init("video_analytics")
+                try:
+                    rr.serve(
+                        open_browser=False,
+                        ws_port=self._ws_port,
+                        default_blueprint=rr.blueprint.Vertical(
+                            rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                        )
                     )
-                )
-                
-                # Port is fixed, just log it
-                self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
+                    self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
+                except Exception as port_error:
+                    if "address already in use" in str(port_error).lower():
+                        self.logger.info("Rerun server already running, continuing with existing instance")
+                    else:
+                        raise
             else:
-                self.logger.debug("Rerun already initialized")
+                # Clear existing logs but keep the recording
+                rr.clear()
+                self.logger.debug("Cleared Rerun logs while maintaining existing connection")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
             raise
