@@ -6,4 +6,7 @@
 .aider*
 .env
 tmp_content/
-.env
+others/
+aider_old/
+.vscode
+sample_video.mp4
