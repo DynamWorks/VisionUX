@@ -133,29 +133,27 @@ class WebSocketHandler:
             async for message in websocket:
                 if isinstance(message, str) and message == "pong":
                     continue
-                # Try to parse as JSON first
                 try:
                     if isinstance(message, str):
                         data = json.loads(message)
                         message_type = data.get('type')
                         logging.info(f"Received message type: {message_type}")
                         
-                        if message_type == 'video_upload_start':
-                            self.current_upload = {
-                                'filename': data.get('filename'),
-                                'size': data.get('size'),
-                                'file_handle': open(self.uploads_path / data.get('filename'), 'wb'),
-                                'bytes_received': 0
-                            }
-                            logging.info(f"Starting video upload: {data.get('filename')} ({data.get('size')} bytes)")
-                            await websocket.send(json.dumps({'type': 'upload_start_ack'}))
-                            
-                        elif message_type == 'video_upload_chunk':
-                            if not hasattr(self, 'current_upload'):
-                                raise ValueError("No active upload session")
-                            logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
-                            
-                        elif message_type == 'reset_rerun':
+                        if message_type == 'get_uploaded_files':
+                            try:
+                                files = await self.get_uploaded_files()
+                                self.logger.info(f"Sending file list: {len(files)} files found")
+                                await websocket.send(json.dumps({
+                                    'type': 'uploaded_files',
+                                    'files': files
+                                }))
+                            except Exception as e:
+                                self.logger.error(f"Error sending file list: {e}")
+                                await websocket.send(json.dumps({
+                                    'type': 'error',
+                                    'error': f"Failed to get file list: {str(e)}"
+                                }))
+                        elif message_type == 'video_upload_start':
                             # Clear all topics
                             rr.log("world", rr.Clear(recursive=True))
                             rr.log("camera", rr.Clear(recursive=True))
