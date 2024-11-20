@@ -59,7 +59,7 @@ class RerunManager:
                         raise
             else:
                 # Clear existing logs but keep the recording
-                rr.reset()  # Use reset() instead of clear()
+                rr.Clear(recursive=True)  # Use reset() instead of clear()
                 self.logger.debug("Reset Rerun logs while maintaining existing connection")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
@@ -89,7 +89,7 @@ class RerunManager:
     def reset(self):
         """Clear Rerun data and reinitialize"""
         try:
-            rr.reset()  # Use reset() instead of clear()
+            rr.Clear(recursive=True)  # Use reset() instead of clear()
             self.logger.info("Rerun data reset successfully")
             # Force reinitialization
             if hasattr(rr, '_recording'):
