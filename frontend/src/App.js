@@ -214,35 +214,43 @@ function App() {
         // Fetch uploaded files on mount
         const fetchUploadedFiles = () => {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                const handleMessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'uploaded_files') {
-                            const files = data.files.map(file => new File(
-                                [new Blob()], // Empty blob as placeholder
-                                file.name,
-                                {
-                                    type: 'video/mp4',
-                                    lastModified: file.modified * 1000
-                                }
-                            ));
-                            setUploadedFiles(files);
-                        }
-                    } catch (error) {
-                        console.error('Error processing uploaded files:', error);
-                    }
-                };
-                
-                // Add message listener
-                ws.addEventListener('message', handleMessage);
-                
                 // Request file list
                 ws.send(JSON.stringify({
                     type: 'get_uploaded_files'
                 }));
-                
-                // Cleanup listener on unmount
-                return () => ws.removeEventListener('message', handleMessage);
+            }
+        };
+
+        // Handle WebSocket messages for file list updates
+        const handleFileListMessages = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'uploaded_files') {
+                    const files = data.files.map(file => ({
+                        name: file.name,
+                        size: file.size,
+                        lastModified: file.modified * 1000,
+                        type: 'video/mp4'
+                    }));
+                    setUploadedFiles(files);
+                } else if (data.type === 'upload_complete_ack') {
+                    // Refresh file list after successful upload
+                    fetchUploadedFiles();
+                }
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error);
+            }
+        };
+
+        // Add message listener
+        if (ws) {
+            ws.addEventListener('message', handleFileListMessages);
+        }
+
+        // Cleanup listener on unmount
+        return () => {
+            if (ws) {
+                ws.removeEventListener('message', handleFileListMessages);
             }
         };
 
