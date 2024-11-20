@@ -1,23 +1,23 @@
 import json
 import time
 import cv2
+import logging
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
+
 from ..services.scene_service import SceneAnalysisService
 from ..services.chat_service import ChatService
 from ..utils.memory_manager import MemoryManager
+from ..utils.config import Config
 from ..content_manager import ContentManager
-import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create Blueprint
 api = Blueprint('api', __name__)
 
-# Initialize services and memory store with config
-from ..utils.config import Config
+# Initialize services
 config = Config()
 scene_service = SceneAnalysisService()
 chat_service = ChatService()
@@ -149,19 +149,32 @@ def get_files():
     """Get list of uploaded video files"""
     uploads_path = Path("tmp_content/uploads")
     if not uploads_path.exists():
+        logger.info("Creating uploads directory")
         uploads_path.mkdir(parents=True, exist_ok=True)
         return jsonify({"files": []})
         
     try:
         files = []
         for file_path in uploads_path.glob('*.mp4'):
-            stat = file_path.stat()
-            files.append({
-                'name': file_path.name,
-                'size': stat.st_size,
-                'modified': stat.st_mtime,
-                'path': str(file_path)
-            })
-        return jsonify({"files": sorted(files, key=lambda x: x['modified'], reverse=True)})
+            try:
+                stat = file_path.stat()
+                files.append({
+                    'name': file_path.name,
+                    'size': stat.st_size,
+                    'modified': stat.st_mtime,
+                    'path': str(file_path)
+                })
+            except OSError as e:
+                logger.error(f"Error accessing file {file_path}: {e}")
+                continue
+                
+        sorted_files = sorted(files, key=lambda x: x['modified'], reverse=True)
+        logger.debug(f"Found {len(sorted_files)} files")
+        return jsonify({"files": sorted_files})
+        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error listing files: {e}")
+        return jsonify({
+            "error": "Failed to list files",
+            "details": str(e)
+        }), 500
