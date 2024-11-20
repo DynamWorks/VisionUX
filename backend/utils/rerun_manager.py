@@ -41,7 +41,7 @@ class RerunManager:
                     self.logger.debug("Rerun server reinitialized")
                 
                 # Send periodic heartbeat
-                rr.log("heartbeat", rr.timestamp(time.time_ns()))
+                #rr.log("heartbeat", rr.timestamp(time.time_ns()))
                 
                 # Brief sleep between heartbeats
                 await asyncio.sleep(5)
