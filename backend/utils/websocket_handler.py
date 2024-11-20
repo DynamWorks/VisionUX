@@ -3,8 +3,10 @@ import websockets
 import logging
 import json
 from pathlib import Path
+import rerun as rr
 from .handlers.message_router import MessageRouter
 from .rerun_manager import RerunManager
+from .video_stream import VideoStream
 
 class WebSocketHandler:
     def __init__(self):
