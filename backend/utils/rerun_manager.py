@@ -73,9 +73,12 @@ class RerunManager:
                     else:
                         raise
             else:
-                # Just clear the recording state without restarting server
+                # Just clear the logs without restarting server
                 rr.Clear(recursive=True)
                 self.logger.debug("Cleared Rerun logs while maintaining existing connection")
+                # Ensure keep-alive task is running
+                if self._keep_alive_task is None or self._keep_alive_task.done():
+                    self._keep_alive_task = asyncio.create_task(self._keep_alive())
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
             raise

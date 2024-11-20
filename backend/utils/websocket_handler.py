@@ -75,9 +75,14 @@ class WebSocketHandler:
                             logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
                             
                         elif message_type == 'reset_rerun':
-                            # Just reset the logs without reinitializing
+                            # Clear logs but maintain connection
                             rr.Clear(recursive=True)
                             self.logger.info("Cleared Rerun logs on frontend refresh")
+                            # Ensure Rerun stays alive
+                            from .rerun_manager import RerunManager
+                            rerun_manager = RerunManager()
+                            if not hasattr(rerun_manager, '_keep_alive_task') or rerun_manager._keep_alive_task.done():
+                                rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
                             await websocket.send(json.dumps({
                                 'type': 'rerun_reset_complete'
                             }))
