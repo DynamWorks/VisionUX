@@ -40,10 +40,14 @@ class RerunManager:
                 # Check connection status more frequently
                 await asyncio.sleep(5)  # Check every 5 seconds
                 
-                # If no active WebSocket connections, clear logs but keep server running
+                # If no active connections, clear logs but maintain server
                 if not hasattr(self, '_active_connections') or self._active_connections == 0:
                     rr.Clear(recursive=True)
-                    self.logger.debug("No active connections, cleared Rerun logs")
+                    self.logger.debug("No active connections, cleared Rerun logs but maintaining server")
+                else:
+                    # Ensure server stays alive with active connections
+                    if not hasattr(rr, '_recording'):
+                        self.initialize()
                     
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
@@ -53,7 +57,7 @@ class RerunManager:
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")#, spawn=True, blocking=False, shutdown_after=None)  # Keep server alive
+                rr.init("video_analytics", spawn=True, blocking=False, shutdown_after=None)  # Keep server alive indefinitely
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
