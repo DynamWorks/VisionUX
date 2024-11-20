@@ -60,9 +60,9 @@ class RerunManager:
                     else:
                         raise
             else:
-                # Just reset the recording state without restarting server
-                rr.reset()  # Use reset() instead of Clear()
-                self.logger.debug("Reset Rerun logs while maintaining existing connection")
+                # Just clear the recording state without restarting server
+                rr.Clear(recursive=True)
+                self.logger.debug("Cleared Rerun logs while maintaining existing connection")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
             raise
@@ -91,8 +91,8 @@ class RerunManager:
     def reset(self):
         """Clear Rerun data and reinitialize"""
         try:
-            rr.Clear(recursive=True)  # Use reset() instead of clear()
-            self.logger.info("Rerun data reset successfully")
+            rr.Clear(recursive=True)
+            self.logger.info("Rerun data cleared successfully")
             # Force reinitialization
             if hasattr(rr, '_recording'):
                 delattr(rr, '_recording')

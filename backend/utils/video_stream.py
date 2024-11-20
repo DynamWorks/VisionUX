@@ -114,4 +114,4 @@ class VideoStream:
         if hasattr(self, '_rerun_initialized'):
             delattr(self, '_rerun_initialized')
             from .rerun_manager import RerunManager
-            RerunManager().reset()  # Use reset() instead of clear()
+            RerunManager().Clear(recursive=True)
