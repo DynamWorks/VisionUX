@@ -163,12 +163,12 @@ class WebSocketHandler:
                             data = json.loads(message)
                             if data.get('type') == 'video_upload_start':
                                 await self.upload_handler.handle_upload_start(websocket, data)
-                                    
-                                    # Open file for writing chunks
-                                    with open(file_path, 'wb') as f:
-                                        while True:
-                                            try:
-                                                # Receive chunk metadata
+                                
+                                # Open file for writing chunks
+                                with open(file_path, 'wb') as f:
+                                    while True:
+                                        try:
+                                            # Receive chunk metadata
                                                 chunk_meta = await asyncio.wait_for(
                                                     websocket.recv(),
                                                     timeout=chunk_timeout
@@ -220,10 +220,10 @@ class WebSocketHandler:
                                         "path": str(file_path),
                                         "success": True
                                     }))
-                            except IOError as e:
-                                logging.error(f"Failed to save video file: {e}")
-                                await websocket.send(json.dumps({
-                                    "type": "upload_complete",
+                    except IOError as e:
+                        logging.error(f"Failed to save video file: {e}")
+                        await websocket.send(json.dumps({
+                            "type": "upload_complete",
                                     "success": False,
                                     "error": "Failed to save video file"
                                 }))
