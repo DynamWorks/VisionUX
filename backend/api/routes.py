@@ -145,11 +145,11 @@ import cv2
 import logging
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
-from ..services.scene_service import SceneAnalysisService
-from ..services.chat_service import ChatService
-from ..utils.memory_manager import MemoryManager
-from ..utils.config import Config
-from ..content_manager import ContentManager
+from backend.services.scene_service import SceneAnalysisService
+from backend.services.chat_service import ChatService
+from backend.utils.memory_manager import MemoryManager
+from backend.utils.config import Config
+from backend.content_manager import ContentManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
