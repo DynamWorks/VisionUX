@@ -233,20 +233,29 @@ function App() {
     }, []);
 
     // Initialize devices on mount
-    const fetchUploadedFiles = useCallback(() => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            console.log('Requesting file list...');
-            ws.send(JSON.stringify({
-                type: 'get_uploaded_files'
-            }));
+    const fetchUploadedFiles = useCallback(async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('Received file list:', data.files);
+            setUploadedFiles(data.files || []);
+        } catch (error) {
+            console.error('Error fetching files:', error);
         }
-    }, [ws]);
+    }, []);
 
     useEffect(() => {
         refreshDevices();
+        fetchUploadedFiles(); // Initial fetch
+
+        // Set up periodic refresh
+        const refreshInterval = setInterval(fetchUploadedFiles, 5000);
 
         // Handle WebSocket messages for file list updates
-        const handleFileListMessages = (event) => {
+        const handleWebSocketMessages = (event) => {
             if (!event.data) return;
             try {
                 const data = JSON.parse(event.data);

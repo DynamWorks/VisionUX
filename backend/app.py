@@ -1,4 +1,5 @@
 from flask import Flask, send_from_directory
+from api.routes import api
 import threading
 import asyncio
 from pathlib import Path
@@ -25,7 +26,8 @@ class BackendApp:
         self.websocket_handler = WebSocketHandler()
         self.rerun_manager = RerunManager()
         
-        # Add routes
+        # Register blueprints and routes
+        self.app.register_blueprint(api, url_prefix='/api/v1')
         self.setup_routes()
     
     def setup_logging(self):

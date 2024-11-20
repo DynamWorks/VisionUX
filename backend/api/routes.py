@@ -138,3 +138,30 @@ def handle_error(error):
         'status': 'error',
         'message': str(error)
     }), 500
+from flask import Blueprint, jsonify
+from pathlib import Path
+import os
+
+api = Blueprint('api', __name__)
+
+@api.route('/files', methods=['GET'])
+def get_files():
+    """Get list of uploaded video files"""
+    uploads_path = Path("tmp_content/uploads")
+    if not uploads_path.exists():
+        uploads_path.mkdir(parents=True, exist_ok=True)
+        return jsonify({"files": []})
+        
+    try:
+        files = []
+        for file_path in uploads_path.glob('*.mp4'):
+            stat = file_path.stat()
+            files.append({
+                'name': file_path.name,
+                'size': stat.st_size,
+                'modified': stat.st_mtime,
+                'path': str(file_path)
+            })
+        return jsonify({"files": sorted(files, key=lambda x: x['modified'], reverse=True)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
