@@ -393,6 +393,7 @@ function App() {
                                         });
 
                                         // Send video file through WebSocket
+                                        console.log('Starting video upload via WebSocket...');
                                         if (ws && ws.readyState === WebSocket.OPEN) {
                                             const reader = new FileReader();
 

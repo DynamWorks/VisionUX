@@ -57,8 +57,10 @@ class RerunManager:
     def initialize(self):
         """Initialize Rerun if not already initialized"""
         try:
+            self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")#, spawn=True, blocking=False, shutdown_after=None)  # Keep server alive indefinitely
+                self.logger.info("Creating new Rerun recording")
+                rr.init("video_analytics", spawn=True)  # Enable spawn mode for better stability
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(

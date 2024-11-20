@@ -131,6 +131,7 @@ class WebSocketHandler:
                     try:
                         data = json.loads(message)
                         message_type = data.get('type')
+                        self.logger.info(f"Received WebSocket message type: {message_type}")
                         
                         if message_type == 'video_upload_start':
                             # Clear all topics
