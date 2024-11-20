@@ -232,41 +232,6 @@ class WebSocketHandler:
                     else:
                         self.logger.error(f"Video file not found: {file_path}")
                         
-                elif message_type == 'pause_video_stream':
-                    if self.video_streamer:
-                        self.video_streamer.pause()
-                        self.logger.info("Video stream paused")
-                        
-                elif message_type == 'stop_video_stream':
-                    if self.video_streamer:
-                        self.video_streamer.stop()
-                        self.video_streamer = None
-                        self.logger.info("Video stream stopped")
-                        
-                elif message_type == 'start_camera_stream':
-                    device_id = data.get('deviceId')
-                    if self.video_streamer:
-                        self.video_streamer.stop()
-                        self.video_streamer = None
-                        self.logger.info("Video stream stopped")
-                    logging.info(f"Starting camera stream from device: {device_id}")
-                    # Reset Rerun for new stream
-                    # rr.log("world", rr.Clear(recursive=True))
-                    # rr.log("camera", rr.Clear(recursive=True))
-                    # rr.log("edge_detection", rr.Clear(recursive=True))
-
-                    await websocket.send(json.dumps({
-                        'type': 'camera_stream_started'
-                    }))
-                    
-                elif message_type == 'camera_frame':
-                    # Store metadata from the message
-                    frame_metadata = {
-                        'width': data.get('width'),
-                        'height': data.get('height'),
-                        'timestamp': data.get('timestamp')
-                    }
-                    
                     # Next message will be the frame data
                     frame_data = await websocket.recv()
                     if isinstance(frame_data, bytes):
