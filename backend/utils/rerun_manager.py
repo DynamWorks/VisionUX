@@ -10,8 +10,8 @@ class RerunManager:
     _instance = None
     _initialized = False
     # Static ports for Rerun server
-    WS_PORT = 9090  # WebSocket port
-    WEB_PORT = 9091  # Web viewer port
+    WS_PORT = 4321  # WebSocket port
+    WEB_PORT = 9090  # Web viewer port
     _ws_port = WS_PORT
     _web_port = WEB_PORT
     _app: Optional[web.Application] = None
@@ -53,7 +53,7 @@ class RerunManager:
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics", spawn=True)  # Spawn new process to keep server alive
+                rr.init("video_analytics")#, spawn=True)  # Spawn new process to keep server alive
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
