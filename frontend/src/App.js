@@ -251,9 +251,6 @@ function App() {
         refreshDevices();
         fetchUploadedFiles(); // Initial fetch
 
-        // Set up periodic refresh
-        const refreshInterval = setInterval(fetchUploadedFiles, 5000);
-
         // Handle WebSocket messages for file list updates
         const handleWebSocketMessages = (event) => {
             if (!event.data) return;
@@ -321,18 +318,6 @@ function App() {
                 if (ws.readyState === WebSocket.OPEN) {
                     console.log('WebSocket ready, fetching files');
                     fetchUploadedFiles();
-                    
-                    // Set up periodic refresh
-                    const refreshInterval = setInterval(() => {
-                        if (ws.readyState === WebSocket.OPEN) {
-                            fetchUploadedFiles();
-                        } else {
-                            clearInterval(refreshInterval);
-                        }
-                    }, 5000); // Refresh every 5 seconds
-                    
-                    // Clean up interval on unmount
-                    return () => clearInterval(refreshInterval);
                 }
             };
 
