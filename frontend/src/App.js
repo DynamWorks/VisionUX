@@ -297,6 +297,22 @@ function App() {
             }
         };
 
+        const handleFileListMessages = (event) => {
+            if (!event.data) return;
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'uploaded_files') {
+                    console.log('Processing uploaded files:', data.files);
+                    if (Array.isArray(data.files)) {
+                        const sortedFiles = data.files.sort((a, b) => b.modified - a.modified);
+                        setUploadedFiles(sortedFiles);
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error);
+            }
+        };
+
         if (ws) {
             ws.addEventListener('message', handleFileListMessages);
             
