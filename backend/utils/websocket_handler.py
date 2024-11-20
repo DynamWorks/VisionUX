@@ -35,19 +35,29 @@ class WebSocketHandler:
         if rerun_manager._keep_alive_task is None or rerun_manager._keep_alive_task.done():
             rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
 
-    async def handle_connection(self, websocket):
-        """Handle incoming WebSocket connections"""
+    async def _setup_connection(self, websocket):
+        """Setup initial WebSocket connection"""
         self.clients.add(websocket)
-        heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
+        websocket.max_size = 1024 * 1024 * 100  # 100MB limit
         
-        # Register connection with RerunManager
+        # Initialize Rerun
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
         rerun_manager.register_connection()
-        rerun_manager.initialize()  # Ensure Rerun is initialized for new connection
+        rerun_manager.initialize()
         
-        # Increase WebSocket message size limit (100MB)
-        websocket.max_size = 1024 * 1024 * 100
+        return asyncio.create_task(self.send_heartbeat(websocket))
+
+    async def _cleanup_connection(self, websocket):
+        """Cleanup when connection closes"""
+        self.clients.remove(websocket)
+        from .rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.unregister_connection()
+
+    async def handle_connection(self, websocket):
+        """Handle incoming WebSocket connections"""
+        heartbeat_task = await self._setup_connection(websocket)
         
         try:
             async for message in websocket:
@@ -277,37 +287,52 @@ class WebSocketHandler:
         
         async with websockets.serve(self.handle_connection, host, port):
             await asyncio.Future()  # run forever
+    async def _handle_text_message(self, websocket, message):
+        """Handle text-based WebSocket messages"""
+        if message == "pong":
+            return
+            
+        data = json.loads(message)
+        message_type = data.get('type')
+        self.logger.info(f"Received message type: {message_type}")
+        
+        handlers = {
+            'video_upload_start': lambda: self.upload_handler.handle_upload_start(websocket, data),
+            'video_upload_complete': self._handle_upload_complete,
+            'reset_rerun': lambda: self._handle_rerun_reset(websocket)
+        }
+        
+        handler = handlers.get(message_type)
+        if handler:
+            await handler()
+
+    async def _handle_binary_message(self, websocket, message):
+        """Handle binary WebSocket messages"""
+        if hasattr(self.upload_handler, 'current_upload'):
+            await self.upload_handler.handle_upload_chunk(message)
+        else:
+            await self.frame_handler.handle_frame(message)
+
+    async def _handle_upload_complete(self):
+        """Handle video upload completion"""
+        file_path = await self.upload_handler.handle_upload_complete(websocket)
+        if file_path:
+            await self.handle_new_video(file_path)
+
+    async def _handle_rerun_reset(self, websocket):
+        """Handle Rerun reset request"""
+        self._init_rerun()
+        await websocket.send(json.dumps({
+            'type': 'rerun_reset_complete'
+        }))
+
     async def handle_message(self, websocket, message):
         """Route incoming messages to appropriate handlers"""
         try:
             if isinstance(message, str):
-                if message == "pong":
-                    return
-                    
-                data = json.loads(message)
-                message_type = data.get('type')
-                self.logger.info(f"Received message type: {message_type}")
-                
-                if message_type == 'video_upload_start':
-                    await self.upload_handler.handle_upload_start(websocket, data)
-                    
-                elif message_type == 'video_upload_complete':
-                    file_path = await self.upload_handler.handle_upload_complete(websocket)
-                    if file_path:
-                        await self.handle_new_video(file_path)
-                        
-                elif message_type == 'reset_rerun':
-                    self._init_rerun()
-                    await websocket.send(json.dumps({
-                        'type': 'rerun_reset_complete'
-                    }))
-                    
+                await self._handle_text_message(websocket, message)
             else:  # Binary message
-                if hasattr(self.upload_handler, 'current_upload'):
-                    await self.upload_handler.handle_upload_chunk(message)
-                else:
-                    await self.frame_handler.handle_frame(message)
-                    
+                await self._handle_binary_message(websocket, message)
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
             await websocket.send(json.dumps({
