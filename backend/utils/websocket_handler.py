@@ -28,6 +28,18 @@ class WebSocketHandler:
         # Heartbeat configuration
         self.heartbeat_interval = 30  # seconds
         
+    async def _keep_alive(self):
+        """Send periodic heartbeats to keep connection alive"""
+        while True:
+            try:
+                await asyncio.sleep(30)  # 30 second interval
+                if self.clients:  # Only send if there are active clients
+                    for client in self.clients:
+                        await client.send(json.dumps({"type": "ping"}))
+            except Exception as e:
+                self.logger.error(f"Error in keep-alive: {e}")
+                await asyncio.sleep(5)  # Brief pause before retry
+
     async def _init_rerun(self):
         """Initialize Rerun for websocket handling"""
         # Initialize through RerunManager
