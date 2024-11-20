@@ -148,8 +148,9 @@ class WebSocketHandler:
                             
                         elif message_type == 'video_upload_complete':
                             await self.message_router.route_message(websocket, message)
-                            
-                    elif isinstance(message, bytes):
+                    except json.JSONDecodeError:
+                        self.logger.error("Failed to decode JSON message")
+                elif isinstance(message, bytes):
                         await self.message_router.route_message(websocket, message)
                         
         except websockets.exceptions.ConnectionClosed:
