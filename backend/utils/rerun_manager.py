@@ -28,15 +28,16 @@ class RerunManager:
             self._keep_alive_task = None
     
     async def _keep_alive(self):
-        """Keep Rerun connection alive"""
+        """Keep Rerun connection alive as long as frontend exists"""
         while True:
             try:
                 if not hasattr(rr, '_recording'):
                     self.initialize()
-                await asyncio.sleep(5)  # Check every 5 seconds
+                # Longer sleep since we're keeping connection indefinitely    
+                await asyncio.sleep(30)  # Check every 30 seconds
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
-                await asyncio.sleep(1)  # Brief pause before retry
+                await asyncio.sleep(5)  # Longer retry delay
 
     def initialize(self):
         """Initialize Rerun if not already initialized"""
@@ -50,7 +51,8 @@ class RerunManager:
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                            )
+                            ),
+                            blocking=False  # Don't block so frontend can control lifecycle
                         )
                         # Add delay to ensure server is ready
                         time.sleep(2)
