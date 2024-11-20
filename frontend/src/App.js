@@ -256,10 +256,19 @@ function App() {
                             name: file.name,
                             size: file.size,
                             lastModified: file.modified * 1000,
-                            type: 'video/mp4'
+                            type: 'video/mp4',
+                            path: file.path
                         }));
                         console.log('Updating file list with:', files);
-                        setUploadedFiles(files);
+                        setUploadedFiles(prev => {
+                            // Only update if the file list has changed
+                            const currentPaths = prev.map(f => f.path);
+                            const newPaths = files.map(f => f.path);
+                            if (JSON.stringify(currentPaths) !== JSON.stringify(newPaths)) {
+                                return files;
+                            }
+                            return prev;
+                        });
                     } else {
                         console.warn('Received invalid file list format:', data.files);
                     }

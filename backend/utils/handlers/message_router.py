@@ -24,7 +24,12 @@ class MessageRouter:
                 message_type = data.get('type')
                 self.logger.debug(f"Routing message type: {message_type}")
                 
-                if message_type in self.handlers:
+                if message_type == 'get_uploaded_files':
+                    self.logger.info("Handling get_uploaded_files request")
+                    handler = self.handlers[message_type]
+                    await handler.handle(websocket, data)
+                    self.logger.debug("File list request completed")
+                elif message_type in self.handlers:
                     handler = self.handlers[message_type]
                     await handler.handle(websocket, data)
                     self.logger.debug(f"Handler completed for {message_type}")
