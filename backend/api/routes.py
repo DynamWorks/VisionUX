@@ -97,8 +97,8 @@ def chat_analysis():
         logger.error("Chat analysis failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@api.route('/files', methods=['GET'])
-def get_files():
+@api.route('/files/list', methods=['GET'])
+def get_files_list():
     """Get list of uploaded video files"""
     try:
         uploads_path = Path("tmp_content/uploads")

@@ -235,7 +235,7 @@ function App() {
     // Initialize devices on mount
     const fetchUploadedFiles = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files`);
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
