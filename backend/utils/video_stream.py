@@ -53,37 +53,21 @@ class VideoStream:
                         self.buffer.get_nowait()
                     except:
                         pass
-                # Convert BGR to RGB for rerun
+                # Convert BGR to RGB for visualization
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                # Log video to rerun
+                # Log frame to Rerun
                 try:
                     # Initialize Rerun through manager if needed
                     from .rerun_manager import RerunManager
                     RerunManager().initialize()
                     
-                    if isinstance(self.source, str):
-                        # For video files, use AssetVideo with looping enabled
-                        video_asset = rr.AssetVideo(path=self.source)
-                        rr.log("world/video", video_asset, static=True)
-                        
-                        # Get frame timestamps and send them
-                        frame_timestamps_ns = video_asset.read_frame_timestamps_ns()
-                        rr.send_columns(
-                            "world/video",
-                            times=[rr.TimeNanosColumn("video_time", frame_timestamps_ns)],
-                            components=[
-                                rr.VideoFrameReference.indicator(),
-                                rr.components.VideoTimestamp.nanoseconds(frame_timestamps_ns)
-                            ],
-                        )
-                    else:
-                        # For live camera feed, log frames directly
-                        timestamp = time.time_ns()
-                        rr.log("world/video",
-                              rr.Image(frame_rgb),
-                              timeless=False,)
-                              #timestamp=timestamp)
+                    # Log frames directly regardless of source type
+                    timestamp = time.time_ns()
+                    rr.log("world/video",
+                          rr.Image(frame_rgb),
+                          timeless=False,
+                          timestamp=timestamp)
                 except Exception as e:
                     self.logger.warning(f"Failed to log to Rerun: {e}")
                     self.logger.debug(f"Error details: {str(e)}", exc_info=True)
