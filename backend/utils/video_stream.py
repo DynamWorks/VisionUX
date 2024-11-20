@@ -9,7 +9,7 @@ import rerun as rr
 class VideoStream:
     """Handles video streaming, either from file or camera"""
     
-    def __init__(self, source, loop: bool = True, buffer_size: int = 30):
+    def __init__(self, source, loop: bool = True, buffer_size: int = 10):
         self.source = source
         self.loop = loop and isinstance(source, str)  # Only loop for file sources
         self.buffer = Queue(maxsize=buffer_size)
@@ -78,8 +78,11 @@ class VideoStream:
                     'frame_number': self.frame_count
                 })
                 
-                # Control frame rate
-                time.sleep(1/30)  # 30 FPS
+                # Control frame rate and add delay if buffer is getting full
+                if self.buffer.qsize() > self.buffer.maxsize * 0.8:  # Buffer over 80% full
+                    time.sleep(1/15)  # Reduce to 15 FPS when buffer filling up
+                else:
+                    time.sleep(1/30)  # Normal 30 FPS
                 
             cap.release()
             if not self.loop:
