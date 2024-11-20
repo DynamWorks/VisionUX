@@ -122,134 +122,38 @@ class WebSocketHandler:
         
         try:
             async for message in websocket:
-                if isinstance(message, str) and message == "pong":
-                    continue
-                    
-                await self.message_router.route_message(websocket, message)
-                
-                try:
-                    files = await self.get_uploaded_files()
-                    await websocket.send(json.dumps({
-                        'type': 'uploaded_files',
-                        'files': files
-                    }))
-                except Exception as e:
-                    self.logger.error(f"Error sending file list: {e}")
-                    await websocket.send(json.dumps({
-                        'type': 'error',
-                        'error': f"Failed to get file list: {str(e)}"
-                    }))
-                elif message_type == 'video_upload_start':
-                    # Clear all topics
-                    rr.log("world", rr.Clear(recursive=True))
-                    rr.log("camera", rr.Clear(recursive=True))
-                    rr.log("edge_detection", rr.Clear(recursive=True))
-                    rr.log("heartbeat", rr.Clear(recursive=True))
-                    self.logger.info("Cleared all Rerun topics on frontend refresh")
-                    # Ensure Rerun stays alive
-                    from .rerun_manager import RerunManager
-                    rerun_manager = RerunManager()
-                    if not hasattr(rerun_manager, '_keep_alive_task') or rerun_manager._keep_alive_task.done():
-                        rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
-                    await websocket.send(json.dumps({
-                        'type': 'rerun_reset_complete'
-                    }))
+                if isinstance(message, str):
+                    if message == "pong":
+                        continue
+                        
+                    try:
+                        data = json.loads(message)
+                        message_type = data.get('type')
+                        
+                        if message_type == 'video_upload_start':
+                            # Clear all topics
+                            rr.log("world", rr.Clear(recursive=True))
+                            rr.log("camera", rr.Clear(recursive=True))
+                            rr.log("edge_detection", rr.Clear(recursive=True))
+                            rr.log("heartbeat", rr.Clear(recursive=True))
+                            self.logger.info("Cleared all Rerun topics on frontend refresh")
+                            
+                            # Ensure Rerun stays alive
+                            if not hasattr(self.rerun_manager, '_keep_alive_task') or self.rerun_manager._keep_alive_task.done():
+                                self.rerun_manager._keep_alive_task = asyncio.create_task(self.rerun_manager._keep_alive())
+                            
+                            await websocket.send(json.dumps({
+                                'type': 'rerun_reset_complete'
+                            }))
                             
                         elif message_type == 'video_upload_complete':
-                            if hasattr(self, 'current_upload'):
-                                try:
-                                    self.current_upload['file_handle'].flush()
-                                    self.current_upload['file_handle'].close()
-                                    file_path = self.uploads_path / self.current_upload['filename']
-                                    if file_path.exists():
-                                        file_size = file_path.stat().st_size
-                                        logging.info(f"Upload completed successfully: {self.current_upload['filename']} ({file_size} bytes)")
-                                        await websocket.send(json.dumps({
-                                            'type': 'upload_complete_ack',
-                                            'filename': self.current_upload['filename'],
-                                            'size': file_size
-                                        }))
-                                        
-                                        # Start streaming the uploaded video
-                                        try:
-                                            # Stop any existing stream
-                                            if self.video_streamer:
-                                                self.video_streamer.stop()
-                                            # Create new video stream
-                                            self.video_streamer = VideoStream(str(file_path))
-                                            self.video_streamer.start()
-                                            logging.info(f"Started streaming video: {file_path}")
-                                        except Exception as e:
-                                            logging.error(f"Failed to start video streaming: {e}")
-                                            
-                                        # Keep connection alive for a moment to ensure client receives the acknowledgment
-                                        await asyncio.sleep(1)
-                                    else:
-                                        raise FileNotFoundError(f"Uploaded file not found: {file_path}")
-                                except Exception as e:
-                                    logging.error(f"Error finalizing upload: {str(e)}")
-                                    await websocket.send(json.dumps({
-                                        'type': 'upload_error',
-                                        'error': f"Failed to finalize upload: {str(e)}"
-                                    }))
-                                    await asyncio.sleep(1)  # Give time for error message to be sent
-                                finally:
-                                    delattr(self, 'current_upload')
+                            await self.message_router.route_message(websocket, message)
                             
-                    else:
-                        # Handle binary chunk data
-                        if hasattr(self, 'current_upload'):
-                            self.current_upload['file_handle'].write(message)
-                            self.current_upload['bytes_received'] += len(message)
-                            logging.info(f"Wrote {len(message)} bytes to {self.current_upload['filename']}")
-        except Exception as e:
-            self.logger.error(f"Error processing message: {e}")
-            await websocket.send(json.dumps({
-                'type': 'error',
-                'error': str(e)
-            }))
-                        await websocket.send(json.dumps({
-                            'type': 'uploaded_files',
-                            'files': files
-                        }))
-                    except Exception as e:
-                        self.logger.error(f"Error sending file list: {e}")
-                        await websocket.send(json.dumps({
-                            'type': 'error',
-                            'error': f"Failed to get file list: {str(e)}"
-                        }))
-                    except Exception as e:
-                        self.logger.error(f"Error handling video upload: {e}")
-                        await websocket.send(json.dumps({
-                            "type": "upload_error",
-                            "error": str(e)
-                        }))
-                
-                elif message_type == 'start_video_stream':
-                    filename = data.get('filename')
-                    file_path = self.uploads_path / filename
-                    if file_path.exists():
-                        # Stop any existing stream
-                        if self.video_streamer:
-                            self.video_streamer.stop()
-                        # Create new video stream
-                        self.video_streamer = VideoStream(str(file_path))
-                        self.video_streamer.start()
-                        self.logger.info(f"Started streaming video: {file_path}")
-                    else:
-                        self.logger.error(f"Video file not found: {file_path}")
+                    elif isinstance(message, bytes):
+                        await self.message_router.route_message(websocket, message)
                         
-                    # Next message will be the frame data
-                    frame_data = await websocket.recv()
-                    if isinstance(frame_data, bytes):
-                        # Pass both frame data and metadata to handler
-                        success = await self.frame_handler.handle_frame(frame_data, frame_metadata)
-                        if not success:
-                            self.logger.error("Failed to process camera frame")
-                            await websocket.send(json.dumps({
-                                'type': 'camera_frame_error',
-                                'error': 'Failed to process frame'
-                            }))
+        except websockets.exceptions.ConnectionClosed:
+            self.logger.info("WebSocket connection closed")
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
