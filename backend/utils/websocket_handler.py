@@ -161,18 +161,32 @@ class WebSocketHandler:
                 logging.error(f"Error sending heartbeat: {e}")
                 break
 
+    async def _init_rerun(self):
+        """Initialize Rerun visualization"""
+        try:
+            self.rerun_manager.initialize()
+            self.logger.info("Rerun initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Rerun: {e}")
+            raise
+
     async def start_server(self, host='localhost', port=8001):
-        # Initialize Rerun when starting the server
-        await self._init_rerun()
-        
-        async with websockets.serve(
-            ws_handler=self.handle_connection, 
-            host=host, 
-            port=port,
-            process_request=None  # Allow any path for now while debugging
-        ):
-            self.logger.info(f"WebSocket server started on ws://{host}:{port}/ws")
-            await asyncio.Future()  # run forever
+        """Start the WebSocket server"""
+        try:
+            # Initialize Rerun when starting the server
+            await self._init_rerun()
+            
+            async with websockets.serve(
+                ws_handler=self.handle_connection, 
+                host=host, 
+                port=port,
+                process_request=None  # Allow any path for now while debugging
+            ):
+                self.logger.info(f"WebSocket server started on ws://{host}:{port}/ws")
+                await asyncio.Future()  # run forever
+        except Exception as e:
+            self.logger.error(f"Failed to start WebSocket server: {e}")
+            raise
     async def _handle_text_message(self, websocket, message):
         """Handle text-based WebSocket messages"""
         if message == "pong":
