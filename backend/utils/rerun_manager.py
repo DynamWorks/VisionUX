@@ -32,28 +32,16 @@ class RerunManager:
             self._active_connections = 0
     
     async def _keep_alive(self):
-        """Keep Rerun connection alive regardless of frontend connections"""
+        """Keep Rerun connection alive with periodic heartbeats"""
         while True:
             try:
-                # Always maintain server connection
-                if not hasattr(rr, '_recording'):
-                    self.initialize()
-                    self.logger.debug("Rerun server reinitialized")
-                
-                # Send periodic heartbeat
-                #rr.log("heartbeat", rr.timestamp(time.time_ns()))
-                
-                # Brief sleep between heartbeats
                 await asyncio.sleep(5)
-                
+                if hasattr(rr, '_recording'):
+                    # Send periodic heartbeat only if already initialized
+                    rr.log("heartbeat", rr.Timestamp(time.time_ns()))
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
                 await asyncio.sleep(2)  # Brief pause before retry
-                # Attempt to reinitialize on error
-                try:
-                    self.initialize()
-                except Exception as reinit_error:
-                    self.logger.error(f"Failed to reinitialize Rerun: {reinit_error}")
 
     def initialize(self):
         """Initialize Rerun if not already initialized"""
@@ -119,12 +107,6 @@ class RerunManager:
             self._active_connections = 0
         self._active_connections += 1
         self.logger.info(f"Registered new connection. Active connections: {self._active_connections}")
-        
-        # Ensure Rerun is initialized and keep-alive task is running
-        self.initialize()
-        if not self._keep_alive_task or self._keep_alive_task.done():
-            self._keep_alive_task = asyncio.create_task(self._keep_alive())
-            self.logger.info("Started Rerun keep-alive task")
         
     def unregister_connection(self):
         """Unregister a frontend connection"""

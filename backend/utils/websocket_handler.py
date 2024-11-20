@@ -30,13 +30,12 @@ class WebSocketHandler:
         
     async def _init_rerun(self):
         """Initialize Rerun for websocket handling"""
-        from .rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-        rerun_manager.initialize()
+        self.initialize()
         
-        # Start keep-alive task in the event loop
-        if rerun_manager._keep_alive_task is None or rerun_manager._keep_alive_task.done():
-            rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
+        # Start keep-alive task only once
+        if not hasattr(self, '_keep_alive_task') or self._keep_alive_task is None or self._keep_alive_task.done():
+            self._keep_alive_task = asyncio.create_task(self._keep_alive())
+            self.logger.info("Started Rerun keep-alive task")
 
     async def _setup_connection(self, websocket):
         """Setup initial WebSocket connection"""
