@@ -10,7 +10,8 @@ const CameraSelector = ({
     isStreaming,
     startCamera,
     stopCamera,
-    refreshDevices
+    refreshDevices,
+    ws
 }) => {
     const handleDeviceChange = (event) => {
         const deviceId = event.target.value;
@@ -44,7 +45,7 @@ const CameraSelector = ({
                     variant="contained"
                     startIcon={<VideocamIcon />}
                     onClick={() => {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
+                        if (ws?.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({
                                 type: 'start_camera_stream',
                                 deviceId: selectedDevice

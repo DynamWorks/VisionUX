@@ -276,6 +276,7 @@ function App() {
                                     startCamera={startCamera}
                                     stopCamera={stopCamera}
                                     refreshDevices={refreshDevices}
+                                    ws={ws}
                                 />
                             ) : (
                                 <VideoUpload
