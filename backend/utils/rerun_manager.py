@@ -79,9 +79,12 @@ class RerunManager:
                     else:
                         raise
             else:
-                # Just clear the logs without restarting server
-                rr.Clear(recursive=True)
-                self.logger.debug("Cleared Rerun logs while maintaining existing connection")
+                # Clear all topics
+                rr.log("world", rr.Clear(recursive=True))
+                rr.log("camera", rr.Clear(recursive=True))
+                rr.log("edge_detection", rr.Clear(recursive=True))
+                rr.log("heartbeat", rr.Clear(recursive=True))
+                self.logger.debug("Cleared all Rerun topics while maintaining existing connection")
                 # Ensure keep-alive task is running
                 if self._keep_alive_task is None or self._keep_alive_task.done():
                     self._keep_alive_task = asyncio.create_task(self._keep_alive())

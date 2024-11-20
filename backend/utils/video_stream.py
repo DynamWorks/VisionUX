@@ -117,4 +117,8 @@ class VideoStream:
         if hasattr(self, '_rerun_initialized'):
             delattr(self, '_rerun_initialized')
             from .rerun_manager import RerunManager
-            RerunManager().Clear(recursive=True)
+            rerun_manager = RerunManager()
+            rr.log("world", rr.Clear(recursive=True))
+            rr.log("camera", rr.Clear(recursive=True))
+            rr.log("edge_detection", rr.Clear(recursive=True))
+            rr.log("heartbeat", rr.Clear(recursive=True))

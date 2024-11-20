@@ -89,9 +89,12 @@ class WebSocketHandler:
                             logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
                             
                         elif message_type == 'reset_rerun':
-                            # Clear logs but maintain connection
-                            rr.Clear(recursive=True)
-                            self.logger.info("Cleared Rerun logs on frontend refresh")
+                            # Clear all topics
+                            rr.log("world", rr.Clear(recursive=True))
+                            rr.log("camera", rr.Clear(recursive=True))
+                            rr.log("edge_detection", rr.Clear(recursive=True))
+                            rr.log("heartbeat", rr.Clear(recursive=True))
+                            self.logger.info("Cleared all Rerun topics on frontend refresh")
                             # Ensure Rerun stays alive
                             from .rerun_manager import RerunManager
                             rerun_manager = RerunManager()
