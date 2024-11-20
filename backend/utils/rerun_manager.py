@@ -24,46 +24,45 @@ class RerunManager:
             self.logger = logging.getLogger(__name__)
             self._initialized = True
             self._app = web.Application()
+            self._keep_alive_task = None
     
+    async def _keep_alive(self):
+        """Keep Rerun connection alive"""
+        while True:
+            try:
+                if not hasattr(rr, '_recording'):
+                    self.initialize()
+                await asyncio.sleep(5)  # Check every 5 seconds
+            except Exception as e:
+                self.logger.error(f"Rerun keep-alive error: {e}")
+                await asyncio.sleep(1)  # Brief pause before retry
+
     def initialize(self):
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")
-                # Use port 0 to let OS choose an available port
+                rr.init("video_analytics", spawn=True)  # Use spawn=True for better process isolation
                 server_info = rr.serve(
                     open_browser=False,
-                    ws_port=4321,  # Let OS choose available port
+                    ws_port=0,  # Always use dynamic port allocation
                     default_blueprint=rr.blueprint.Vertical(
                         rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
                     )
                 )
-                # Update the port with the dynamically assigned one
+                
                 if hasattr(server_info, 'ws_port'):
                     self._ws_port = server_info.ws_port
-                self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
+                    self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
+                    
+                    # Start keep-alive task if not already running
+                    if self._keep_alive_task is None or self._keep_alive_task.done():
+                        self._keep_alive_task = asyncio.create_task(self._keep_alive())
+                else:
+                    raise RuntimeError("Failed to get WebSocket port from Rerun")
             else:
                 self.logger.debug("Rerun already initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
-            # Try one more time with a different port if it was a port conflict
-            if "address is already in use" in str(e):
-                try:
-                    self._ws_port = 0  # Reset to let OS choose
-                    rr.init("video_analytics")
-                    server_info = rr.serve(
-                        open_browser=False,
-                        ws_port=0,
-                        default_blueprint=rr.blueprint.Vertical(
-                            rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                        )
-                    )
-                    if hasattr(server_info, 'ws_port'):
-                        self._ws_port = server_info.ws_port
-                    self.logger.info(f"Rerun initialized successfully on alternate port {self._ws_port}")
-                    return
-                except Exception as retry_error:
-                    self.logger.error(f"Failed to initialize Rerun on retry: {retry_error}")
             raise
 
     async def start_web_server(self):
@@ -88,12 +87,16 @@ class RerunManager:
         self.logger.info("Rerun web server stopped")
     
     def reset(self):
-        """Clear Rerun data without reinitializing"""
+        """Clear Rerun data and reinitialize"""
         try:
             rr.clear()
             self.logger.info("Rerun data cleared successfully")
+            # Force reinitialization
+            if hasattr(rr, '_recording'):
+                delattr(rr, '_recording')
+            self.initialize()
         except Exception as e:
-            self.logger.error(f"Failed to clear Rerun data: {e}")
+            self.logger.error(f"Failed to reset Rerun: {e}")
             raise
 
     @property
