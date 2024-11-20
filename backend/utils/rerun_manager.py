@@ -26,17 +26,20 @@ class RerunManager:
             self._app = web.Application()
     
     def initialize(self):
-        """Initialize or reinitialize Rerun"""
+        """Initialize Rerun if not already initialized"""
         try:
-            rr.init("video_analytics")
-            rr.serve(
-                open_browser=False,
-                ws_port=self._ws_port,
-                default_blueprint=rr.blueprint.Vertical(
-                    rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+            if not hasattr(rr, '_recording'):
+                rr.init("video_analytics")
+                rr.serve(
+                    open_browser=False,
+                    ws_port=self._ws_port,
+                    default_blueprint=rr.blueprint.Vertical(
+                        rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                    )
                 )
-            )
-            self.logger.info("Rerun initialized successfully")
+                self.logger.info("Rerun initialized successfully")
+            else:
+                self.logger.debug("Rerun already initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
             raise
@@ -63,14 +66,12 @@ class RerunManager:
         self.logger.info("Rerun web server stopped")
     
     def reset(self):
-        """Reset Rerun state"""
+        """Clear Rerun data without reinitializing"""
         try:
-            rr.init("video_analytics")
             rr.clear()
-            self.initialize()
-            self.logger.info("Rerun reset successfully")
+            self.logger.info("Rerun data cleared successfully")
         except Exception as e:
-            self.logger.error(f"Failed to reset Rerun: {e}")
+            self.logger.error(f"Failed to clear Rerun data: {e}")
             raise
 
     @property
