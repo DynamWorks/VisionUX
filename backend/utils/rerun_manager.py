@@ -32,32 +32,34 @@ class RerunManager:
             self._active_connections = 0
     
     async def _keep_alive(self):
-        """Keep Rerun connection alive as long as frontend exists"""
+        """Keep Rerun connection alive regardless of frontend connections"""
         while True:
             try:
+                # Always maintain server connection
                 if not hasattr(rr, '_recording'):
                     self.initialize()
-                # Check connection status more frequently
-                await asyncio.sleep(5)  # Check every 5 seconds
+                    self.logger.debug("Rerun server reinitialized")
                 
-                # If no active connections, clear logs but maintain server
-                if not hasattr(self, '_active_connections') or self._active_connections == 0:
-                    rr.Clear(recursive=True)
-                    self.logger.debug("No active connections, cleared Rerun logs but maintaining server")
-                else:
-                    # Ensure server stays alive with active connections
-                    if not hasattr(rr, '_recording'):
-                        self.initialize()
-                    
+                # Send periodic heartbeat
+                rr.log("heartbeat", rr.TimeStamp(time.time_ns()))
+                
+                # Brief sleep between heartbeats
+                await asyncio.sleep(5)
+                
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
                 await asyncio.sleep(2)  # Brief pause before retry
+                # Attempt to reinitialize on error
+                try:
+                    self.initialize()
+                except Exception as reinit_error:
+                    self.logger.error(f"Failed to reinitialize Rerun: {reinit_error}")
 
     def initialize(self):
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")#, spawn=True, blocking=False, shutdown_after=None)  # Keep server alive indefinitely
+                rr.init("video_analytics", spawn=True, blocking=False, shutdown_after=None)  # Keep server alive indefinitely
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
@@ -115,9 +117,11 @@ class RerunManager:
         self._active_connections += 1
         self.logger.info(f"Registered new connection. Active connections: {self._active_connections}")
         
-        # Ensure Rerun is initialized with new connection
-        if not hasattr(rr, '_recording'):
-            self.initialize()
+        # Ensure Rerun is initialized and keep-alive task is running
+        self.initialize()
+        if not self._keep_alive_task or self._keep_alive_task.done():
+            self._keep_alive_task = asyncio.create_task(self._keep_alive())
+            self.logger.info("Started Rerun keep-alive task")
         
     def unregister_connection(self):
         """Unregister a frontend connection"""
