@@ -65,7 +65,7 @@ class RerunManager:
                             open_browser=False,
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
-                                rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                                rr.blueprint.Spatial2DView(origin="world/video", name="Video Feed")
                             ))
                         # Add delay to ensure server is ready
                         time.sleep(2)

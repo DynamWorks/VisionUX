@@ -288,9 +288,9 @@ class WebSocketHandler:
                         # Process frame with edge detection
                         #edges_rgb = self.edge_detector.detect_edges(frame)
                         
-                        # Log original frame to Rerun
+                        # Log frame to Rerun using consistent topic
                         timestamp = time.time()
-                        rr.log("camera/original", 
+                        rr.log("world/video", 
                               rr.Image(frame_rgb),
                               timeless=False,
                               timestamp=timestamp)

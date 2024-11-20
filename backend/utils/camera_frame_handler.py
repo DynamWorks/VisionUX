@@ -20,9 +20,9 @@ class CameraFrameHandler:
                 # Convert BGR to RGB for Rerun
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                # Log to Rerun
+                # Log to Rerun using same topic as video stream
                 timestamp = time.time()
-                rr.log("camera/original", 
+                rr.log("world/video", 
                       rr.Image(frame_rgb),
                       timeless=False,
                       timestamp=timestamp)
