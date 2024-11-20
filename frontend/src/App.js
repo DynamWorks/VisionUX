@@ -33,7 +33,9 @@ function App() {
 
         const connectWebSocket = () => {
             try {
-                const websocket = new WebSocket(process.env.REACT_APP_WS_URL);
+                const wsUrl = `${process.env.REACT_APP_WS_URL}/ws`;
+                console.log('Connecting to WebSocket:', wsUrl);
+                const websocket = new WebSocket(wsUrl);
                 
                 websocket.onopen = () => {
                     console.log('WebSocket Connected');

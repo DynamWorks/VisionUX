@@ -309,7 +309,13 @@ class WebSocketHandler:
         # Initialize Rerun when starting the server
         await self._init_rerun()
         
-        async with websockets.serve(self.handle_connection, host, port):
+        async with websockets.serve(
+            self.handle_connection, 
+            host, 
+            port,
+            path="/ws"
+        ):
+            self.logger.info(f"WebSocket server started on ws://{host}:{port}/ws")
             await asyncio.Future()  # run forever
     async def _handle_text_message(self, websocket, message):
         """Handle text-based WebSocket messages"""
