@@ -85,19 +85,28 @@ class WebSocketHandler:
     async def get_uploaded_files(self):
         """Get list of uploaded files with their metadata"""
         try:
+            if not self.uploads_path.exists():
+                self.logger.warning(f"Creating uploads directory: {self.uploads_path}")
+                self.uploads_path.mkdir(parents=True, exist_ok=True)
+                return []
+                
             files = []
-            if self.uploads_path.exists():
-                for file_path in self.uploads_path.glob('*.mp4'):
+            for file_path in self.uploads_path.glob('*.mp4'):
+                try:
                     stat = file_path.stat()
                     files.append({
                         'name': file_path.name,
                         'size': stat.st_size,
-                        'modified': stat.st_mtime
+                        'modified': stat.st_mtime,
+                        'path': str(file_path)
                     })
-                self.logger.info(f"Found {len(files)} uploaded files")
-            else:
-                self.logger.warning(f"Uploads directory does not exist: {self.uploads_path}")
-            return files
+                except OSError as e:
+                    self.logger.error(f"Error accessing file {file_path}: {e}")
+                    continue
+                    
+            self.logger.info(f"Found {len(files)} uploaded files")
+            return sorted(files, key=lambda x: x['modified'], reverse=True)
+            
         except Exception as e:
             self.logger.error(f"Error listing uploaded files: {e}")
             return []
