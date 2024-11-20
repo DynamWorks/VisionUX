@@ -12,14 +12,22 @@ class FileListHandler(BaseMessageHandler):
         try:
             files = await self.get_uploaded_files()
             self.logger.info(f"Sending file list: {len(files)} files found")
-            response = {
-                'type': 'uploaded_files',
-                'files': files
-            }
-            self.logger.info(f"Sending file list response with {len(files)} files")
-            response_json = json.dumps(response)
-            self.logger.debug(f"Response payload: {response_json}")
-            await websocket.send(response_json)
+            try:
+                response = {
+                    'type': 'uploaded_files',
+                    'files': files
+                }
+                self.logger.info(f"Sending file list response with {len(files)} files")
+                response_json = json.dumps(response)
+                self.logger.debug(f"Response payload: {response_json}")
+                await websocket.send(response_json)
+                self.logger.info("File list sent successfully")
+            except Exception as e:
+                self.logger.error(f"Error sending file list: {e}")
+                await websocket.send(json.dumps({
+                    'type': 'error',
+                    'error': f'Failed to send file list: {str(e)}'
+                }))
         except Exception as e:
             self.logger.error(f"Error getting file list: {e}")
             await self.send_error(websocket, f"Failed to get file list: {str(e)}")

@@ -26,9 +26,16 @@ class MessageRouter:
                 
                 if message_type == 'get_uploaded_files':
                     self.logger.info("Handling get_uploaded_files request")
-                    handler = self.handlers[message_type]
-                    await handler.handle(websocket, data)
-                    self.logger.debug("File list request completed")
+                    try:
+                        handler = self.handlers[message_type]
+                        await handler.handle(websocket, data)
+                        self.logger.info("File list request completed successfully")
+                    except Exception as e:
+                        self.logger.error(f"Error handling file list request: {e}")
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'error': f'Failed to get file list: {str(e)}'
+                        }))
                 elif message_type in self.handlers:
                     handler = self.handlers[message_type]
                     await handler.handle(websocket, data)

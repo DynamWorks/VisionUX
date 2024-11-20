@@ -60,8 +60,13 @@ function App() {
                 websocket.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
+                        console.log('WebSocket message received:', data);
+                        
                         if (data.type === 'ping') {
                             websocket.send('pong');
+                        } else if (data.type === 'uploaded_files') {
+                            console.log('Received file list:', data.files);
+                            setUploadedFiles(data.files || []);
                         }
                     } catch (error) {
                         console.error('Error processing WebSocket message:', error);
