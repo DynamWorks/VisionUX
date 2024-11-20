@@ -40,6 +40,11 @@ class WebSocketHandler:
         self.clients.add(websocket)
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
         
+        # Register connection with RerunManager
+        from .rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.register_connection()
+        
         # Increase WebSocket message size limit (100MB)
         websocket.max_size = 1024 * 1024 * 100
         
@@ -272,6 +277,10 @@ class WebSocketHandler:
             pass
         finally:
             self.clients.remove(websocket)
+            # Unregister connection from RerunManager
+            from .rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+            rerun_manager.unregister_connection()
 
     async def send_heartbeat(self, websocket):
         """Send periodic heartbeat to keep connection alive"""

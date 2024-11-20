@@ -26,6 +26,7 @@ class RerunManager:
             self._initialized = True
             self._app = web.Application()
             self._keep_alive_task = None
+            self._active_connections = 0
     
     async def _keep_alive(self):
         """Keep Rerun connection alive as long as frontend exists"""
@@ -33,11 +34,17 @@ class RerunManager:
             try:
                 if not hasattr(rr, '_recording'):
                     self.initialize()
-                # Longer sleep since we're keeping connection indefinitely    
-                await asyncio.sleep(30)  # Check every 30 seconds
+                # Check connection status more frequently
+                await asyncio.sleep(5)  # Check every 5 seconds
+                
+                # If no active WebSocket connections, clear logs but keep server running
+                if not hasattr(self, '_active_connections') or self._active_connections == 0:
+                    rr.Clear(recursive=True)
+                    self.logger.debug("No active connections, cleared Rerun logs")
+                    
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
-                await asyncio.sleep(5)  # Longer retry delay
+                await asyncio.sleep(2)  # Brief pause before retry
 
     def initialize(self):
         """Initialize Rerun if not already initialized"""
@@ -91,6 +98,16 @@ class RerunManager:
             await self._runner.cleanup()
         self.logger.info("Rerun web server stopped")
     
+    def register_connection(self):
+        """Register a new frontend connection"""
+        self._active_connections += 1
+        self.logger.info(f"Registered new connection. Active connections: {self._active_connections}")
+        
+    def unregister_connection(self):
+        """Unregister a frontend connection"""
+        self._active_connections = max(0, self._active_connections - 1)
+        self.logger.info(f"Unregistered connection. Active connections: {self._active_connections}")
+        
     def reset(self):
         """Clear Rerun data and reinitialize"""
         try:
