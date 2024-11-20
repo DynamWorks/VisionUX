@@ -1,6 +1,6 @@
 from .base_handler import BaseMessageHandler
 from .file_list_handler import FileListHandler
-from backend.utils.handlers.video_upload_handler import VideoUploadHandler
+from .video_upload_handler import VideoUploadHandler
 import json
 import logging
 
