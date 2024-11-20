@@ -1,32 +1,18 @@
 import asyncio
 import websockets
-import json
 import logging
-import rerun as rr
-import time
-import numpy as np
-import cv2
 from pathlib import Path
-from .video_upload_handler import VideoUploadHandler
-from .camera_frame_handler import CameraFrameHandler
-from utils.video_stream import VideoStream
+from .handlers.message_router import MessageRouter
 
 class WebSocketHandler:
     def __init__(self):
         self.clients = set()
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
+        self.heartbeat_interval = 30
         
-        # Constants
-        self.chunk_timeout = 30  # seconds
-        
-        # Initialize handlers and services
-        self.upload_handler = VideoUploadHandler(self.uploads_path)
-        self.frame_handler = CameraFrameHandler()
-        self.video_streamer = None
-        
-        # Heartbeat configuration
-        self.heartbeat_interval = 30  # seconds
+        # Initialize message router
+        self.message_router = MessageRouter(self.uploads_path)
         
     async def _keep_alive(self):
         """Send periodic heartbeats to keep connection alive"""
@@ -113,10 +99,11 @@ class WebSocketHandler:
 
     async def handle_connection(self, websocket):
         """Handle incoming WebSocket connections"""
-        # Ensure uploads directory exists
         self.uploads_path.mkdir(parents=True, exist_ok=True)
+        self.clients.add(websocket)
         
-        heartbeat_task = await self._setup_connection(websocket)
+        # Start heartbeat
+        heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
         
         # Send initial list of uploaded files
         try:
@@ -133,11 +120,8 @@ class WebSocketHandler:
             async for message in websocket:
                 if isinstance(message, str) and message == "pong":
                     continue
-                try:
-                    if isinstance(message, str):
-                        data = json.loads(message)
-                        message_type = data.get('type')
-                        logging.info(f"Received message type: {message_type}")
+                    
+                await self.message_router.route_message(websocket, message)
                         
                         if message_type == 'get_uploaded_files':
                             try:
