@@ -195,10 +195,37 @@ function App() {
     // Initialize devices on mount
     useEffect(() => {
         refreshDevices();
+        
+        // Fetch uploaded files on mount
+        const fetchUploadedFiles = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.addEventListener('message', (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'uploaded_files') {
+                            const files = data.files.map(file => new File(
+                                [new Blob()], // Empty blob as placeholder
+                                file.name,
+                                {
+                                    type: 'video/mp4',
+                                    lastModified: file.modified * 1000
+                                }
+                            ));
+                            setUploadedFiles(files);
+                        }
+                    } catch (error) {
+                        console.error('Error processing uploaded files:', error);
+                    }
+                });
+            }
+        };
+
+        fetchUploadedFiles();
+        
         // Log mount for debugging
         console.log('App mounted');
         return () => console.log('App unmounted');
-    }, [refreshDevices]);
+    }, [refreshDevices, ws]);
 
     return (
         <Router>

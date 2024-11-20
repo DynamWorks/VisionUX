@@ -82,9 +82,32 @@ class WebSocketHandler:
             rerun_manager = RerunManager()
             rerun_manager.unregister_connection()
 
+    async def get_uploaded_files(self):
+        """Get list of uploaded files with their metadata"""
+        try:
+            files = []
+            for file_path in self.uploads_path.glob('*.mp4'):
+                stat = file_path.stat()
+                files.append({
+                    'name': file_path.name,
+                    'size': stat.st_size,
+                    'modified': stat.st_mtime
+                })
+            return files
+        except Exception as e:
+            self.logger.error(f"Error listing uploaded files: {e}")
+            return []
+
     async def handle_connection(self, websocket):
         """Handle incoming WebSocket connections"""
         heartbeat_task = await self._setup_connection(websocket)
+        
+        # Send initial list of uploaded files
+        files = await self.get_uploaded_files()
+        await websocket.send(json.dumps({
+            'type': 'uploaded_files',
+            'files': files
+        }))
         
         try:
             async for message in websocket:
