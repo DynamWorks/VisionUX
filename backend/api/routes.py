@@ -29,7 +29,8 @@ def health_check():
     """Simple health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'service': 'video-analytics-api'
+        'service': 'video-analytics-api',
+        'timestamp': time.time()
     })
 
 @api.route('/analyze_scene', methods=['POST'])
@@ -125,14 +126,6 @@ def get_files_list():
     except Exception as e:
         logger.error("Error listing files", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
-@api.route('/health', methods=['GET'])
-def health_check():
-    """Simple health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'video-analytics-api'
-    })
 
 @api.errorhandler(Exception)
 def handle_error(error):
