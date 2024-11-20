@@ -32,24 +32,6 @@ class WebSocketHandler:
                 self.logger.error(f"Error in keep-alive: {e}")
                 await asyncio.sleep(5)  # Brief pause before retry
 
-    async def _init_rerun(self):
-        """Initialize Rerun for websocket handling"""
-        try:
-            # Initialize through RerunManager
-            from .rerun_manager import RerunManager
-            rerun_manager = RerunManager()
-            rerun_manager.initialize()
-            
-            # Start keep-alive task only once
-            if not hasattr(self, '_keep_alive_task'):
-                self._keep_alive_task = asyncio.create_task(self._keep_alive())
-                self.logger.info("Started Rerun keep-alive task")
-            elif self._keep_alive_task.done():
-                self._keep_alive_task = asyncio.create_task(self._keep_alive())
-                self.logger.info("Restarted Rerun keep-alive task")
-        except Exception as e:
-            self.logger.error(f"Error initializing Rerun: {e}")
-            raise
 
     async def _setup_connection(self, websocket):
         """Setup initial WebSocket connection"""
@@ -253,19 +235,6 @@ class WebSocketHandler:
                 'error': f"Failed to reset Rerun: {str(e)}"
             }))
 
-    async def handle_message(self, websocket, message):
-        """Route incoming messages to appropriate handlers"""
-        try:
-            if isinstance(message, str):
-                await self._handle_text_message(websocket, message)
-            else:  # Binary message
-                await self._handle_binary_message(websocket, message)
-        except Exception as e:
-            self.logger.error(f"Error handling message: {e}")
-            await websocket.send(json.dumps({
-                'type': 'error',
-                'error': str(e)
-            }))
             
     async def handle_new_video(self, file_path):
         """Handle setup for a newly uploaded video"""

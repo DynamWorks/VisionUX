@@ -72,35 +72,6 @@ body {
         flex-direction: column;
     }
 }
-:root {
-  --primary-color: #333333;
-  --secondary-color: #bd9544;
-  --background-color: #f4f4f4;
-  --text-color: #ffffff;
-  --body-text-color: #050402;
-}
-
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: var(--background-color);
-    color: var(--body-text-color);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-.app-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-.main-content {
-    display: flex;
-    flex: 1;
-    padding: 20px;
-}
 
 .left-panel {
     width: 30%;
