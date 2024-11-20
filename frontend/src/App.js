@@ -387,8 +387,39 @@ function App() {
                             )}
                             <FileList
                                 files={uploadedFiles}
+                                activeFile={videoFile}
+                                isPlaying={isStreaming}
                                 onFileSelect={(file) => {
                                     setVideoFile(file);
+                                }}
+                                onPlayPause={(file, shouldPlay) => {
+                                    if (shouldPlay && !isStreaming) {
+                                        // Start streaming the selected file
+                                        if (ws && ws.readyState === WebSocket.OPEN) {
+                                            ws.send(JSON.stringify({
+                                                type: 'start_video_stream',
+                                                filename: file.name
+                                            }));
+                                        }
+                                        setIsStreaming(true);
+                                    } else if (!shouldPlay && isStreaming) {
+                                        // Pause streaming
+                                        if (ws && ws.readyState === WebSocket.OPEN) {
+                                            ws.send(JSON.stringify({
+                                                type: 'pause_video_stream'
+                                            }));
+                                        }
+                                        setIsStreaming(false);
+                                    }
+                                }}
+                                onStop={(file) => {
+                                    if (ws && ws.readyState === WebSocket.OPEN) {
+                                        ws.send(JSON.stringify({
+                                            type: 'stop_video_stream'
+                                        }));
+                                    }
+                                    setIsStreaming(false);
+                                    setVideoFile(null);
                                 }}
                             />
                         </Box>

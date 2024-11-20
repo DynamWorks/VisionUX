@@ -269,6 +269,31 @@ class WebSocketHandler:
                             "error": "Upload failed"
                         }))
                 
+                elif message_type == 'start_video_stream':
+                    filename = data.get('filename')
+                    file_path = self.uploads_path / filename
+                    if file_path.exists():
+                        # Stop any existing stream
+                        if self.video_streamer:
+                            self.video_streamer.stop()
+                        # Create new video stream
+                        self.video_streamer = VideoStream(str(file_path))
+                        self.video_streamer.start()
+                        self.logger.info(f"Started streaming video: {file_path}")
+                    else:
+                        self.logger.error(f"Video file not found: {file_path}")
+                        
+                elif message_type == 'pause_video_stream':
+                    if self.video_streamer:
+                        self.video_streamer.pause()
+                        self.logger.info("Video stream paused")
+                        
+                elif message_type == 'stop_video_stream':
+                    if self.video_streamer:
+                        self.video_streamer.stop()
+                        self.video_streamer = None
+                        self.logger.info("Video stream stopped")
+                        
                 elif message_type == 'camera_frame':
                     # Next message will be the frame data
                     message = await websocket.recv()
