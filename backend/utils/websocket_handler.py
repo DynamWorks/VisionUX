@@ -1,8 +1,10 @@
 import asyncio
 import websockets
 import logging
+import json
 from pathlib import Path
 from .handlers.message_router import MessageRouter
+from .rerun_manager import RerunManager
 
 class WebSocketHandler:
     def __init__(self):
@@ -10,8 +12,10 @@ class WebSocketHandler:
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
         self.heartbeat_interval = 30
+        self.rerun_manager = RerunManager()
         
-        # Initialize message router
+        # Initialize message router and ensure uploads directory exists
+        self.uploads_path.mkdir(parents=True, exist_ok=True)
         self.message_router = MessageRouter(self.uploads_path)
         
     async def _keep_alive(self):
