@@ -26,7 +26,7 @@ function App() {
             console.error('WebSocket URL is not defined in environment variables');
             return;
         }
-        
+
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
         let reconnectTimeout;
@@ -36,12 +36,12 @@ function App() {
                 const wsUrl = process.env.REACT_APP_WS_URL;
                 console.log('Connecting to WebSocket:', wsUrl);
                 const websocket = new WebSocket(wsUrl);
-                
+
                 websocket.onopen = () => {
                     console.log('WebSocket Connected');
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket); // Only set ws when connection is established
-                    
+
                     // Send initial connection message
                     websocket.send(JSON.stringify({ type: 'connection_established' }));
                 };
@@ -56,7 +56,7 @@ function App() {
                         console.error('Error processing WebSocket message:', error);
                     }
                 };
-                
+
                 websocket.onclose = (event) => {
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
                     if (!event.wasClean) {
@@ -70,7 +70,7 @@ function App() {
                         }
                     }
                 };
-                
+
                 websocket.onerror = (error) => {
                     console.error('WebSocket Error:', error);
                     // Attempt to reconnect on error
@@ -79,7 +79,7 @@ function App() {
                         setTimeout(connectWebSocket, 3000);
                     }
                 };
-                
+
                 setWs(websocket);
             } catch (error) {
                 console.error('WebSocket connection error:', error);
@@ -87,7 +87,7 @@ function App() {
         };
 
         connectWebSocket();
-        
+
         return () => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.close();
@@ -200,7 +200,7 @@ function App() {
                 <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <Box sx={{ width: '30%' }}>
-                            <InputSelector 
+                            <InputSelector
                                 inputType={inputType}
                                 setInputType={setInputType}
                             />
@@ -235,19 +235,19 @@ function App() {
                                             });
                                             return newFiles;
                                         });
-                                        
+
                                         // Send video file through WebSocket
                                         if (ws && ws.readyState === WebSocket.OPEN) {
                                             const reader = new FileReader();
-                                            
+
                                             // Send metadata first
-                                            ws.send(JSON.stringify({ 
+                                            ws.send(JSON.stringify({
                                                 type: 'video_upload_start',
                                                 filename: file.name,
                                                 size: file.size,
                                                 contentType: file.type
                                             }));
-                                            
+
                                             reader.onload = async () => {
                                                 try {
                                                     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -256,12 +256,12 @@ function App() {
 
                                                     // Set binary type to blob for better memory handling
                                                     ws.binaryType = 'blob';
-                                                    
+
                                                     // Split file into chunks
                                                     const chunkSize = 1024 * 1024; // 1MB chunks
                                                     const fileData = reader.result;
                                                     const chunks = [];
-                                                    
+
                                                     for (let i = 0; i < fileData.byteLength; i += chunkSize) {
                                                         chunks.push(fileData.slice(i, i + chunkSize));
                                                     }
@@ -269,12 +269,12 @@ function App() {
                                                     // Create promise to wait for upload completion
                                                     const uploadComplete = new Promise((resolve, reject) => {
                                                         let timeoutId;
-                                                        
+
                                                         const messageHandler = (event) => {
                                                             try {
                                                                 const response = JSON.parse(event.data);
                                                                 console.log('Received upload response:', response);
-                                                                
+
                                                                 if (response.type === 'upload_complete_ack') {
                                                                     clearTimeout(timeoutId);
                                                                     ws.removeEventListener('message', messageHandler);
@@ -288,13 +288,13 @@ function App() {
                                                                 console.warn('Non-JSON message received:', event.data);
                                                             }
                                                         };
-                                                        
+
                                                         // Set timeout for upload confirmation
                                                         timeoutId = setTimeout(() => {
                                                             ws.removeEventListener('message', messageHandler);
                                                             reject(new Error('Upload confirmation timeout'));
                                                         }, 30000); // 30 second timeout
-                                                        
+
                                                         ws.addEventListener('message', messageHandler);
                                                     });
 
@@ -303,10 +303,10 @@ function App() {
                                                         if (ws.readyState !== WebSocket.OPEN) {
                                                             throw new Error('WebSocket connection lost during upload');
                                                         }
-                                                        
+
                                                         // Send chunk
                                                         ws.send(chunks[i]);
-                                                        
+
                                                         // Send progress update
                                                         ws.send(JSON.stringify({
                                                             type: 'upload_progress',
@@ -314,51 +314,51 @@ function App() {
                                                             totalChunks: chunks.length,
                                                             progress: Math.round(((i + 1) / chunks.length) * 100)
                                                         }));
-                                                        
+
                                                         // Small delay between chunks
                                                         await new Promise(resolve => setTimeout(resolve, 100));
                                                     }
-                                                        
-                                                        // Send upload complete notification
-                                                        ws.send(JSON.stringify({
-                                                            type: 'video_upload_complete',
-                                                            filename: file.name,
-                                                            totalSize: file.size
-                                                        }));
 
-                                                        console.log('Waiting for upload confirmation...');
-                                                        await uploadComplete;
-                                                        console.log('Upload completed successfully');
-                                        
-                                                        // Reset Rerun viewer
-                                                        const rerunViewer = document.querySelector('iframe');
-                                                        if (rerunViewer) {
-                                                            rerunViewer.src = rerunViewer.src;
-                                                        }
-                                                        // Reset Rerun after successful upload
-                                                        ws.send(JSON.stringify({
-                                                            type: 'reset_rerun'
-                                                        }));
+                                                    // Send upload complete notification
+                                                    ws.send(JSON.stringify({
+                                                        type: 'video_upload_complete',
+                                                        filename: file.name,
+                                                        totalSize: file.size
+                                                    }));
+
+                                                    console.log('Waiting for upload confirmation...');
+                                                    await uploadComplete;
+                                                    console.log('Upload completed successfully');
+
+                                                    // Reset Rerun viewer
+                                                    const rerunViewer = document.querySelector('iframe');
+                                                    if (rerunViewer) {
+                                                        rerunViewer.src = rerunViewer.src;
+                                                    }
+                                                    // Reset Rerun after successful upload
+                                                    // ws.send(JSON.stringify({
+                                                    //     type: 'reset_rerun'
+                                                    // }));
                                                 } catch (error) {
                                                     console.error('Upload failed:', error);
                                                     alert(`Upload failed: ${error.message}`);
                                                 }
                                             };
-                                            
+
                                             reader.onerror = (error) => {
                                                 console.error('Error reading file:', error);
                                                 alert('Failed to read file');
                                             };
-                                            
+
                                             // Read the entire file as ArrayBuffer
                                             reader.readAsArrayBuffer(file);
-                                            
+
                                             // Handle WebSocket messages
                                             const messageHandler = (event) => {
                                                 try {
                                                     const response = JSON.parse(event.data);
                                                     console.log('Received WebSocket response:', response);
-                                                    
+
                                                     if (response.type === 'upload_error') {
                                                         throw new Error(response.error);
                                                     }
@@ -367,9 +367,9 @@ function App() {
                                                     alert(`Upload error: ${error.message}`);
                                                 }
                                             };
-                                            
+
                                             ws.addEventListener('message', messageHandler);
-                                            
+
                                             // Cleanup
                                             return () => {
                                                 ws.removeEventListener('message', messageHandler);
@@ -378,7 +378,7 @@ function App() {
                                     }}
                                 />
                             )}
-                            <FileList 
+                            <FileList
                                 files={uploadedFiles}
                                 onFileSelect={(file) => {
                                     setVideoFile(file);
