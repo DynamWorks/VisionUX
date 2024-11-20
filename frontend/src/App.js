@@ -247,13 +247,21 @@ function App() {
                 
                 if (data.type === 'uploaded_files') {
                     console.log('Processing uploaded files:', data.files);
-                    const files = data.files.map(file => ({
-                        name: file.name,
-                        size: file.size,
-                        lastModified: file.modified * 1000,
-                        type: 'video/mp4'
-                    }));
-                    setUploadedFiles(files);
+                    if (Array.isArray(data.files)) {
+                        const files = data.files.map(file => ({
+                            name: file.name,
+                            size: file.size,
+                            lastModified: file.modified * 1000,
+                            type: 'video/mp4'
+                        }));
+                        setUploadedFiles(prev => {
+                            // Compare new files with previous to avoid unnecessary updates
+                            const hasChanges = JSON.stringify(prev) !== JSON.stringify(files);
+                            return hasChanges ? files : prev;
+                        });
+                    } else {
+                        console.warn('Received invalid file list format:', data.files);
+                    }
                 } else if (data.type === 'upload_complete_ack') {
                     console.log('Upload complete, refreshing file list');
                     fetchUploadedFiles();
@@ -266,20 +274,31 @@ function App() {
         if (ws) {
             ws.addEventListener('message', handleFileListMessages);
             
-            // Request file list when WebSocket connects
-            // Always request file list when WebSocket is ready
-            const requestFileList = () => {
+            // Set up connection and file list request handlers
+            const handleConnection = () => {
                 if (ws.readyState === WebSocket.OPEN) {
                     console.log('WebSocket ready, fetching files');
                     fetchUploadedFiles();
+                    
+                    // Set up periodic refresh
+                    const refreshInterval = setInterval(() => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            fetchUploadedFiles();
+                        } else {
+                            clearInterval(refreshInterval);
+                        }
+                    }, 5000); // Refresh every 5 seconds
+                    
+                    // Clean up interval on unmount
+                    return () => clearInterval(refreshInterval);
                 }
             };
 
             // Request immediately if already open
-            requestFileList();
+            handleConnection();
 
             // Set up listener for when connection opens
-            ws.addEventListener('open', requestFileList);
+            ws.addEventListener('open', handleConnection);
 
             // Also request files after successful connection message
             ws.addEventListener('message', (event) => {
