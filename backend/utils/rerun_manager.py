@@ -30,18 +30,40 @@ class RerunManager:
         try:
             if not hasattr(rr, '_recording'):
                 rr.init("video_analytics")
-                rr.serve(
+                # Use port 0 to let OS choose an available port
+                server_info = rr.serve(
                     open_browser=False,
-                    ws_port=self._ws_port,
+                    ws_port=0,  # Let OS choose available port
                     default_blueprint=rr.blueprint.Vertical(
                         rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
                     )
                 )
-                self.logger.info("Rerun initialized successfully")
+                # Update the port with the dynamically assigned one
+                if hasattr(server_info, 'ws_port'):
+                    self._ws_port = server_info.ws_port
+                self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
             else:
                 self.logger.debug("Rerun already initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
+            # Try one more time with a different port if it was a port conflict
+            if "address is already in use" in str(e):
+                try:
+                    self._ws_port = 0  # Reset to let OS choose
+                    rr.init("video_analytics")
+                    server_info = rr.serve(
+                        open_browser=False,
+                        ws_port=0,
+                        default_blueprint=rr.blueprint.Vertical(
+                            rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                        )
+                    )
+                    if hasattr(server_info, 'ws_port'):
+                        self._ws_port = server_info.ws_port
+                    self.logger.info(f"Rerun initialized successfully on alternate port {self._ws_port}")
+                    return
+                except Exception as retry_error:
+                    self.logger.error(f"Failed to initialize Rerun on retry: {retry_error}")
             raise
 
     async def start_web_server(self):
