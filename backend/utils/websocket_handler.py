@@ -86,13 +86,17 @@ class WebSocketHandler:
         """Get list of uploaded files with their metadata"""
         try:
             files = []
-            for file_path in self.uploads_path.glob('*.mp4'):
-                stat = file_path.stat()
-                files.append({
-                    'name': file_path.name,
-                    'size': stat.st_size,
-                    'modified': stat.st_mtime
-                })
+            if self.uploads_path.exists():
+                for file_path in self.uploads_path.glob('*.mp4'):
+                    stat = file_path.stat()
+                    files.append({
+                        'name': file_path.name,
+                        'size': stat.st_size,
+                        'modified': stat.st_mtime
+                    })
+                self.logger.info(f"Found {len(files)} uploaded files")
+            else:
+                self.logger.warning(f"Uploads directory does not exist: {self.uploads_path}")
             return files
         except Exception as e:
             self.logger.error(f"Error listing uploaded files: {e}")

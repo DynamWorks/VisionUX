@@ -232,13 +232,18 @@ function App() {
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'uploaded_files') {
+                    console.log('Received uploaded files:', data.files);
                     const files = data.files.map(file => ({
                         name: file.name,
                         size: file.size,
                         lastModified: file.modified * 1000,
                         type: 'video/mp4'
                     }));
-                    setUploadedFiles(files);
+                    setUploadedFiles(prev => {
+                        console.log('Previous files:', prev);
+                        console.log('New files:', files);
+                        return files;
+                    });
                 } else if (data.type === 'upload_complete_ack') {
                     // Refresh file list after successful upload
                     fetchUploadedFiles();
