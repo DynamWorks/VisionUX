@@ -30,6 +30,7 @@ function App() {
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
         let reconnectTimeout;
+        let isFirstConnection = true;
 
         const connectWebSocket = () => {
             try {
@@ -44,6 +45,14 @@ function App() {
 
                     // Send initial connection message
                     websocket.send(JSON.stringify({ type: 'connection_established' }));
+                    
+                    // Request file list on initial connection and reconnects
+                    websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
+                    console.log('Requested initial file list');
+                    
+                    if (isFirstConnection) {
+                        isFirstConnection = false;
+                    }
                 };
 
                 websocket.onmessage = (event) => {
