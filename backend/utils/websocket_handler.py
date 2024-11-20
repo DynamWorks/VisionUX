@@ -295,25 +295,24 @@ class WebSocketHandler:
                     }))
                     
                 elif message_type == 'camera_frame':
+                    # Store metadata from the message
+                    frame_metadata = {
+                        'width': data.get('width'),
+                        'height': data.get('height'),
+                        'timestamp': data.get('timestamp')
+                    }
+                    
                     # Next message will be the frame data
-                    message = await websocket.recv()
-                    if isinstance(message, bytes):
-                        # Handle live stream frame
-                        nparr = np.frombuffer(message, np.uint8)
-                        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                        if frame is not None:
-                            logging.info(f"Received camera frame: {frame.shape}")
-                            # Convert BGR to RGB for Rerun
-                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            
-                            # Log frame to Rerun using same topic as video stream
-                            timestamp = time.time()
-                            rr.log("world/video", 
-                                  rr.Image(frame_rgb),
-                                  timeless=False,
-                                  timestamp=timestamp)
-                        else:
-                            logging.error("Failed to decode camera frame")
+                    frame_data = await websocket.recv()
+                    if isinstance(frame_data, bytes):
+                        # Pass both frame data and metadata to handler
+                        success = await self.frame_handler.handle_frame(frame_data, frame_metadata)
+                        if not success:
+                            self.logger.error("Failed to process camera frame")
+                            await websocket.send(json.dumps({
+                                'type': 'camera_frame_error',
+                                'error': 'Failed to process frame'
+                            }))
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
