@@ -30,7 +30,10 @@ class WebSocketHandler:
         
     async def _init_rerun(self):
         """Initialize Rerun for websocket handling"""
-        self.initialize()
+        # Initialize through RerunManager
+        from .rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.initialize()
         
         # Start keep-alive task only once
         if not hasattr(self, '_keep_alive_task') or self._keep_alive_task is None or self._keep_alive_task.done():
