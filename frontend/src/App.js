@@ -98,6 +98,13 @@ function App() {
 
     const startCamera = async (deviceId) => {
         try {
+            // Reset Rerun video topic before starting camera
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'reset_rerun'
+                }));
+            }
+
             const constraints = {
                 video: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
