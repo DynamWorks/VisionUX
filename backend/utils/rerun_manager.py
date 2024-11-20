@@ -56,6 +56,7 @@ class RerunManager:
                         rr.serve(
                             open_browser=False,
                             ws_port=self._ws_port,
+                            blocking=False,  # Prevent blocking
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
                             ))
