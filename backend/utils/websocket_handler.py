@@ -42,15 +42,22 @@ class WebSocketHandler:
 
     async def _init_rerun(self):
         """Initialize Rerun for websocket handling"""
-        # Initialize through RerunManager
-        from .rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-        rerun_manager.initialize()
-        
-        # Start keep-alive task only once
-        if not hasattr(self, '_keep_alive_task') or self._keep_alive_task is None or self._keep_alive_task.done():
-            self._keep_alive_task = asyncio.create_task(self._keep_alive())
-            self.logger.info("Started Rerun keep-alive task")
+        try:
+            # Initialize through RerunManager
+            from .rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+            rerun_manager.initialize()
+            
+            # Start keep-alive task only once
+            if not hasattr(self, '_keep_alive_task'):
+                self._keep_alive_task = asyncio.create_task(self._keep_alive())
+                self.logger.info("Started Rerun keep-alive task")
+            elif self._keep_alive_task.done():
+                self._keep_alive_task = asyncio.create_task(self._keep_alive())
+                self.logger.info("Restarted Rerun keep-alive task")
+        except Exception as e:
+            self.logger.error(f"Error initializing Rerun: {e}")
+            raise
 
     async def _setup_connection(self, websocket):
         """Setup initial WebSocket connection"""
@@ -354,10 +361,24 @@ class WebSocketHandler:
 
     async def _handle_rerun_reset(self, websocket):
         """Handle Rerun reset request"""
-        self._init_rerun()
-        await websocket.send(json.dumps({
-            'type': 'rerun_reset_complete'
-        }))
+        try:
+            await self._init_rerun()
+            # Clear all topics
+            rr.log("world", rr.Clear(recursive=True))
+            rr.log("camera", rr.Clear(recursive=True))
+            rr.log("edge_detection", rr.Clear(recursive=True))
+            rr.log("heartbeat", rr.Clear(recursive=True))
+            self.logger.info("Cleared all Rerun topics on frontend refresh")
+            
+            await websocket.send(json.dumps({
+                'type': 'rerun_reset_complete'
+            }))
+        except Exception as e:
+            self.logger.error(f"Error resetting Rerun: {e}")
+            await websocket.send(json.dumps({
+                'type': 'error',
+                'error': f"Failed to reset Rerun: {str(e)}"
+            }))
 
     async def handle_message(self, websocket, message):
         """Route incoming messages to appropriate handlers"""
