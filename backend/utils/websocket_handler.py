@@ -169,41 +169,41 @@ class WebSocketHandler:
                                     while True:
                                         try:
                                             # Receive chunk metadata
-                                                chunk_meta = await asyncio.wait_for(
-                                                    websocket.recv(),
-                                                    timeout=chunk_timeout
-                                                )
-                                                if not isinstance(chunk_meta, str):
-                                                    logging.error("Invalid chunk metadata format")
-                                                    continue
+                                            chunk_meta = await asyncio.wait_for(
+                                                websocket.recv(),
+                                                timeout=chunk_timeout
+                                            )
+                                            if not isinstance(chunk_meta, str):
+                                                logging.error("Invalid chunk metadata format")
+                                                continue
+                                                
+                                            chunk_data = json.loads(chunk_meta)
+                                            if chunk_data.get('type') == 'video_upload_complete':
+                                                logging.info(f"Upload complete: {filename}")
+                                                break
                                                     
-                                                chunk_data = json.loads(chunk_meta)
-                                                if chunk_data.get('type') == 'video_upload_complete':
-                                                    logging.info(f"Upload complete: {filename}")
-                                                    break
-                                                        
-                                                # Send progress acknowledgment
-                                                await websocket.send(json.dumps({
-                                                    'type': 'upload_progress',
-                                                    'progress': chunk_data.get('progress', 0),
-                                                    'chunk': chunk_data.get('chunk', 0),
-                                                    'totalChunks': chunk_data.get('totalChunks', 0)
-                                                }))
-                                            
-                                                if chunk_data.get('type') == 'video_upload_chunk':
-                                                    chunk = await websocket.recv()
-                                                    if isinstance(chunk, bytes):
-                                                        offset = chunk_data.get('offset', 0)
-                                                        size = chunk_data.get('size', 0)
-                                                        
-                                                        f.write(chunk)
-                                                        bytes_received += len(chunk)
-                                                        
-                                                        progress = (bytes_received / total_size) * 100
-                                                        logging.info(f"Progress: {progress:.1f}% ({bytes_received}/{total_size} bytes)")
-                                                    else:
-                                                        logging.error("Invalid chunk data format")
-                                            except Exception as e:
+                                            # Send progress acknowledgment
+                                            await websocket.send(json.dumps({
+                                                'type': 'upload_progress',
+                                                'progress': chunk_data.get('progress', 0),
+                                                'chunk': chunk_data.get('chunk', 0),
+                                                'totalChunks': chunk_data.get('totalChunks', 0)
+                                            }))
+                                        
+                                            if chunk_data.get('type') == 'video_upload_chunk':
+                                                chunk = await websocket.recv()
+                                                if isinstance(chunk, bytes):
+                                                    offset = chunk_data.get('offset', 0)
+                                                    size = chunk_data.get('size', 0)
+                                                    
+                                                    f.write(chunk)
+                                                    bytes_received += len(chunk)
+                                                    
+                                                    progress = (bytes_received / total_size) * 100
+                                                    logging.info(f"Progress: {progress:.1f}% ({bytes_received}/{total_size} bytes)")
+                                                else:
+                                                    logging.error("Invalid chunk data format")
+                                        except Exception as e:
                                                 logging.error(f"Error during upload: {str(e)}")
                                                 await websocket.send(json.dumps({
                                                     "type": "upload_error",
