@@ -11,7 +11,7 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <iframe
-                src={`${process.env.REACT_APP_RERUN_URL}?url=${process.env.REACT_APP_RERUN_WS_URL}`}
+                src={`http://localhost:9090?url=ws://localhost:4321`}
                 style={{
                     width: '100%',
                     height: '100%',
