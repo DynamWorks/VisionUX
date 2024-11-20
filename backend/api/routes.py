@@ -3,10 +3,10 @@ import time
 import cv2
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response
-from backend.services.scene_service import SceneAnalysisService
-from backend.services.chat_service import ChatService
-from backend.utils.memory_manager import MemoryManager
-from backend.content_manager import ContentManager
+from ..services.scene_service import SceneAnalysisService
+from ..services.chat_service import ChatService
+from ..utils.memory_manager import MemoryManager
+from ..content_manager import ContentManager
 import logging
 
 # Configure logging
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 api = Blueprint('api', __name__)
 
 # Initialize services and memory store with config
-from ...utils.config import Config
+from ..utils.config import Config
 config = Config()
 scene_service = SceneAnalysisService()
 chat_service = ChatService()
