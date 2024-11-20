@@ -28,14 +28,24 @@ class VideoUploadHandler:
                 'error': str(e)
             }))
 
-    async def handle_upload_chunk(self, chunk):
+    async def handle_upload_chunk(self, websocket, chunk):
         """Handle an incoming chunk of video data"""
         if not self.current_upload:
             raise ValueError("No active upload session")
             
         self.current_upload['file_handle'].write(chunk)
         self.current_upload['bytes_received'] += len(chunk)
-        self.logger.info(f"Wrote {len(chunk)} bytes to {self.current_upload['filename']}")
+        
+        # Calculate and send progress
+        progress = (self.current_upload['bytes_received'] / self.current_upload['size']) * 100
+        await websocket.send(json.dumps({
+            'type': 'upload_progress',
+            'progress': round(progress, 2),
+            'bytes_received': self.current_upload['bytes_received'],
+            'total_bytes': self.current_upload['size']
+        }))
+        
+        self.logger.info(f"Upload progress: {progress:.1f}% ({self.current_upload['bytes_received']}/{self.current_upload['size']} bytes)")
 
     async def handle_upload_complete(self, websocket):
         """Handle upload completion"""
