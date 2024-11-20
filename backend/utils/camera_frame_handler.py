@@ -21,9 +21,20 @@ class CameraFrameHandler:
                 # Convert BGR to RGB for Rerun
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                # Log to Rerun using camera topic
+                # Initialize Rerun if needed
+                from .rerun_manager import RerunManager
+                rerun_manager = RerunManager()
+                rerun_manager.initialize()
+                
+                # Log to Rerun using camera topic with explicit timestamp
                 timestamp = time.time_ns()  # Use nanosecond precision
                 rr.log("world/video", 
+                      rr.Image(frame_rgb),
+                      timeless=False,
+                      timestamp=timestamp)
+                
+                # Log to additional topics for debugging
+                rr.log("camera/raw", 
                       rr.Image(frame_rgb),
                       timeless=False,
                       timestamp=timestamp)
