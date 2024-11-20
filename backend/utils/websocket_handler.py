@@ -22,16 +22,18 @@ class WebSocketHandler:
         self.frame_handler = CameraFrameHandler()
         self.video_streamer = None
         
-        # Initialize Rerun
-        self._init_rerun()
-        
         # Heartbeat configuration
         self.heartbeat_interval = 30  # seconds
         
-    def _init_rerun(self):
+    async def _init_rerun(self):
         """Initialize Rerun for websocket handling"""
         from .rerun_manager import RerunManager
-        RerunManager().initialize()
+        rerun_manager = RerunManager()
+        rerun_manager.initialize()
+        
+        # Start keep-alive task in the event loop
+        if rerun_manager._keep_alive_task is None or rerun_manager._keep_alive_task.done():
+            rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
 
     async def handle_connection(self, websocket):
         """Handle incoming WebSocket connections"""
@@ -275,6 +277,9 @@ class WebSocketHandler:
                 break
 
     async def start_server(self, host='localhost', port=8001):
+        # Initialize Rerun when starting the server
+        await self._init_rerun()
+        
         async with websockets.serve(self.handle_connection, host, port):
             await asyncio.Future()  # run forever
     async def handle_message(self, websocket, message):

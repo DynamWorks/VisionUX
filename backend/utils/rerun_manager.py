@@ -52,10 +52,6 @@ class RerunManager:
                 
                 # Port is fixed, just log it
                 self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
-                
-                # Start keep-alive task if not already running
-                if self._keep_alive_task is None or self._keep_alive_task.done():
-                    self._keep_alive_task = asyncio.create_task(self._keep_alive())
             else:
                 self.logger.debug("Rerun already initialized")
         except Exception as e:
