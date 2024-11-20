@@ -10,3 +10,29 @@ others/
 aider_old/
 .vscode
 sample_video.mp4
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Logs and databases
+*.log
+*.sqlite3
+logs/
+
+# Project specific
+tmp_content/
