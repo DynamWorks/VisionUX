@@ -100,14 +100,21 @@ class WebSocketHandler:
 
     async def handle_connection(self, websocket):
         """Handle incoming WebSocket connections"""
+        # Ensure uploads directory exists
+        self.uploads_path.mkdir(parents=True, exist_ok=True)
+        
         heartbeat_task = await self._setup_connection(websocket)
         
         # Send initial list of uploaded files
-        files = await self.get_uploaded_files()
-        await websocket.send(json.dumps({
-            'type': 'uploaded_files',
-            'files': files
-        }))
+        try:
+            files = await self.get_uploaded_files()
+            await websocket.send(json.dumps({
+                'type': 'uploaded_files',
+                'files': files
+            }))
+            self.logger.info(f"Sent initial file list: {len(files)} files")
+        except Exception as e:
+            self.logger.error(f"Error sending initial file list: {e}")
         
         try:
             async for message in websocket:

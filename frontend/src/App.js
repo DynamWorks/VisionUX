@@ -199,7 +199,7 @@ function App() {
         // Fetch uploaded files on mount
         const fetchUploadedFiles = () => {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.addEventListener('message', (event) => {
+                const handleMessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
                         if (data.type === 'uploaded_files') {
@@ -216,11 +216,25 @@ function App() {
                     } catch (error) {
                         console.error('Error processing uploaded files:', error);
                     }
-                });
+                };
+                
+                // Add message listener
+                ws.addEventListener('message', handleMessage);
+                
+                // Request file list
+                ws.send(JSON.stringify({
+                    type: 'get_uploaded_files'
+                }));
+                
+                // Cleanup listener on unmount
+                return () => ws.removeEventListener('message', handleMessage);
             }
         };
 
-        fetchUploadedFiles();
+        // Call fetchUploadedFiles when WebSocket is ready
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            fetchUploadedFiles();
+        }
         
         // Log mount for debugging
         console.log('App mounted');
