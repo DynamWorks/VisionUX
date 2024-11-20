@@ -9,8 +9,11 @@ class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
     _instance = None
     _initialized = False
-    _ws_port = 4321
-    _web_port = 9090
+    # Static ports for Rerun server
+    WS_PORT = 9090  # WebSocket port
+    WEB_PORT = 9091  # Web viewer port
+    _ws_port = WS_PORT
+    _web_port = WEB_PORT
     _app: Optional[web.Application] = None
     _runner: Optional[web.AppRunner] = None
     _site: Optional[web.TCPSite] = None
