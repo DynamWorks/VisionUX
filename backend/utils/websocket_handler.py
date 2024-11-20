@@ -228,24 +228,20 @@ class WebSocketHandler:
                         'error': str(e)
                     }))
 
-                if message_type == 'video_upload':
+                elif message_type == 'get_uploaded_files':
                     try:
-                        # Delegate upload handling to upload handler
-                        file_path = await self.upload_handler.handle_upload(websocket)
-                        if file_path:
-                            # Handle successful upload
-                            await self.handle_new_video(file_path)
-                            await websocket.send(json.dumps({
-                                "type": "upload_complete",
-                                "path": str(file_path),
-                                "success": True
-                            }))
-                            # Refresh file list
-                            files = await self.get_uploaded_files()
-                            await websocket.send(json.dumps({
-                                'type': 'uploaded_files',
-                                'files': files
-                            }))
+                        files = await self.get_uploaded_files()
+                        self.logger.info(f"Sending file list: {len(files)} files found")
+                        await websocket.send(json.dumps({
+                            'type': 'uploaded_files',
+                            'files': files
+                        }))
+                    except Exception as e:
+                        self.logger.error(f"Error sending file list: {e}")
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'error': f"Failed to get file list: {str(e)}"
+                        }))
                     except Exception as e:
                         self.logger.error(f"Error handling video upload: {e}")
                         await websocket.send(json.dumps({
