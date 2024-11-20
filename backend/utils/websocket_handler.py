@@ -74,14 +74,6 @@ class WebSocketHandler:
                                 raise ValueError("No active upload session")
                             logging.info(f"Received chunk: offset={data.get('offset')}, size={data.get('size')}, progress={data.get('progress')}%")
                             
-                        elif message_type == 'init_rerun':
-                            # Initialize Rerun when WebSocket connects
-                            await self._init_rerun()
-                            self.logger.info("Initialized Rerun after WebSocket connection")
-                            await websocket.send(json.dumps({
-                                'type': 'rerun_init_complete'
-                            }))
-                    
                         elif message_type == 'reset_rerun':
                             # Just reset the logs without reinitializing
                             rr.Clear(recursive=True)
