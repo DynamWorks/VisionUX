@@ -310,10 +310,10 @@ class WebSocketHandler:
         await self._init_rerun()
         
         async with websockets.serve(
-            self.handle_connection, 
-            host, 
-            port,
-            path="/ws"
+            ws_handler=self.handle_connection, 
+            host=host, 
+            port=port,
+            process_request=lambda path, headers: None if path == "/ws" else (404, [], b'Not Found')
         ):
             self.logger.info(f"WebSocket server started on ws://{host}:{port}/ws")
             await asyncio.Future()  # run forever
