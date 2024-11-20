@@ -237,6 +237,7 @@ function App() {
 
         // Handle WebSocket messages for file list updates
         const handleFileListMessages = (event) => {
+            if (!event.data) return;
             try {
                 const data = JSON.parse(event.data);
                 console.log('Received WebSocket message:', data);
@@ -263,15 +264,32 @@ function App() {
             ws.addEventListener('message', handleFileListMessages);
             
             // Request file list when WebSocket connects
-            if (ws.readyState === WebSocket.OPEN) {
-                console.log('WebSocket ready, fetching files');
-                fetchUploadedFiles();
-            } else {
-                ws.addEventListener('open', () => {
-                    console.log('WebSocket opened, fetching files');
+            // Always request file list when WebSocket is ready
+            const requestFileList = () => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    console.log('WebSocket ready, fetching files');
                     fetchUploadedFiles();
-                }, { once: true });
-            }
+                }
+            };
+
+            // Request immediately if already open
+            requestFileList();
+
+            // Set up listener for when connection opens
+            ws.addEventListener('open', requestFileList);
+
+            // Also request files after successful connection message
+            ws.addEventListener('message', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'connection_established') {
+                        console.log('Connection established, fetching files');
+                        fetchUploadedFiles();
+                    }
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            });
         }
 
         return () => {
