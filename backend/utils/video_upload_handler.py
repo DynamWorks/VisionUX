@@ -13,13 +13,36 @@ class VideoUploadHandler:
     async def handle_upload_start(self, websocket, data):
         """Handle the start of a video upload"""
         try:
+            filename = data.get('filename')
+            size = data.get('size')
+            file_path = self.uploads_path / filename
+
+            # Check if file already exists
+            if file_path.exists():
+                self.logger.warning(f"File already exists: {filename}")
+                await websocket.send(json.dumps({
+                    'type': 'upload_error',
+                    'error': 'File already exists'
+                }))
+                return
+
+            # Validate file size (e.g., max 500MB)
+            max_size = 500 * 1024 * 1024  # 500MB in bytes
+            if size > max_size:
+                self.logger.warning(f"File too large: {size} bytes")
+                await websocket.send(json.dumps({
+                    'type': 'upload_error',
+                    'error': f'File size exceeds maximum allowed size of {max_size/1024/1024}MB'
+                }))
+                return
+
             self.current_upload = {
-                'filename': data.get('filename'),
-                'size': data.get('size'),
-                'file_handle': open(self.uploads_path / data.get('filename'), 'wb'),
+                'filename': filename,
+                'size': size,
+                'file_handle': open(file_path, 'wb'),
                 'bytes_received': 0
             }
-            self.logger.info(f"Starting video upload: {data.get('filename')} ({data.get('size')} bytes)")
+            self.logger.info(f"Starting video upload: {filename} ({size} bytes)")
             await websocket.send(json.dumps({'type': 'upload_start_ack'}))
         except Exception as e:
             self.logger.error(f"Error starting upload: {e}")
