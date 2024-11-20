@@ -1,4 +1,5 @@
 from flask import Flask, send_from_directory
+from flask_cors import CORS
 from api.routes import api
 import threading
 import asyncio
@@ -19,7 +20,9 @@ class BackendApp:
         # Setup logging
         self.setup_logging()
         self.app = Flask(__name__, static_folder='../frontend/build')
-        logging.info("Flask app initialized")
+        # Enable CORS
+        CORS(self.app, resources={r"/api/*": {"origins": "*"}})
+        logging.info("Flask app initialized with CORS support")
         self.server = None
         self.content_manager = None
         self.models_loaded = False
