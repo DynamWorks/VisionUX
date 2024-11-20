@@ -40,26 +40,28 @@ class RerunManager:
     def initialize(self):
         """Initialize Rerun if not already initialized"""
         try:
-            # Only clear and reinitialize if not already recording
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")
+                rr.init("video_analytics", spawn=False)  # Don't spawn new process
                 try:
-                    rr.serve(
-                        open_browser=False,
-                        ws_port=self._ws_port,
-                        default_blueprint=rr.blueprint.Vertical(
-                            rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                    if not hasattr(self, '_server_started'):
+                        rr.serve(
+                            open_browser=False,
+                            ws_port=self._ws_port,
+                            default_blueprint=rr.blueprint.Vertical(
+                                rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
+                            )
                         )
-                    )
-                    self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
+                        self._server_started = True
+                        self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
                 except Exception as port_error:
                     if "address already in use" in str(port_error).lower():
                         self.logger.info("Rerun server already running, continuing with existing instance")
+                        self._server_started = True
                     else:
                         raise
             else:
-                # Clear existing logs but keep the recording
-                rr.Clear(recursive=True)  # Use reset() instead of clear()
+                # Just reset the recording state without restarting server
+                rr.reset()  # Use reset() instead of Clear()
                 self.logger.debug("Reset Rerun logs while maintaining existing connection")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
