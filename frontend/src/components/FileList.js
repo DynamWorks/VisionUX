@@ -38,7 +38,7 @@ const FileList = ({ files, onFileSelect, activeFile, onPlayPause, onStop, isPlay
                                 </ListItemIcon>
                                 <ListItemText 
                                     primary={file.name}
-                                    secondary={`Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`}
+                                    secondary={file.size ? `Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB` : ''}
                                 />
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
