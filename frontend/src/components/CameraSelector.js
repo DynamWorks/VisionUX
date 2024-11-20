@@ -46,6 +46,11 @@ const CameraSelector = ({
                     startIcon={<VideocamIcon />}
                     onClick={() => {
                         if (ws?.readyState === WebSocket.OPEN) {
+                            // First stop any playing video
+                            ws.send(JSON.stringify({
+                                type: 'stop_video_stream'
+                            }));
+                            // Then start camera stream
                             ws.send(JSON.stringify({
                                 type: 'start_camera_stream',
                                 deviceId: selectedDevice
