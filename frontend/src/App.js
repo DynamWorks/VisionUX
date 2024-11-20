@@ -250,7 +250,9 @@ function App() {
                 if (data.type === 'uploaded_files') {
                     console.log('Processing uploaded files:', data.files);
                     if (Array.isArray(data.files)) {
-                        const files = data.files.map(file => ({
+                        // Sort files by last modified date
+                        const sortedFiles = data.files.sort((a, b) => b.modified - a.modified);
+                        const files = sortedFiles.map(file => ({
                             name: file.name,
                             size: file.size,
                             lastModified: file.modified * 1000,
@@ -479,11 +481,26 @@ function App() {
                                                     await uploadComplete;
                                                     console.log('Upload completed successfully');
 
-                                                    // Reset Rerun viewer
+                                                    // Reset Rerun viewer and request file list
                                                     const rerunViewer = document.querySelector('iframe');
                                                     if (rerunViewer) {
                                                         rerunViewer.src = rerunViewer.src;
                                                     }
+                                    
+                                                    // Request updated file list
+                                                    fetchUploadedFiles();
+                                    
+                                                    // Set up retry mechanism for file list
+                                                    let retryCount = 0;
+                                                    const maxRetries = 3;
+                                                    const retryInterval = setInterval(() => {
+                                                        if (retryCount < maxRetries) {
+                                                            fetchUploadedFiles();
+                                                            retryCount++;
+                                                        } else {
+                                                            clearInterval(retryInterval);
+                                                        }
+                                                    }, 1000);
                                                     // Reset Rerun after successful upload
                                                     // ws.send(JSON.stringify({
                                                     //     type: 'reset_rerun'
