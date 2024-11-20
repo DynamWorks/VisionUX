@@ -122,31 +122,34 @@ class WebSocketHandler:
                     continue
                     
                 await self.message_router.route_message(websocket, message)
-                                await websocket.send(json.dumps({
-                                    'type': 'uploaded_files',
-                                    'files': files
-                                }))
-                            except Exception as e:
-                                self.logger.error(f"Error sending file list: {e}")
-                                await websocket.send(json.dumps({
-                                    'type': 'error',
-                                    'error': f"Failed to get file list: {str(e)}"
-                                }))
-                        elif message_type == 'video_upload_start':
-                            # Clear all topics
-                            rr.log("world", rr.Clear(recursive=True))
-                            rr.log("camera", rr.Clear(recursive=True))
-                            rr.log("edge_detection", rr.Clear(recursive=True))
-                            rr.log("heartbeat", rr.Clear(recursive=True))
-                            self.logger.info("Cleared all Rerun topics on frontend refresh")
-                            # Ensure Rerun stays alive
-                            from .rerun_manager import RerunManager
-                            rerun_manager = RerunManager()
-                            if not hasattr(rerun_manager, '_keep_alive_task') or rerun_manager._keep_alive_task.done():
-                                rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
-                            await websocket.send(json.dumps({
-                                'type': 'rerun_reset_complete'
-                            }))
+                
+                try:
+                    files = await self.get_uploaded_files()
+                    await websocket.send(json.dumps({
+                        'type': 'uploaded_files',
+                        'files': files
+                    }))
+                except Exception as e:
+                    self.logger.error(f"Error sending file list: {e}")
+                    await websocket.send(json.dumps({
+                        'type': 'error',
+                        'error': f"Failed to get file list: {str(e)}"
+                    }))
+                elif message_type == 'video_upload_start':
+                    # Clear all topics
+                    rr.log("world", rr.Clear(recursive=True))
+                    rr.log("camera", rr.Clear(recursive=True))
+                    rr.log("edge_detection", rr.Clear(recursive=True))
+                    rr.log("heartbeat", rr.Clear(recursive=True))
+                    self.logger.info("Cleared all Rerun topics on frontend refresh")
+                    # Ensure Rerun stays alive
+                    from .rerun_manager import RerunManager
+                    rerun_manager = RerunManager()
+                    if not hasattr(rerun_manager, '_keep_alive_task') or rerun_manager._keep_alive_task.done():
+                        rerun_manager._keep_alive_task = asyncio.create_task(rerun_manager._keep_alive())
+                    await websocket.send(json.dumps({
+                        'type': 'rerun_reset_complete'
+                    }))
                             
                         elif message_type == 'video_upload_complete':
                             if hasattr(self, 'current_upload'):
