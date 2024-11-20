@@ -362,13 +362,22 @@ class WebSocketHandler:
     async def _handle_rerun_reset(self, websocket):
         """Handle Rerun reset request"""
         try:
-            await self._init_rerun()
+            # Initialize Rerun if needed
+            if not hasattr(rr, '_recording'):
+                await self._init_rerun()
+            
             # Clear all topics
             rr.log("world", rr.Clear(recursive=True))
             rr.log("camera", rr.Clear(recursive=True))
             rr.log("edge_detection", rr.Clear(recursive=True))
             rr.log("heartbeat", rr.Clear(recursive=True))
             self.logger.info("Cleared all Rerun topics on frontend refresh")
+            
+            # Ensure keep-alive task is running
+            if not hasattr(self, '_keep_alive_task'):
+                self._keep_alive_task = asyncio.create_task(self._keep_alive())
+            elif self._keep_alive_task and self._keep_alive_task.done():
+                self._keep_alive_task = asyncio.create_task(self._keep_alive())
             
             await websocket.send(json.dumps({
                 'type': 'rerun_reset_complete'
