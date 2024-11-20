@@ -10,10 +10,10 @@ class RerunManager:
     _instance = None
     _initialized = False
     # Static ports for Rerun server
-    WS_PORT = 4321  # WebSocket port
-    WEB_PORT = 9090  # Web viewer port
-    _ws_port = WS_PORT
-    _web_port = WEB_PORT
+    WS_PORT = 4321  # WebSocket port for Rerun server
+    WEB_PORT = 9090  # Web viewer port for Rerun UI
+    _ws_port = WS_PORT  # WebSocket port for data streaming
+    _web_port = WEB_PORT  # HTTP port for web viewer
     _app: Optional[web.Application] = None
     _runner: Optional[web.AppRunner] = None
     _site: Optional[web.TCPSite] = None
