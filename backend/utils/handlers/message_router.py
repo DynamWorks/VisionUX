@@ -22,12 +22,18 @@ class MessageRouter:
             if isinstance(message, str):
                 data = json.loads(message)
                 message_type = data.get('type')
+                self.logger.debug(f"Routing message type: {message_type}")
                 
                 if message_type in self.handlers:
                     handler = self.handlers[message_type]
                     await handler.handle(websocket, data)
+                    self.logger.debug(f"Handler completed for {message_type}")
                 else:
                     self.logger.warning(f"No handler for message type: {message_type}")
+                    await websocket.send(json.dumps({
+                        'type': 'error',
+                        'error': f'No handler for message type: {message_type}'
+                    }))
                     
             elif isinstance(message, bytes):
                 # Handle binary data (e.g., video chunks)

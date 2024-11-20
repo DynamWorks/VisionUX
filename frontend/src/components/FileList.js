@@ -3,7 +3,17 @@ import { Box, List, ListItem, ListItemIcon, ListItemText, Typography, Button } f
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 
 const FileList = ({ files, onFileSelect, activeFile, onPlayPause, onStop, isPlaying }) => {
-    if (!files || files.length === 0) {
+    if (!files) {
+        return (
+            <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                    Loading files...
+                </Typography>
+            </Box>
+        );
+    }
+    
+    if (files.length === 0) {
         return (
             <Box sx={{ p: 2, textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
