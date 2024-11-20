@@ -17,18 +17,23 @@ class CameraFrameHandler:
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
             if frame is not None:
-                self.logger.info(f"Received camera frame: {frame.shape}")
+                self.logger.debug(f"Received camera frame: {frame.shape}")  # Changed to debug to reduce log spam
                 # Convert BGR to RGB for Rerun
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                # Log to Rerun using same topic as video stream
-                timestamp = time.time()
+                # Log to Rerun using camera topic
+                timestamp = time.time_ns()  # Use nanosecond precision
                 rr.log("world/video", 
                       rr.Image(frame_rgb),
                       timeless=False,
                       timestamp=timestamp)
+                
+                # Send frame received acknowledgment
+                return True
             else:
                 self.logger.error("Failed to decode camera frame")
+                return False
                 
         except Exception as e:
             self.logger.error(f"Error processing camera frame: {e}")
+            return False

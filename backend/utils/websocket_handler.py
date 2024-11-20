@@ -328,7 +328,12 @@ class WebSocketHandler:
                     device_id = data.get('deviceId')
                     logging.info(f"Starting camera stream from device: {device_id}")
                     # Reset Rerun for new stream
-                    #rr.log("world", rr.Clear(recursive=True))
+                    rr.log("world", rr.Clear(recursive=True))
+                    rr.log("camera", rr.Clear(recursive=True))
+                    rr.log("edge_detection", rr.Clear(recursive=True))
+                    await websocket.send(json.dumps({
+                        'type': 'camera_stream_started'
+                    }))
                     
                 elif message_type == 'camera_frame':
                     # Next message will be the frame data
