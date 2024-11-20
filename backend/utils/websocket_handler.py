@@ -122,11 +122,6 @@ class WebSocketHandler:
                     continue
                     
                 await self.message_router.route_message(websocket, message)
-                        
-                        if message_type == 'get_uploaded_files':
-                            try:
-                                files = await self.get_uploaded_files()
-                                self.logger.info(f"Sending file list: {len(files)} files found")
                                 await websocket.send(json.dumps({
                                     'type': 'uploaded_files',
                                     'files': files
@@ -200,20 +195,12 @@ class WebSocketHandler:
                             self.current_upload['file_handle'].write(message)
                             self.current_upload['bytes_received'] += len(message)
                             logging.info(f"Wrote {len(message)} bytes to {self.current_upload['filename']}")
-                except Exception as e:
-                    logging.error(f"Error processing message: {str(e)}")
-                    if hasattr(self, 'current_upload'):
-                        self.current_upload['file_handle'].close()
-                        delattr(self, 'current_upload')
-                    await websocket.send(json.dumps({
-                        'type': 'upload_error',
-                        'error': str(e)
-                    }))
-
-                elif message_type == 'get_uploaded_files':
-                    try:
-                        files = await self.get_uploaded_files()
-                        self.logger.info(f"Sending file list: {len(files)} files found")
+        except Exception as e:
+            self.logger.error(f"Error processing message: {e}")
+            await websocket.send(json.dumps({
+                'type': 'error',
+                'error': str(e)
+            }))
                         await websocket.send(json.dumps({
                             'type': 'uploaded_files',
                             'files': files
