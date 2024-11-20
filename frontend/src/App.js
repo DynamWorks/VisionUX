@@ -22,10 +22,9 @@ function App() {
     const [ws, setWs] = useState(null);
 
     useEffect(() => {
-        if (!process.env.REACT_APP_WS_URL) {
-            console.error('WebSocket URL is not defined in environment variables');
-            return;
-        }
+        const wsPort = process.env.REACT_APP_WS_PORT || '8001';
+        const wsHost = process.env.REACT_APP_WS_HOST || 'localhost';
+        const wsUrl = `ws://${wsHost}:${wsPort}/ws`;
 
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
@@ -34,7 +33,6 @@ function App() {
 
         const connectWebSocket = () => {
             try {
-                const wsUrl = process.env.REACT_APP_WS_URL;
                 console.log('Connecting to WebSocket:', wsUrl);
                 const websocket = new WebSocket(wsUrl);
 

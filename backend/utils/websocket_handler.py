@@ -186,7 +186,7 @@ class WebSocketHandler:
             ws_handler=self.handle_connection, 
             host=host, 
             port=port,
-            process_request=lambda path, headers: None if path == "/ws" else (404, [], b'Not Found')
+            process_request=None  # Allow any path for now while debugging
         ):
             self.logger.info(f"WebSocket server started on ws://{host}:{port}/ws")
             await asyncio.Future()  # run forever
