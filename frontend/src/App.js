@@ -288,9 +288,19 @@ function App() {
                                             URL.revokeObjectURL(URL.createObjectURL(videoFile));
                                         }
                                         setVideoFile(file);
-                                        // Update uploaded files list, keeping only recent files
+                                        // Update uploaded files list, checking for duplicates
                                         setUploadedFiles(prev => {
-                                            // Keep only the 5 most recent files
+                                            // Check if file already exists
+                                            const fileExists = prev.some(existingFile => 
+                                                existingFile.name === file.name
+                                            );
+                                            
+                                            if (fileExists) {
+                                                console.log(`File ${file.name} already exists in the list`);
+                                                return prev;
+                                            }
+                                            
+                                            // Add new file and keep only 5 most recent
                                             const newFiles = [file, ...prev.slice(0, 4)];
                                             // Clean up old URLs
                                             prev.slice(5).forEach(oldFile => {
