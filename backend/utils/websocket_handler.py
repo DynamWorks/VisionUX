@@ -168,6 +168,7 @@ class WebSocketHandler:
                                     with open(file_path, 'wb') as f:
                                         while True:
                                             try:
+                                                # Receive chunk metadata
                                                 chunk_meta = await asyncio.wait_for(
                                                     websocket.recv(),
                                                     timeout=chunk_timeout
@@ -180,6 +181,14 @@ class WebSocketHandler:
                                                 if chunk_data.get('type') == 'video_upload_complete':
                                                     logging.info(f"Upload complete: {filename}")
                                                     break
+                                                        
+                                                # Send progress acknowledgment
+                                                await websocket.send(json.dumps({
+                                                    'type': 'upload_progress',
+                                                    'progress': chunk_data.get('progress', 0),
+                                                    'chunk': chunk_data.get('chunk', 0),
+                                                    'totalChunks': chunk_data.get('totalChunks', 0)
+                                                }))
                                             
                                                 if chunk_data.get('type') == 'video_upload_chunk':
                                                     chunk = await websocket.recv()
