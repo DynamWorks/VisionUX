@@ -17,6 +17,9 @@ class WebSocketHandler:
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
         
+        # Constants
+        self.chunk_timeout = 30  # seconds
+        
         # Initialize handlers and services
         self.upload_handler = VideoUploadHandler(self.uploads_path)
         self.frame_handler = CameraFrameHandler()
@@ -162,6 +165,10 @@ class WebSocketHandler:
                         if isinstance(message, str):
                             data = json.loads(message)
                             if data.get('type') == 'video_upload_start':
+                                filename = data.get('filename')
+                                total_size = data.get('size', 0)
+                                bytes_received = 0
+                                
                                 await self.upload_handler.handle_upload_start(websocket, data)
                                 
                                 # Open file for writing chunks
@@ -171,7 +178,7 @@ class WebSocketHandler:
                                             # Receive chunk metadata
                                             chunk_meta = await asyncio.wait_for(
                                                 websocket.recv(),
-                                                timeout=chunk_timeout
+                                                timeout=self.chunk_timeout
                                             )
                                             if not isinstance(chunk_meta, str):
                                                 logging.error("Invalid chunk metadata format")
@@ -313,7 +320,7 @@ class WebSocketHandler:
         else:
             await self.frame_handler.handle_frame(message)
 
-    async def _handle_upload_complete(self):
+    async def _handle_upload_complete(self, websocket):
         """Handle video upload completion"""
         file_path = await self.upload_handler.handle_upload_complete(websocket)
         if file_path:
