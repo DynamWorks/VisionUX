@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, List, ListItem, ListItemIcon, ListItemText, Typography } from '@mui/material';
+import { Box, List, ListItem, ListItemIcon, ListItemText, Typography, Button } from '@mui/material';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 
 const FileList = ({ files, onFileSelect, activeFile, onPlayPause, onStop, isPlaying }) => {
