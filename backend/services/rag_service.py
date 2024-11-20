@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from ...utils.config import Config
+from backend.utils.config import Config
 from langchain_community.vectorstores import Chroma
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.chains import RetrievalQAWithSourcesChain
