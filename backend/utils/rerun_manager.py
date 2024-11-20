@@ -33,15 +33,26 @@ class RerunManager:
     
     async def _keep_alive(self):
         """Keep Rerun connection alive with periodic heartbeats"""
+        retry_count = 0
+        max_retries = 3
         while True:
             try:
                 await asyncio.sleep(5)
                 if hasattr(rr, '_recording'):
                     # Send periodic heartbeat only if already initialized
                     rr.log("heartbeat", rr.Timestamp(time.time_ns()))
+                    retry_count = 0  # Reset retry count on successful heartbeat
+            except ConnectionResetError:
+                retry_count += 1
+                self.logger.warning(f"Connection reset during heartbeat (attempt {retry_count}/{max_retries})")
+                if retry_count >= max_retries:
+                    self.logger.error("Max heartbeat retries reached, reinitializing Rerun")
+                    await self._reinitialize()
+                    retry_count = 0
+                await asyncio.sleep(2 * retry_count)  # Exponential backoff
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
-                await asyncio.sleep(2)  # Brief pause before retry
+                await asyncio.sleep(2)
 
     def initialize(self):
         """Initialize Rerun if not already initialized"""
@@ -113,15 +124,31 @@ class RerunManager:
         self._active_connections = max(0, self._active_connections - 1)
         self.logger.info(f"Unregistered connection. Active connections: {self._active_connections}")
         
+    async def _reinitialize(self):
+        """Reinitialize Rerun connection after failure"""
+        try:
+            # Clear existing state
+            if hasattr(rr, '_recording'):
+                delattr(rr, '_recording')
+            
+            # Stop existing server if running
+            if hasattr(self, '_server_started'):
+                delattr(self, '_server_started')
+            
+            # Reinitialize
+            self.initialize()
+            self.logger.info("Successfully reinitialized Rerun connection")
+        except Exception as e:
+            self.logger.error(f"Failed to reinitialize Rerun: {e}")
+            raise
+
     def reset(self):
         """Clear Rerun data and reinitialize"""
         try:
             rr.Clear(recursive=True)
             self.logger.info("Rerun data cleared successfully")
             # Force reinitialization
-            if hasattr(rr, '_recording'):
-                delattr(rr, '_recording')
-            self.initialize()
+            asyncio.create_task(self._reinitialize())
         except Exception as e:
             self.logger.error(f"Failed to reset Rerun: {e}")
             raise
