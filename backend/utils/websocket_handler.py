@@ -280,11 +280,16 @@ class WebSocketHandler:
                         
                 elif message_type == 'start_camera_stream':
                     device_id = data.get('deviceId')
+                    if self.video_streamer:
+                        self.video_streamer.stop()
+                        self.video_streamer = None
+                        self.logger.info("Video stream stopped")
                     logging.info(f"Starting camera stream from device: {device_id}")
                     # Reset Rerun for new stream
-                    rr.log("world", rr.Clear(recursive=True))
-                    rr.log("camera", rr.Clear(recursive=True))
-                    rr.log("edge_detection", rr.Clear(recursive=True))
+                    # rr.log("world", rr.Clear(recursive=True))
+                    # rr.log("camera", rr.Clear(recursive=True))
+                    # rr.log("edge_detection", rr.Clear(recursive=True))
+
                     await websocket.send(json.dumps({
                         'type': 'camera_stream_started'
                     }))
