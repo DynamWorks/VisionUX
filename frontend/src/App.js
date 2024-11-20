@@ -40,7 +40,8 @@ function App() {
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket); // Only set ws when connection is established
                     
-                    // WebSocket is now connected and ready
+                    // Initialize Rerun after WebSocket connection
+                    websocket.send(JSON.stringify({ type: 'init_rerun' }));
                 };
 
                 websocket.onmessage = (event) => {
