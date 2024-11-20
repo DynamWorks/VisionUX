@@ -41,7 +41,7 @@ class RerunManager:
                     self.logger.debug("Rerun server reinitialized")
                 
                 # Send periodic heartbeat
-                rr.log("heartbeat", rr.Timestamp(time.time_ns()))
+                rr.log("heartbeat", rr.timestamp(time.time_ns()))
                 
                 # Brief sleep between heartbeats
                 await asyncio.sleep(5)
@@ -59,7 +59,7 @@ class RerunManager:
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics", spawn=True, blocking=False, shutdown_after=None)  # Keep server alive indefinitely
+                rr.init("video_analytics")#, spawn=True, blocking=False, shutdown_after=None)  # Keep server alive indefinitely
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
