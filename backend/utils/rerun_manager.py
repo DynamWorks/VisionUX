@@ -42,16 +42,15 @@ class RerunManager:
         try:
             if not hasattr(rr, '_recording'):
                 rr.init("video_analytics", spawn=True)  # Use spawn=True for better process isolation
-                server_info = rr.serve(
+                rr.serve(
                     open_browser=False,
-                    ws_port=0,  # Always use dynamic port allocation
+                    ws_port=self._ws_port,  # Use fixed port
                     default_blueprint=rr.blueprint.Vertical(
                         rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
                     )
                 )
                 
-                if hasattr(server_info, 'ws_port'):
-                    self._ws_port = server_info.ws_port
+                # Port is fixed, just log it
                     self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
                     
                     # Start keep-alive task if not already running
