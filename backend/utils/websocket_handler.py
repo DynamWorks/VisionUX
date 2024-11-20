@@ -324,6 +324,12 @@ class WebSocketHandler:
                         self.video_streamer = None
                         self.logger.info("Video stream stopped")
                         
+                elif message_type == 'start_camera_stream':
+                    device_id = data.get('deviceId')
+                    logging.info(f"Starting camera stream from device: {device_id}")
+                    # Reset Rerun for new stream
+                    rr.log("world", rr.Clear(recursive=True))
+                    
                 elif message_type == 'camera_frame':
                     # Next message will be the frame data
                     message = await websocket.recv()
@@ -333,22 +339,17 @@ class WebSocketHandler:
                         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                         if frame is not None:
                             logging.info(f"Received camera frame: {frame.shape}")
+                            # Convert BGR to RGB for Rerun
+                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            
+                            # Log frame to Rerun using same topic as video stream
+                            timestamp = time.time()
+                            rr.log("world/video", 
+                                  rr.Image(frame_rgb),
+                                  timeless=False,
+                                  timestamp=timestamp)
                         else:
                             logging.error("Failed to decode camera frame")
-                            continue
-                            
-                        # Convert BGR to RGB for Rerun
-                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        
-                        # Process frame with edge detection
-                        #edges_rgb = self.edge_detector.detect_edges(frame)
-                        
-                        # Log frame to Rerun using consistent topic
-                        timestamp = time.time()
-                        rr.log("world/video", 
-                              rr.Image(frame_rgb),
-                              timeless=False,
-                              timestamp=timestamp)
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:

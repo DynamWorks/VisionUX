@@ -43,7 +43,15 @@ const CameraSelector = ({
                 <Button
                     variant="contained"
                     startIcon={<VideocamIcon />}
-                    onClick={() => startCamera(selectedDevice)}
+                    onClick={() => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'start_camera_stream',
+                                deviceId: selectedDevice
+                            }));
+                        }
+                        startCamera(selectedDevice);
+                    }}
                     disabled={isStreaming || !selectedDevice}
                     sx={{ flex: 1 }}
                 >
