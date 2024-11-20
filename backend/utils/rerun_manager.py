@@ -41,7 +41,7 @@ class RerunManager:
         """Initialize Rerun if not already initialized"""
         try:
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics", spawn=True)  # Use spawn=True for better process isolation
+                rr.init("video_analytics")#, spawn=True)  # Use spawn=True for better process isolation
                 rr.serve(
                     open_browser=False,
                     ws_port=self._ws_port,  # Use fixed port
