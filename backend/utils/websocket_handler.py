@@ -44,6 +44,7 @@ class WebSocketHandler:
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
         rerun_manager.register_connection()
+        rerun_manager.initialize()  # Ensure Rerun is initialized for new connection
         
         # Increase WebSocket message size limit (100MB)
         websocket.max_size = 1024 * 1024 * 100
@@ -145,34 +146,13 @@ class WebSocketHandler:
                     }))
 
                 if message_type == 'video_upload':
-                    # Next message will be the video file
+                    # Delegate to upload handler
                     try:
                         message = await websocket.recv()
                         if isinstance(message, str):
-                            try:
-                                data = json.loads(message)
-                                if data.get('type') == 'video_upload_start':
-                                    # Ensure uploads directory exists
-                                    self.uploads_path.mkdir(parents=True, exist_ok=True)
-                                
-                                    # Get file metadata
-                                    filename = data.get('filename', f"video_{len(self.clients)}_{int(time.time())}.mp4")
-                                    file_path = self.uploads_path / filename
-                                
-                                    # Create uploads directory if it doesn't exist
-                                    self.uploads_path.mkdir(parents=True, exist_ok=True)
-                                    
-                                    total_size = data.get('size', 0)
-                                    bytes_received = 0
-                                    chunk_timeout = 30  # seconds
-                                    
-                                    logging.info(f"Starting upload of {filename} ({total_size} bytes)")
-                                    
-                                    # Send acknowledgment
-                                    await websocket.send(json.dumps({
-                                        "type": "upload_start_ack",
-                                        "filename": filename
-                                    }))
+                            data = json.loads(message)
+                            if data.get('type') == 'video_upload_start':
+                                await self.upload_handler.handle_upload_start(websocket, data)
                                     
                                     # Open file for writing chunks
                                     with open(file_path, 'wb') as f:
