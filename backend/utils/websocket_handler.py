@@ -57,20 +57,23 @@ class WebSocketHandler:
         self.clients.add(websocket)
         websocket.max_size = 1024 * 1024 * 100  # 100MB limit
         
-        # Initialize Rerun
+        # Initialize Rerun only if not already initialized
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
+        if not hasattr(rerun_manager, '_server_started'):
+            rerun_manager.initialize()
         rerun_manager.register_connection()
-        rerun_manager.initialize()
         
-        return asyncio.create_task(self.send_heartbeat(websocket))
+        heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
+        return heartbeat_task
 
     async def _cleanup_connection(self, websocket):
         """Cleanup when connection closes"""
-        self.clients.remove(websocket)
-        from .rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-        rerun_manager.unregister_connection()
+        if websocket in self.clients:
+            self.clients.remove(websocket)
+            from .rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+            rerun_manager.unregister_connection()
 
     async def handle_connection(self, websocket):
         """Handle incoming WebSocket connections"""
