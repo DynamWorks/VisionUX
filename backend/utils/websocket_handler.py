@@ -71,7 +71,7 @@ class WebSocketHandler:
                             
                         elif message_type == 'reset_rerun':
                             # Just reset the logs without reinitializing
-                            rr.reset()
+                            rr.Clear(recursive=True)
                             self.logger.info("Reset Rerun logs on frontend refresh")
                             await websocket.send(json.dumps({
                                 'type': 'rerun_reset_complete'
