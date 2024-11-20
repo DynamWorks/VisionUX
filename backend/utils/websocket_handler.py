@@ -124,7 +124,15 @@ class WebSocketHandler:
                             self.logger.info("Cleared all Rerun topics on frontend refresh")
                             
                             # Ensure Rerun stays alive
-                            if not hasattr(self.rerun_manager, '_keep_alive_task') or self.rerun_manager._keep_alive_task.done():
+                            # Initialize _keep_alive_task if not present
+                            if not hasattr(self.rerun_manager, '_keep_alive_task'):
+                                self.rerun_manager._keep_alive_task = None
+            
+                            # Create new task if none exists or previous one is done
+                            if self.rerun_manager._keep_alive_task is None or (
+                                hasattr(self.rerun_manager._keep_alive_task, 'done') and 
+                                self.rerun_manager._keep_alive_task.done()
+                            ):
                                 self.rerun_manager._keep_alive_task = asyncio.create_task(self.rerun_manager._keep_alive())
                             
                             await websocket.send(json.dumps({
