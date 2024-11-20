@@ -33,7 +33,7 @@ class RerunManager:
                 # Use port 0 to let OS choose an available port
                 server_info = rr.serve(
                     open_browser=False,
-                    ws_port=0,  # Let OS choose available port
+                    ws_port=4321,  # Let OS choose available port
                     default_blueprint=rr.blueprint.Vertical(
                         rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
                     )
