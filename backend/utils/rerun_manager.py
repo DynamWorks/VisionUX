@@ -50,9 +50,7 @@ class RerunManager:
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video", name="Video Stream")
-                            ),
-                            shutdown_after=3600,  # Keep server alive for 1 hour
-                            blocking=False  # Don't block the main thread
+                            )
                         )
                         # Add delay to ensure server is ready
                         time.sleep(2)
