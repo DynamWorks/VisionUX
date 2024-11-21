@@ -80,18 +80,35 @@ class RerunManager:
             
             # Start server only if not already started
             if not hasattr(self, '_server_started'):
-                rr.serve(
-                    open_browser=False,
-                    ws_port=self._ws_port,
-                    web_port=self._web_port,
-                    default_blueprint=rr.blueprint.Vertical(
-                        rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
+                try:
+                    rr.serve(
+                        open_browser=False,
+                        ws_port=self._ws_port,
+                        web_port=self._web_port,
+                        default_blueprint=rr.blueprint.Vertical(
+                            rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
+                        )
                     )
-                )
-                time.sleep(2)  # Allow server to start
-                self._server_started = True
-                self._initialized = True
-                self.logger.info(f"Rerun initialized successfully on ports - WS: {self._ws_port}, Web: {self._web_port}")
+                    # Wait for server to be ready
+                    start_time = time.time()
+                    while time.time() - start_time < 10:  # 10 second timeout
+                        try:
+                            import requests
+                            response = requests.get(f"http://localhost:{self._web_port}/health")
+                            if response.status_code == 200:
+                                self._server_started = True
+                                self._initialized = True
+                                self.logger.info(f"Rerun initialized successfully on ports - WS: {self._ws_port}, Web: {self._web_port}")
+                                break
+                        except:
+                            time.sleep(0.5)
+                    
+                    if not self._server_started:
+                        raise TimeoutError("Rerun server failed to start within timeout")
+                        
+                except Exception as e:
+                    self.logger.error(f"Failed to start Rerun server: {e}")
+                    raise
                 
                 # Start keep-alive task in the current event loop
                 loop = asyncio.get_event_loop()
