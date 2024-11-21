@@ -12,9 +12,11 @@ class RerunManager:
     _initialized = False
     def __init__(self):
         from ..config.urls import get_urls
-        urls = get_urls()
-        self._ws_port = int(urls['rerun_ws'].split(':')[-1])  # Extract port from WS URL
-        self._web_port = int(urls['rerun_web'].split(':')[-1])  # Extract port from web URL
+        self.urls = get_urls()
+        self._ws_port = int(self.urls['rerun_ws'].split(':')[-1])  # Extract port from WS URL
+        self._web_port = int(self.urls['rerun_web'].split(':')[-1])  # Extract port from web URL
+        self._ws_host = self.urls['rerun_ws'].split('://')[1].split(':')[0]  # Extract host from WS URL
+        self._web_host = self.urls['rerun_web'].split('://')[1].split(':')[0]  # Extract host from web URL
         self._app: Optional[web.Application] = None
         self._runner: Optional[web.AppRunner] = None
         self._site: Optional[web.TCPSite] = None
@@ -113,7 +115,7 @@ class RerunManager:
             if not self._runner:
                 self._runner = web.AppRunner(self._app)
                 loop.run_until_complete(self._runner.setup())
-                self._site = web.TCPSite(self._runner, 'localhost', self._web_port)
+                self._site = web.TCPSite(self._runner, self._web_host, self._web_port)
                 loop.run_until_complete(self._site.start())
                 self.logger.info(f"Rerun web server started on port {self._web_port}")
                 
@@ -208,9 +210,9 @@ class RerunManager:
     @property
     def ws_url(self) -> str:
         """Get the WebSocket URL for Rerun"""
-        return f"ws://localhost:{self._ws_port}"
+        return self.urls['rerun_ws']
 
     @property
     def web_url(self) -> str:
         """Get the web viewer URL"""
-        return f"http://localhost:{self._web_port}"
+        return self.urls['rerun_web']
