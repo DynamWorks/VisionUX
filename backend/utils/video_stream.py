@@ -132,10 +132,15 @@ class VideoStream:
         
     def stop(self):
         """Stop video streaming and clean up resources"""
+        self.logger.info("Stopping video stream...")
         self.stop_event.set()
         self.pause_event.clear()
+        
+        # Wait for thread to finish with timeout
         if self._stream_thread and self._stream_thread.is_alive():
-            self._stream_thread.join(timeout=2.0)  # Wait up to 2 seconds for thread to finish
+            self._stream_thread.join(timeout=2.0)
+            if self._stream_thread.is_alive():
+                self.logger.warning("Stream thread did not stop within timeout")
             
         # Clear buffer
         while not self.buffer.empty():
@@ -150,6 +155,7 @@ class VideoStream:
                   rr.TextLog("Video stream stopped"),
                   timeless=False,
                   timestamp=time.time_ns())
+            self.logger.info("Video stream stopped successfully")
         except Exception as e:
             self.logger.error(f"Error logging stop event: {e}")
             

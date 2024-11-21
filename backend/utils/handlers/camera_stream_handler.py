@@ -43,30 +43,36 @@ class CameraStreamHandler(BaseMessageHandler):
 
             if message_type == 'stop_video_stream':
                 if hasattr(self, 'video_stream') and self.video_stream:
+                    self.logger.info("Stopping video stream")
                     self.video_stream.stop()
                     delattr(self, 'video_stream')
                     await websocket.send(json.dumps({
                         'type': 'video_stream_stopped',
                         'status': 'success'
                     }))
+                    self.logger.info("Video stream stopped successfully")
                 return
                 
             elif message_type == 'pause_video_stream':
                 if hasattr(self, 'video_stream') and self.video_stream:
+                    self.logger.info("Pausing video stream")
                     self.video_stream.pause()
                     await websocket.send(json.dumps({
                         'type': 'video_stream_paused',
                         'status': 'success'
                     }))
+                    self.logger.info("Video stream paused successfully")
                 return
                 
             elif message_type == 'resume_video_stream':
                 if hasattr(self, 'video_stream') and self.video_stream:
+                    self.logger.info("Resuming video stream")
                     self.video_stream.resume()
                     await websocket.send(json.dumps({
                         'type': 'video_stream_resumed',
                         'status': 'success'
                     }))
+                    self.logger.info("Video stream resumed successfully")
                 return
             elif message_type == 'start_video_stream':
                 # Handle start video stream request
