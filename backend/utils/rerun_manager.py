@@ -65,6 +65,9 @@ class RerunManager:
     def initialize(self, clear_existing: bool = True):
         """Initialize Rerun recording and server"""
         try:
+            # Initialize logger first
+            self.logger = logging.getLogger(__name__)
+            
             if hasattr(self, '_initialized') and self._initialized:
                 if clear_existing:
                     rr.log("world", rr.Clear(recursive=True))
