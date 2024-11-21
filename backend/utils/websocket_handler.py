@@ -41,7 +41,7 @@ class WebSocketHandler:
         # Initialize Rerun
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
-        #rerun_manager.initialize()  # Always ensure initialization
+        rerun_manager.initialize()  # Always ensure initialization
         rerun_manager.register_connection()
         
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
