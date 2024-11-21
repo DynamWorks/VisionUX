@@ -11,6 +11,7 @@ class RerunManager:
     _instance = None
     _initialized = False
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         from ..config.urls import get_urls
         self.urls = get_urls()
         self._ws_port = int(self.urls['rerun_ws'].split(':')[-1])  # Extract port from WS URL
@@ -20,7 +21,6 @@ class RerunManager:
         self._app = web.Application()
         self._runner = web.AppRunner(self._app)
         self._site = None
-        self.logger = logging.getLogger(__name__)
         self._initialized = False
     
     def __new__(cls):
