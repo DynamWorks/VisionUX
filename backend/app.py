@@ -1,11 +1,11 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from api.routes import api
 import threading
-import asyncio
 from pathlib import Path
 from content_manager import ContentManager
-from utils.websocket_handler import WebSocketHandler
+from utils.socket_handler import SocketHandler
 from utils.rerun_manager import RerunManager
 import logging
 import os
@@ -26,7 +26,7 @@ class BackendApp:
         self.server = None
         self.content_manager = None
         self.models_loaded = False
-        self.websocket_handler = WebSocketHandler()
+        self.socket_handler = SocketHandler(self.app)
         self.rerun_manager = RerunManager()
         
         # Register blueprints and routes
@@ -85,35 +85,21 @@ class BackendApp:
         """Check if backend is ready"""
         return True
 
-    def run(self, host='localhost', port=8000, ws_port=8001, debug=False):
-        # Ensure port numbers are integers
-        port = int(port)
-        ws_port = int(ws_port)
-        """Run the Flask application and WebSocket server"""
+    def run(self, host='localhost', port=8000, debug=False):
+        """Run the Flask application with Socket.IO"""
         
-        # Initialize Rerun server and wait for connections
+        # Initialize Rerun server
         self.rerun_manager.initialize(clear_existing=True)
-        
-        # Sleep briefly to allow connections to establish
-        import time
-        time.sleep(2)
-        
-        # Start WebSocket server in a separate thread
-        ws_thread = threading.Thread(
-            target=lambda: asyncio.run(self.websocket_handler.start_server(host=host, port=ws_port)),
-            daemon=True
-        )
-        ws_thread.start()
         
         # Start Rerun web server in a separate thread
         rerun_thread = threading.Thread(
-            target=lambda: asyncio.run(self.rerun_manager.start_web_server()),
+            target=self.rerun_manager.start_web_server_sync,
             daemon=True
         )
         rerun_thread.start()
         
-        # Run Flask app
-        self.app.run(host=host, port=port, debug=debug)
+        # Run Flask-SocketIO app
+        self.socket_handler.socketio.run(self.app, host=host, port=port, debug=debug)
 
     def start(self, port=8000, ws_port=8001, config=None):
         """Start the backend server in a separate thread"""

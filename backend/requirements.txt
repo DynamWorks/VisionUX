@@ -1,8 +1,8 @@
 # Core dependencies
 flask==3.0.0
 flask-cors==4.0.0
-aiohttp==3.9.1
-websockets==12.0
+flask-socketio==5.3.6
+python-socketio==5.11.1
 numpy>=1.24.0
 opencv-contrib-python==4.9.0.80
 Pillow==10.2.0

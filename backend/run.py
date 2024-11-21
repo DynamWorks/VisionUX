@@ -18,19 +18,14 @@ if __name__ == "__main__":
     api_config = config.get("api", {})
     ws_config = config.get("websocket", {})
     
-    # Get host and ports with fallback values
+    # Get host and port with fallback values
     host = api_config.get("host", "localhost")
     try:
         port = int(api_config.get("port", "8000"))
     except ValueError:
         port = 8000
         
-    try:
-        ws_port = int(ws_config.get("port", "8001"))
-    except ValueError:
-        ws_port = 8001
-        
     debug = api_config.get("debug", False)
     
     # Run server
-    app.run(host=host, port=port, ws_port=ws_port, debug=debug)
+    app.run(host=host, port=port, debug=debug)

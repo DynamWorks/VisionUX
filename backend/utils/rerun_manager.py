@@ -95,18 +95,27 @@ class RerunManager:
             self.logger.error(f"Failed to initialize/clear Rerun: {e}")
             raise
 
-    async def start_web_server(self):
-        """Start the web server for Rerun viewer"""
+    def start_web_server_sync(self):
+        """Start the web server for Rerun viewer (synchronous version)"""
         try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
             if not self._runner:
                 self._runner = web.AppRunner(self._app)
-                await self._runner.setup()
+                loop.run_until_complete(self._runner.setup())
                 self._site = web.TCPSite(self._runner, 'localhost', self._web_port)
-                await self._site.start()
+                loop.run_until_complete(self._site.start())
                 self.logger.info(f"Rerun web server started on port {self._web_port}")
+                
+                # Keep the server running
+                loop.run_forever()
         except Exception as e:
             self.logger.error(f"Failed to start Rerun web server: {e}")
             raise
+        finally:
+            loop.close()
 
     async def stop_web_server(self):
         """Stop the web server"""
