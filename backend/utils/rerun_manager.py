@@ -71,7 +71,7 @@ class RerunManager:
             # Initialize recording if not already done
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics", spawn=False)  # Don't spawn viewer
+                rr.init("video_analytics")#, spawn=False)  # Don't spawn viewer
                 
             # Configure default blueprint
             blueprint = rr.blueprint.Vertical(
