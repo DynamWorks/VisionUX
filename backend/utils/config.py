@@ -75,17 +75,17 @@ class Config:
         """Recursively update configuration"""
         for key, value in new_config.items():
             if isinstance(value, dict) and key in self.config:
-                self.config[key].update(value)
+                self._config[key].update(value)
             else:
-                self.config[key] = value
+                self._config[key] = value
                 
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value"""
-        return self.config.get(key, default)
+        return self._config.get(key, default)
         
     def __getitem__(self, key: str) -> Any:
         """Get configuration value using dict syntax"""
-        return self.config[key]
+        return self._config[key]
         
     def __setitem__(self, key: str, value: Any):
         """Set configuration value using dict syntax"""
