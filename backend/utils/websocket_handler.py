@@ -119,11 +119,6 @@ class WebSocketHandler:
                         await self.message_router.route_message(websocket, message)
                         
                         if message_type == 'video_upload_start':
-                            # Only clear topics, don't reinitialize
-                            if hasattr(rr, '_recording'):
-                                rr.log("world", rr.Clear(recursive=True))
-                                self.logger.info("Cleared Rerun topics for new upload")
-                            
                             # Ensure keep-alive task is running
                             if not hasattr(self.rerun_manager, '_keep_alive_task') or \
                                (hasattr(self.rerun_manager._keep_alive_task, 'done') and 
@@ -132,7 +127,7 @@ class WebSocketHandler:
                                     self.rerun_manager._keep_alive())
                             
                             await websocket.send(json.dumps({
-                                'type': 'rerun_reset_complete'
+                                'type': 'upload_start_ack'
                             }))
                             
                         elif message_type == 'video_upload_complete':

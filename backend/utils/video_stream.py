@@ -136,24 +136,22 @@ class VideoStream:
         self.pause_event.clear()
         if self._stream_thread and self._stream_thread.is_alive():
             self._stream_thread.join(timeout=2.0)  # Wait up to 2 seconds for thread to finish
+            
         # Clear buffer
         while not self.buffer.empty():
             try:
                 self.buffer.get_nowait()
             except:
                 pass
-        # Clear Rerun visualization
+                
         try:
-            from .rerun_manager import RerunManager
-            rerun_manager = RerunManager()
-            rr.log("world/video/stream", rr.Clear(recursive=True))
-            # Log stop event
+            # Log stop event without clearing visualization
             rr.log("world/events", 
                   rr.TextLog("Video stream stopped"),
                   timeless=False,
                   timestamp=time.time_ns())
         except Exception as e:
-            self.logger.error(f"Error clearing Rerun state: {e}")
+            self.logger.error(f"Error logging stop event: {e}")
             
     def pause(self):
         """Pause video streaming"""
