@@ -153,8 +153,7 @@ class VideoStream:
             # Log stop event without clearing visualization
             rr.log("world/events", 
                   rr.TextLog("Video stream stopped"),
-                  timeless=False,
-                  timestamp=time.time_ns())
+                  timeless=False)
             self.logger.info("Video stream stopped successfully")
         except Exception as e:
             self.logger.error(f"Error logging stop event: {e}")
@@ -167,8 +166,7 @@ class VideoStream:
             # Log pause event to Rerun
             rr.log("world/events", 
                   rr.TextLog("Video stream paused"),
-                  timeless=False,
-                  timestamp=time.time_ns())
+                  timeless=False)
         except Exception as e:
             self.logger.error(f"Error logging pause event: {e}")
         
@@ -180,7 +178,6 @@ class VideoStream:
             # Log resume event to Rerun
             rr.log("world/events", 
                   rr.TextLog("Video stream resumed"),
-                  timeless=False,
-                  timestamp=time.time_ns())
+                  timeless=False)
         except Exception as e:
             self.logger.error(f"Error logging resume event: {e}")
