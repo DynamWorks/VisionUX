@@ -3,16 +3,12 @@ import json
 import logging
 import cv2
 from pathlib import Path
-from ..video_stream import VideoStream
 import numpy as np
-import base64
-import rerun as rr
 import time
 import asyncio
 from typing import Optional, Dict, Any
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime
 
 @dataclass
 class FrameMetrics:
@@ -53,27 +49,6 @@ class CameraStreamHandler(BaseMessageHandler):
                     self.logger.info("Video stream stopped successfully")
                 return
                 
-            elif message_type == 'pause_video_stream':
-                if hasattr(self, 'video_stream') and self.video_stream:
-                    self.logger.info("Pausing video stream")
-                    self.video_stream.pause()
-                    await websocket.send(json.dumps({
-                        'type': 'video_stream_paused',
-                        'status': 'success'
-                    }))
-                    self.logger.info("Video stream paused successfully")
-                return
-                
-            elif message_type == 'resume_video_stream':
-                if hasattr(self, 'video_stream') and self.video_stream:
-                    self.logger.info("Resuming video stream")
-                    self.video_stream.resume()
-                    await websocket.send(json.dumps({
-                        'type': 'video_stream_resumed',
-                        'status': 'success'
-                    }))
-                    self.logger.info("Video stream resumed successfully")
-                return
             elif message_type == 'start_video_stream':
                 # Handle start video stream request
                 filename = message_data.get('filename')
