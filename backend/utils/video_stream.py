@@ -138,6 +138,3 @@ class VideoStream:
             from .rerun_manager import RerunManager
             rerun_manager = RerunManager()
             rr.log("world", rr.Clear(recursive=True))
-            rr.log("camera", rr.Clear(recursive=True))
-            rr.log("edge_detection", rr.Clear(recursive=True))
-            rr.log("heartbeat", rr.Clear(recursive=True))
