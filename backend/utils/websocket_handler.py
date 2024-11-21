@@ -190,10 +190,9 @@ class WebSocketHandler:
                 host=host, 
                 port=port,
                 max_size=1024 * 1024 * 100,  # 100MB max message size
-                process_request=None,  # Allow any path for now while debugging
                 ping_interval=20,
                 ping_timeout=60
-            ):
+            ) as server:
                 self.logger.info(f"WebSocket server started on ws://{host}:{port}/ws")
                 await asyncio.Future()  # run forever
         except Exception as e:

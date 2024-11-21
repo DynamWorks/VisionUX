@@ -24,7 +24,7 @@ function App() {
     useEffect(() => {
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || 'localhost';
-        const wsUrl = `ws://${wsHost}:${wsPort}/ws`;
+        const wsUrl = `ws://${wsHost}:${wsPort}`;
 
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
