@@ -75,8 +75,8 @@ class VideoStream:
                     # Convert BGR to RGB for visualization
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     
-                    # Only log to Rerun if not paused
-                    if not self.pause_event.is_set():
+                    # Only log to Rerun if not paused and from a valid source
+                    if not self.pause_event.is_set() and isinstance(self.source, str):
                         try:
                             # Get RerunManager instance (already initialized)
                             from .rerun_manager import RerunManager

@@ -78,15 +78,9 @@ class CameraFrameHandler:
             elapsed = current_time - self.start_time
             fps = self.frame_count / elapsed if elapsed > 0 else 0
 
-            # Log to Rerun
-            rr.log("world/video/stream", 
-                  rr.Image(frame_rgb),
-                  timeless=False)
-
+            # Process frame without Rerun logging
             if metadata:
-                rr.log("world/camera/info",
-                      rr.TextLog(f"Frame size: {frame.shape[1]}x{frame.shape[0]}"),
-                      timestamp=int(current_time * 1e9))
+                self.logger.debug(f"Frame size: {frame.shape[1]}x{frame.shape[0]}")
 
             return True, {
                 'frame': frame_rgb,
