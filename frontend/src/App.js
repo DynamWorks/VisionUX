@@ -5,7 +5,6 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import CameraSelector from './components/CameraSelector';
 import RerunViewer from './components/RerunViewer';
-import VideoDisplay from './components/VideoDisplay';
 import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
 import FileList from './components/FileList';
@@ -22,6 +21,8 @@ function App() {
     const [ws, setWs] = useState(null);
 
     useEffect(() => {
+        if (ws) return; // Prevent recreating if ws exists
+        
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || 'localhost';
         const wsUrl = `ws://${wsHost}:${wsPort}`;
@@ -187,9 +188,9 @@ function App() {
         }
     };
 
-    const [isPaused, setIsPaused] = useState(false);
 
     const stopCamera = useCallback(() => {
+        if (!ws) return;
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
@@ -204,23 +205,6 @@ function App() {
         }
     }, [stream]);
 
-    const pauseCamera = useCallback(() => {
-        if (stream) {
-            stream.getTracks().forEach(track => {
-                track.enabled = false;
-            });
-            setIsPaused(true);
-        }
-    }, [stream]);
-
-    const resumeCamera = useCallback(() => {
-        if (stream) {
-            stream.getTracks().forEach(track => {
-                track.enabled = true;
-            });
-            setIsPaused(false);
-        }
-    }, [stream]);
 
     const refreshDevices = useCallback(async () => {
         try {
@@ -252,7 +236,7 @@ function App() {
         fetchUploadedFiles(); // Initial fetch
 
         // Handle WebSocket messages for file list updates
-        const handleWebSocketMessages = (event) => {
+        const handleMessages = (event) => {
             if (!event.data) return;
             try {
                 const data = JSON.parse(event.data);
@@ -541,7 +525,9 @@ function App() {
                                                     // Reset Rerun viewer and request file list
                                                     const rerunViewer = document.querySelector('iframe');
                                                     if (rerunViewer) {
-                                                        rerunViewer.src = rerunViewer.src;
+                                                        const currentSrc = rerunViewer.src;
+                                                        rerunViewer.src = '';
+                                                        rerunViewer.src = currentSrc;
                                                     }
                                     
                                                     // Request updated file list

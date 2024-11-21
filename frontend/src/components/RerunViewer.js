@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 
 const RerunViewer = () => {
-    const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
         // Only handle viewer connection state
