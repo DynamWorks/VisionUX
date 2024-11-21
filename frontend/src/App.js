@@ -407,17 +407,25 @@ function App() {
                                         const formData = new FormData();
                                         formData.append('file', file);
 
-                                        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/upload`, {
-                                            method: 'POST',
-                                            body: formData
-                                        });
+                                        // Wrap upload in async function
+                                        (async () => {
+                                            try {
+                                                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/upload`, {
+                                                    method: 'POST',
+                                                    body: formData
+                                                });
 
-                                        if (!response.ok) {
-                                            throw new Error(`Upload failed: ${response.statusText}`);
-                                        }
+                                                if (!response.ok) {
+                                                    throw new Error(`Upload failed: ${response.statusText}`);
+                                                }
 
-                                        const result = await response.json();
-                                        console.log('Upload successful:', result);
+                                                const result = await response.json();
+                                                console.log('Upload successful:', result);
+                                            } catch (error) {
+                                                console.error('Upload failed:', error);
+                                                alert(`Upload failed: ${error.message}`);
+                                            }
+                                        })();
 
                                         // Notify WebSocket about upload
                                         if (ws && ws.readyState === WebSocket.OPEN) {
