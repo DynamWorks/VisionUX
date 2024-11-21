@@ -101,9 +101,9 @@ class VideoStream:
                 else:
                     time.sleep(1/30)  # Normal 30 FPS
                 
-            cap.release()
-            if not self.loop:
-                break
+                cap.release()
+                if not self.loop:
+                    break
                 
     def read(self) -> Optional[dict]:
         """Read the next frame"""
