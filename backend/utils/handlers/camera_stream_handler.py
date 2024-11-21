@@ -32,6 +32,7 @@ class CameraStreamHandler(BaseMessageHandler):
         self.frame_metrics = deque(maxlen=metrics_window)
         self.frame_count = 0
         self.start_time = time.time()
+        self.frame_handler = None  # Will be initialized when needed
         
     async def handle(self, websocket, message_data: Dict[str, Any]) -> None:
         """Handle incoming camera frame data"""
@@ -47,12 +48,19 @@ class CameraStreamHandler(BaseMessageHandler):
                 self.logger.error("Timeout waiting for frame data")
                 await self.send_error(websocket, "Frame data timeout")
                 return
+
+            # Get current time for metrics
+            current_time = time.time()
+            process_start = current_time
                 
-            # Process frame through CameraFrameHandler
-            success, result = self.frame_handler.process_frame(frame_data, message_data)
-            if not success:
-                await self.send_error(websocket, f"Frame processing failed: {result.get('reason', 'unknown error')}")
+            # Decode frame
+            frame = self._decode_frame(frame_data)
+            if frame is None:
+                await self.send_error(websocket, "Failed to decode frame")
                 return
+                
+            # Calculate processing time
+            process_time = time.time() - process_start
             
             metrics = FrameMetrics(
                 timestamp=current_time,
