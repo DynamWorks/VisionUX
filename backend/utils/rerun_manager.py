@@ -123,6 +123,10 @@ class RerunManager:
         self._active_connections += 1
         self.logger.info(f"Registered new connection. Active connections: {self._active_connections}")
         
+        # Ensure Rerun is initialized with the connection
+        if not hasattr(rr, '_recording'):
+            self.initialize(clear_existing=True)
+        
     def unregister_connection(self):
         """Unregister a frontend connection"""
         self._active_connections = max(0, self._active_connections - 1)

@@ -91,8 +91,12 @@ class BackendApp:
         ws_port = int(ws_port)
         """Run the Flask application and WebSocket server"""
         
-        # Initialize Rerun server first
+        # Initialize Rerun server and wait for connections
         self.rerun_manager.initialize(clear_existing=True)
+        
+        # Sleep briefly to allow connections to establish
+        import time
+        time.sleep(2)
         
         # Start WebSocket server in a separate thread
         ws_thread = threading.Thread(

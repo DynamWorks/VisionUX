@@ -38,11 +38,13 @@ class WebSocketHandler:
         self.clients.add(websocket)
         websocket.max_size = 1024 * 1024 * 100  # 100MB limit
         
-        # Initialize Rerun
+        # Initialize Rerun and register connection
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
-        rerun_manager.initialize()  # Always ensure initialization
-        rerun_manager.register_connection()
+        rerun_manager.register_connection()  # This will handle initialization if needed
+        
+        # Wait briefly to ensure connection is established
+        await asyncio.sleep(1)
         
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
         return heartbeat_task
