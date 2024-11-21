@@ -178,6 +178,20 @@ class CameraStreamHandler(BaseMessageHandler):
 
             # Process frame
             await self._process_frame(frame, message_data, metrics)
+            
+            # Log frame to Rerun if not paused
+            if not self.pause_event.is_set():
+                try:
+                    from ..frame_logger import FrameLogger
+                    frame_logger = FrameLogger()
+                    frame_logger.log_frame(
+                        frame=frame,
+                        frame_number=self.frame_count,
+                        source="camera"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Failed to log frame: {e}")
+                    self.logger.debug(f"Error details: {str(e)}", exc_info=True)
                 
         except Exception as e:
             self.logger.error(f"Error handling camera frame: {e}", exc_info=True)
