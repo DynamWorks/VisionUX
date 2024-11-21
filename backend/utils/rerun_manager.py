@@ -82,7 +82,7 @@ class RerunManager:
             # Configure default blueprint
             blueprint = rr.blueprint.Vertical(
                 rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed"),
-                rr.blueprint.TextLogView(entity="world/events", name="Events")
+                rr.blueprint.TextLogView(path="world/events", name="Events")
             )
             
             # Start Rerun server
