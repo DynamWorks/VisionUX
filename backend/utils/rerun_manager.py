@@ -66,7 +66,7 @@ class RerunManager:
             self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics", spawn=True)
+                rr.init("video_analytics")#, spawn=True)
                 
             if clear_existing:
                 self.logger.info("Clearing existing Rerun data")

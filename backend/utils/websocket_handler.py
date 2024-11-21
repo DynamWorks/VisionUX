@@ -172,7 +172,7 @@ class WebSocketHandler:
     async def _init_rerun(self):
         """Initialize Rerun visualization"""
         try:
-            self.rerun_manager.initialize()
+            #self.rerun_manager.initialize()
             self.logger.info("Rerun initialized successfully")
         except Exception as e:
             self.logger.error(f"Failed to initialize Rerun: {e}")
