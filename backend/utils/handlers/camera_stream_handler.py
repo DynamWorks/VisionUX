@@ -210,7 +210,7 @@ class CameraStreamHandler(BaseMessageHandler):
             
     def _decode_frame(self, frame_data: bytes) -> Optional[np.ndarray]:
         """
-        Decode binary frame data to numpy array with validation
+        Decode binary frame data to numpy array with validation and error handling
         
         Args:
             frame_data: Raw binary frame data
@@ -219,16 +219,25 @@ class CameraStreamHandler(BaseMessageHandler):
             Decoded frame as numpy array or None if decoding fails
             
         Raises:
-            ValueError: If frame data is invalid
+            ValueError: If frame data is invalid or corrupted
+            TypeError: If frame_data is not bytes
         """
         try:
-            # Basic validation
-            if len(frame_data) < 100:  # Arbitrary min size for valid frame
-                raise ValueError("Frame data too small")
+            # Type validation
+            if not isinstance(frame_data, bytes):
+                raise TypeError("Frame data must be bytes")
+
+            # Size validation with meaningful threshold
+            min_frame_size = 1024  # 1KB minimum for a valid compressed frame
+            if len(frame_data) < min_frame_size:
+                raise ValueError(f"Frame data too small ({len(frame_data)} bytes < {min_frame_size} bytes minimum)")
                 
-            # Decode frame
-            nparr = np.frombuffer(frame_data, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            # Decode frame with error handling
+            try:
+                nparr = np.frombuffer(frame_data, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            except ValueError as e:
+                raise ValueError(f"Failed to decode frame data: {e}")
             
             if frame is None:
                 raise ValueError("Failed to decode frame data")
