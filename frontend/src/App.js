@@ -434,6 +434,8 @@ function App() {
                                                 filename: file.name
                                             }));
 
+                                            // Create FileReader instance
+                                            const reader = new FileReader();
                                             reader.onload = async (event) => {
                                                 try {
                                                     if (!ws || ws.readyState !== WebSocket.OPEN) {
