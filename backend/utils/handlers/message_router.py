@@ -17,7 +17,8 @@ class MessageRouter:
             'video_upload_complete': VideoUploadHandler(uploads_path),
             'camera_frame': CameraStreamHandler(),
             'start_camera_stream': CameraStreamHandler(),
-            'start_video_stream': CameraStreamHandler()
+            'start_video_stream': CameraStreamHandler(),
+            'stop_video_stream': CameraStreamHandler()
         }
         
     async def route_message(self, websocket, message):
