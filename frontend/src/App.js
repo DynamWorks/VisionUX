@@ -402,17 +402,28 @@ function App() {
                                             return newFiles;
                                         });
 
-                                        // Send video file through WebSocket
-                                        console.log('Starting video upload via WebSocket...');
-                                        if (ws && ws.readyState === WebSocket.OPEN) {
-                                            const reader = new FileReader();
+                                        // Upload file via API
+                                        console.log('Starting file upload via API...');
+                                        const formData = new FormData();
+                                        formData.append('file', file);
 
-                                            // Send metadata first
+                                        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/upload`, {
+                                            method: 'POST',
+                                            body: formData
+                                        });
+
+                                        if (!response.ok) {
+                                            throw new Error(`Upload failed: ${response.statusText}`);
+                                        }
+
+                                        const result = await response.json();
+                                        console.log('Upload successful:', result);
+
+                                        // Notify WebSocket about upload
+                                        if (ws && ws.readyState === WebSocket.OPEN) {
                                             ws.send(JSON.stringify({
-                                                type: 'video_upload_start',
-                                                filename: file.name,
-                                                size: file.size,
-                                                contentType: file.type
+                                                type: 'video_upload_complete',
+                                                filename: file.name
                                             }));
 
                                             reader.onload = async (event) => {

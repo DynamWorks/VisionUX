@@ -3,7 +3,8 @@ import time
 import cv2
 import logging
 from pathlib import Path
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, send_file
+import shutil
 
 from backend.services.scene_service import SceneAnalysisService
 from backend.services.chat_service import ChatService
@@ -96,6 +97,40 @@ def chat_analysis():
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/upload', methods=['POST'])
+def upload_file():
+    """Upload a video file"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+            
+        file = request.files['file']
+        if not file.filename:
+            return jsonify({'error': 'No filename provided'}), 400
+            
+        # Clear tmp_content directory
+        tmp_content = Path("tmp_content")
+        if tmp_content.exists():
+            shutil.rmtree(tmp_content)
+        tmp_content.mkdir(parents=True)
+        
+        # Create uploads directory
+        uploads_path = tmp_content / "uploads"
+        uploads_path.mkdir(parents=True)
+        
+        # Save file
+        file_path = uploads_path / file.filename
+        file.save(file_path)
+        
+        return jsonify({
+            'message': 'File uploaded successfully',
+            'filename': file.filename,
+            'path': str(file_path)
+        })
+    except Exception as e:
+        logger.error("Upload failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @api.route('/files/list', methods=['GET'])
