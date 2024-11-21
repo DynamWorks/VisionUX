@@ -20,6 +20,8 @@ class RerunManager:
         self._app = web.Application()
         self._runner = web.AppRunner(self._app)
         self._site = None
+        self.logger = logging.getLogger(__name__)
+        self._initialized = False
     
     def __new__(cls):
         if cls._instance is None:
@@ -28,9 +30,6 @@ class RerunManager:
     
     def __init__(self):
         if not self._initialized:
-            self.logger = logging.getLogger(__name__)
-            self._initialized = True
-            self._app = web.Application()
             self._keep_alive_task = None
             self._active_connections = 0
     
