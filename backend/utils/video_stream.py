@@ -83,7 +83,7 @@ class VideoStream:
                             rerun_manager.log_frame(
                                 frame=frame,
                                 frame_number=self.frame_count,
-                                source=f"video: {self.source}"
+                                source="camera"
                             )
                         except Exception as e:
                             self.logger.warning(f"Failed to log to Rerun: {e}")
