@@ -19,6 +19,7 @@ class BackendApp:
         
         # Setup logging
         self.setup_logging()
+        self.logger = logging.getLogger(__name__)
         self.app = Flask(__name__, static_folder='../frontend/build')
         # Enable CORS
         CORS(self.app, resources={r"/api/*": {"origins": "*"}})
