@@ -197,22 +197,11 @@ class CameraStreamHandler(BaseMessageHandler):
             elapsed = current_time - self.start_time
             fps = self.frame_count / elapsed if elapsed > 0 else 0
             
-            # Log metrics periodically
+            # Log basic frame info periodically
             if self.frame_count % 100 == 0:
-                avg_process_time = sum(m.process_time for m in self.frame_metrics) / len(self.frame_metrics)
-                self.logger.info(
-                    f"Processed {self.frame_count} frames, "
-                    f"FPS: {fps:.1f}, "
-                    f"Avg process time: {avg_process_time*1000:.1f}ms"
-                )
+                self.logger.info(f"Processed {self.frame_count} frames")
 
-                # Log performance metrics on their own timeline
-                rr.reset_time()
-                rr.set_time_sequence("metrics", self.frame_count)
-                rr.log("world/performance", 
-                      rr.TextLog(f"FPS: {fps:.1f}\nProcess Time: {avg_process_time*1000:.1f}ms"))
-
-            # Process frame with metrics
+            # Process frame
             await self._process_frame(frame, message_data, metrics)
                 
         except Exception as e:
@@ -272,36 +261,11 @@ class CameraStreamHandler(BaseMessageHandler):
             
             timestamp = metadata.get('timestamp', time.time_ns())
             
-            # Set frame sequence timeline
+            # Set frame sequence timeline and log frame
             rr.reset_time()
             rr.set_time_sequence("frame_sequence", self.frame_count)
             rr.log("world/video/stream", 
                   rr.Image(frame_rgb))
-            
-            # Set metrics timeline
-            rr.reset_time()
-            rr.set_time_seconds("metrics_time", timestamp/1e9)
-            rr.log("world/metrics/camera",
-                  rr.TextLog(
-                      f"Frame: {self.frame_count}\n"
-                      f"Size: {metrics.width}x{metrics.height}\n"
-                      f"Process time: {metrics.process_time*1000:.1f}ms\n"
-                      f"Data size: {metrics.size/1024:.1f}KB"
-                  ))
-            
-            # Log frame quality metrics
-            quality_metrics = {
-                "brightness": float(np.mean(frame)),
-                "contrast": float(np.std(frame)),
-                "blur": float(cv2.Laplacian(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var())
-            }
-            
-            rr.log("world/metrics/quality",
-                  rr.TextLog(
-                      f"Brightness: {quality_metrics['brightness']:.1f}\n"
-                      f"Contrast: {quality_metrics['contrast']:.1f}\n"
-                      f"Blur: {quality_metrics['blur']:.1f}"
-                  ))
             
             self.logger.debug(
                 f"Processed frame {self.frame_count}: "
