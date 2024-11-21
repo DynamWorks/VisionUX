@@ -147,9 +147,10 @@ class BackendApp:
                 # Start the Flask-SocketIO server
                 self.socket_handler.socketio.run(
                     self.app,
-                    host='localhost',
+                    host='0.0.0.0',  # Listen on all interfaces
                     port=port,
-                    debug=False
+                    debug=False,
+                    allow_unsafe_werkzeug=True  # Required for production
                 )
             except Exception as e:
                 raise RuntimeError(f"Failed to start backend server: {e}")
