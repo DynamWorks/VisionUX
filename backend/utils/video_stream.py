@@ -49,15 +49,15 @@ class VideoStream:
                 
                 # Process frames
                 while not self.stop_event.is_set():
-                ret, frame = cap.read()
-                if not ret:
-                    if self.loop:
-                        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        continue
-                    else:
-                        break
-                        
-                # Update current frame
+                    ret, frame = cap.read()
+                    if not ret:
+                        if self.loop:
+                            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                            continue
+                        else:
+                            break
+                            
+                    # Update current frame
                 self.current_frame = frame
                 self.frame_count += 1
                 
