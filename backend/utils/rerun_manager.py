@@ -86,9 +86,10 @@ class RerunManager:
                 self._server_started = True
                 self.logger.info(f"Rerun initialized successfully on ports - WS: {self._ws_port}, Web: {self._web_port}")
                 
-                # Start keep-alive task
+                # Start keep-alive task in the current event loop
+                loop = asyncio.get_event_loop()
                 if self._keep_alive_task is None or self._keep_alive_task.done():
-                    self._keep_alive_task = asyncio.create_task(self._keep_alive())
+                    self._keep_alive_task = loop.create_task(self._keep_alive())
                 
         except Exception as e:
             self.logger.error(f"Failed to initialize/clear Rerun: {e}")

@@ -89,8 +89,9 @@ class WebSocketHandler:
         self.uploads_path.mkdir(parents=True, exist_ok=True)
         self.clients.add(websocket)
         
-        # Start heartbeat
-        heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
+        # Start heartbeat in the current event loop
+        loop = asyncio.get_event_loop()
+        heartbeat_task = loop.create_task(self.send_heartbeat(websocket))
         
         # Send initial list of uploaded files
         try:
@@ -129,10 +130,11 @@ class WebSocketHandler:
                         # Route other messages through the message router
                         elif message_type == 'video_upload_start':
                             # Ensure keep-alive task is running
+                            loop = asyncio.get_event_loop()
                             if not hasattr(self.rerun_manager, '_keep_alive_task') or \
                                (hasattr(self.rerun_manager._keep_alive_task, 'done') and 
                                 self.rerun_manager._keep_alive_task.done()):
-                                self.rerun_manager._keep_alive_task = asyncio.create_task(
+                                self.rerun_manager._keep_alive_task = loop.create_task(
                                     self.rerun_manager._keep_alive())
                             
                             await websocket.send(json.dumps({
