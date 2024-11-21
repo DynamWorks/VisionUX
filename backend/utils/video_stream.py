@@ -66,7 +66,7 @@ class VideoStream:
                     
                     # Log frames directly regardless of source type
                     timestamp = time.time_ns()
-                    rr.log("video",
+                    rr.log("world/video",
                           rr.Image(frame_rgb),
                           timeless=False,
                           timestamp=timestamp

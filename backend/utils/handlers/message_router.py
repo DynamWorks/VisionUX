@@ -1,6 +1,7 @@
 from .base_handler import BaseMessageHandler
 from .file_list_handler import FileListHandler
 from .video_upload_handler import VideoUploadHandler
+from .camera_stream_handler import CameraStreamHandler
 import json
 import logging
 
@@ -13,7 +14,9 @@ class MessageRouter:
             'get_uploaded_files': FileListHandler(uploads_path),
             'video_upload_start': VideoUploadHandler(uploads_path),
             'video_upload_chunk': VideoUploadHandler(uploads_path),
-            'video_upload_complete': VideoUploadHandler(uploads_path)
+            'video_upload_complete': VideoUploadHandler(uploads_path),
+            'camera_frame': CameraStreamHandler(),
+            'start_camera_stream': CameraStreamHandler()
         }
         
     async def route_message(self, websocket, message):
