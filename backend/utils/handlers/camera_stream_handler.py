@@ -53,14 +53,48 @@ class CameraStreamHandler(BaseMessageHandler):
                     await self.send_error(websocket, f"Video file not found: {filename}")
                     return
                     
-                # Initialize video stream
-                self.video_stream = VideoStream(str(file_path))
-                self.video_stream.start()
-                await self.send_response(websocket, {
-                    'type': 'video_stream_started',
-                    'filename': filename
-                })
-                return
+                # Verify file exists and is readable
+                try:
+                    # Try to open video file first to verify it's valid
+                    cap = cv2.VideoCapture(str(file_path))
+                    if not cap.isOpened():
+                        await self.send_error(websocket, f"Could not open video file: {filename}")
+                        return
+                    
+                    # Get video properties
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    
+                    if total_frames <= 0 or fps <= 0:
+                        await self.send_error(websocket, f"Invalid video file format: {filename}")
+                        return
+                        
+                    cap.release()
+                    
+                    # Initialize video stream
+                    self.video_stream = VideoStream(str(file_path))
+                    self.video_stream.start()
+                    
+                    # Send success response with video properties
+                    await self.send_response(websocket, {
+                        'type': 'video_stream_started',
+                        'filename': filename,
+                        'properties': {
+                            'frames': total_frames,
+                            'fps': fps,
+                            'width': width,
+                            'height': height
+                        }
+                    })
+                    self.logger.info(f"Started streaming video: {filename} ({total_frames} frames at {fps} FPS)")
+                    return
+                    
+                except Exception as e:
+                    self.logger.error(f"Error starting video stream: {e}")
+                    await self.send_error(websocket, f"Failed to start video stream: {str(e)}")
+                    return
                 
             elif message_type == 'camera_frame':
                 if not isinstance(message_data, dict):

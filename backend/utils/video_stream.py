@@ -29,10 +29,23 @@ class VideoStream:
         """Stream frames from video source"""
         while not self.stop_event.is_set():
             # Handle both string paths and VideoCapture objects
-            cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
-            if not cap.isOpened():
-                self.logger.error(f"Failed to open video source: {self.source}")
-                break
+            try:
+                cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
+                if not cap.isOpened():
+                    self.logger.error(f"Failed to open video source: {self.source}")
+                    # Try with different backend
+                    cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
+                    if not cap.isOpened():
+                        self.logger.error("Failed to open video with FFMPEG backend")
+                        break
+                        
+                # Verify video file is valid
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                if total_frames <= 0:
+                    self.logger.error(f"Invalid video file - no frames detected: {self.source}")
+                    break
+                    
+                self.logger.info(f"Successfully opened video with {total_frames} frames")
                 
             while not self.stop_event.is_set():
                 ret, frame = cap.read()
