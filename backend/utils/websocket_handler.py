@@ -114,11 +114,18 @@ class WebSocketHandler:
                         message_type = data.get('type')
                         self.logger.info(f"Received WebSocket message type: {message_type}")
                         
-                        # Handle video control messages directly
+                        # Handle video control messages with enhanced logging
                         if message_type in ['stop_video_stream', 'pause_video_stream', 'resume_video_stream', 'start_video_stream']:
                             self.logger.info(f"Routing video control message: {message_type}")
-                            await self.message_router.route_message(websocket, data)
-                            self.logger.debug(f"Completed routing {message_type}")
+                            try:
+                                await self.message_router.route_message(websocket, data)
+                                self.logger.info(f"Successfully handled {message_type}")
+                            except Exception as e:
+                                self.logger.error(f"Error handling {message_type}: {e}")
+                                await websocket.send(json.dumps({
+                                    'type': 'error',
+                                    'error': f"Failed to handle {message_type}: {str(e)}"
+                                }))
                         # Route other messages through the message router
                         elif message_type == 'video_upload_start':
                             # Ensure keep-alive task is running

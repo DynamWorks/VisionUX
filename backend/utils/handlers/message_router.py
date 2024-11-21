@@ -29,14 +29,22 @@ class MessageRouter:
         """Route message to appropriate handler"""
         try:
             if isinstance(message, str):
-                data = json.loads(message)
+                data = json.loads(message) if isinstance(message, str) else message
                 message_type = data.get('type')
-                self.logger.debug(f"Routing message type: {message_type}")
+                self.logger.info(f"Routing message type: {message_type}")
                 
                 if message_type in self.handlers:
                     handler = self.handlers[message_type]
-                    await handler.handle(websocket, data)
-                    self.logger.debug(f"Handler completed for {message_type}")
+                    self.logger.debug(f"Found handler for {message_type}")
+                    try:
+                        await handler.handle(websocket, data)
+                        self.logger.info(f"Successfully handled {message_type}")
+                    except Exception as e:
+                        self.logger.error(f"Handler error for {message_type}: {e}")
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'error': f'Handler error: {str(e)}'
+                        }))
                 else:
                     self.logger.warning(f"No handler for message type: {message_type}")
                     await websocket.send(json.dumps({
