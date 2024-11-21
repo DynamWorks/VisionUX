@@ -107,21 +107,27 @@ class VideoStream:
                 if not self.loop:
                     break
 
-        def read(self) -> Optional[dict]:
-            """Read the next frame"""
-            if self.buffer.empty():
-                return None
-            return self.buffer.get()
+            except Exception as e:
+                self.logger.error(f"Error in video streaming: {e}")
+                if not self.loop:
+                    break
+                time.sleep(1)  # Wait before retry
+
+    def read(self) -> Optional[dict]:
+        """Read the next frame"""
+        if self.buffer.empty():
+            return None
+        return self.buffer.get()
+    
+    def get_frames(self, max_frames: int = 30) -> Generator[dict, None, None]:
+        """Get a sequence of frames"""
+        frames = []
+        while len(frames) < max_frames and not self.buffer.empty():
+            frames.append(self.buffer.get())
+        for frame in frames:
+            yield frame
         
-        def get_frames(self, max_frames: int = 30) -> Generator[dict, None, None]:
-            """Get a sequence of frames"""
-            frames = []
-            while len(frames) < max_frames and not self.buffer.empty():
-                frames.append(self.buffer.get())
-            for frame in frames:
-                yield frame
-            
-        def stop(self):
+    def stop(self):
         """Stop video streaming and clean up resources"""
         self.stop_event.set()
         if self._stream_thread:
