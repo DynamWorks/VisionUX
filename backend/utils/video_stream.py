@@ -28,8 +28,8 @@ class VideoStream:
     def _stream_frames(self):
         """Stream frames from video source"""
         while not self.stop_event.is_set():
-            # Handle both string paths and VideoCapture objects
             try:
+                # Handle both string paths and VideoCapture objects
                 cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
                 if not cap.isOpened():
                     self.logger.error(f"Failed to open video source: {self.source}")
@@ -47,7 +47,8 @@ class VideoStream:
                     
                 self.logger.info(f"Successfully opened video with {total_frames} frames")
                 
-            while not self.stop_event.is_set():
+                # Process frames
+                while not self.stop_event.is_set():
                 ret, frame = cap.read()
                 if not ret:
                     if self.loop:
