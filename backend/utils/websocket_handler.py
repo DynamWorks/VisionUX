@@ -116,8 +116,10 @@ class WebSocketHandler:
                         self.logger.info(f"Received WebSocket message type: {message_type}")
                         
                         # Handle video control messages directly
-                        if message_type in ['stop_video_stream', 'pause_video_stream', 'resume_video_stream']:
+                        if message_type in ['stop_video_stream', 'pause_video_stream', 'resume_video_stream', 'start_video_stream']:
+                            self.logger.info(f"Routing video control message: {message_type}")
                             await self.message_router.route_message(websocket, data)
+                            self.logger.debug(f"Completed routing {message_type}")
                         # Route other messages through the message router
                         elif message_type == 'video_upload_start':
                             # Ensure keep-alive task is running

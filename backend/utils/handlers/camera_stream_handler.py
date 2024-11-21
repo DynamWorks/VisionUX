@@ -107,8 +107,10 @@ class CameraStreamHandler(BaseMessageHandler):
                     cap.release()
                     
                     # Initialize video stream
+                    self.logger.info(f"Initializing video stream for {file_path}")
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
+                    self.logger.info("Video stream started successfully")
                     
                     # Send success response with video properties
                     await self.send_response(websocket, {
