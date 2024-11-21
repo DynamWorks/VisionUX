@@ -85,19 +85,23 @@ class VideoStream:
                             
                             self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
                             
-                            # Log frames with timestamp and frame number
-                            timestamp = time.time_ns()
+                            # Calculate stream time in nanoseconds
+                            stream_time = int(cap.get(cv2.CAP_PROP_POS_MSEC) * 1e6)  # ms to ns
+                            
+                            # Log frame as a sequence with stream time
                             rr.log("world/video/stream",
                                   rr.Image(frame_rgb),
                                   timeless=False,
-                                  timestamp=timestamp
+                                  timestamp=stream_time,
+                                  sequence=self.frame_count
                                   )
                             
-                            # Log frame metadata
+                            # Log frame metadata with same timestamp
                             rr.log("world/video/metadata",
-                                  rr.TextLog(f"Frame {self.frame_count}"),
+                                  rr.TextLog(f"Frame {self.frame_count} - Time: {stream_time/1e9:.3f}s"),
                                   timeless=False,
-                                  timestamp=timestamp
+                                  timestamp=stream_time,
+                                  sequence=self.frame_count
                                   )
                             
                             # Force flush to ensure frames are displayed
