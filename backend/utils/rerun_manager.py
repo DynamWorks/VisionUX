@@ -40,7 +40,7 @@ class RerunManager:
                 await asyncio.sleep(5)
                 if hasattr(rr, '_recording'):
                     # Send periodic heartbeat only if already initialized
-                    rr.log("heartbeat", rr.Timestamp(time.time_ns()))
+                    rr.log("world/heartbeat", rr.Timestamp(time.time_ns()))
                     retry_count = 0  # Reset retry count on successful heartbeat
             except ConnectionResetError:
                 retry_count += 1
@@ -49,10 +49,16 @@ class RerunManager:
                     self.logger.error("Max heartbeat retries reached, reinitializing Rerun")
                     await self._reinitialize()
                     retry_count = 0
-                await asyncio.sleep(2 * retry_count)  # Exponential backoff
+                await asyncio.sleep(min(2 * retry_count, 30))  # Exponential backoff with 30s max
             except Exception as e:
                 self.logger.error(f"Rerun keep-alive error: {e}")
-                await asyncio.sleep(2)
+                if retry_count >= max_retries:
+                    self.logger.error("Max error retries reached, attempting reinitialization")
+                    await self._reinitialize()
+                    retry_count = 0
+                else:
+                    retry_count += 1
+                await asyncio.sleep(min(2 * retry_count, 30))
 
     def initialize(self):
         """Initialize Rerun if not already initialized"""
@@ -60,14 +66,14 @@ class RerunManager:
             self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")#, spawn=True)  # Enable spawn mode for better stability
+                rr.init("video_analytics", spawn=True)  # Enable spawn mode for better stability
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
                             open_browser=False,
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
-                                rr.blueprint.Spatial2DView(origin="video", name="Video Feed")
+                                rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
                             ))
                         # Add delay to ensure server is ready
                         time.sleep(2)
