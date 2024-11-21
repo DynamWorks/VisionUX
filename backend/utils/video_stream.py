@@ -134,8 +134,8 @@ class VideoStream:
         """Stop video streaming and clean up resources"""
         self.stop_event.set()
         self.pause_event.clear()
-        if self._stream_thread:
-            self._stream_thread.join()
+        if self._stream_thread and self._stream_thread.is_alive():
+            self._stream_thread.join(timeout=2.0)  # Wait up to 2 seconds for thread to finish
         # Clear buffer
         while not self.buffer.empty():
             try:

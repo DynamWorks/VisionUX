@@ -40,8 +40,30 @@ class CameraStreamHandler(BaseMessageHandler):
         """Handle incoming camera frame data"""
         try:
             message_type = message_data.get('type')
-            
-            if message_type == 'start_video_stream':
+
+            if message_type == 'stop_video_stream':
+                if hasattr(self, 'video_stream'):
+                    self.video_stream.stop()
+                    delattr(self, 'video_stream')
+                    await websocket.send(json.dumps({
+                        'type': 'video_stream_stopped'
+                    }))
+                return
+            elif message_type == 'pause_video_stream':
+                if hasattr(self, 'video_stream'):
+                    self.video_stream.pause()
+                    await websocket.send(json.dumps({
+                        'type': 'video_stream_paused'
+                    }))
+                return
+            elif message_type == 'resume_video_stream':
+                if hasattr(self, 'video_stream'):
+                    self.video_stream.resume()
+                    await websocket.send(json.dumps({
+                        'type': 'video_stream_resumed'
+                    }))
+                return
+            elif message_type == 'start_video_stream':
                 # Handle start video stream request
                 filename = message_data.get('filename')
                 if not filename:
