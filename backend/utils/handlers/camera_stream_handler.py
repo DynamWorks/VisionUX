@@ -109,9 +109,6 @@ class CameraStreamHandler(BaseMessageHandler):
                         'type': 'video_stream_resumed'
                     })
                 return
-                    self.logger.error(f"Error starting video stream: {e}")
-                    await self.send_error(websocket, f"Failed to start video stream: {str(e)}")
-                    return
                 
             elif message_type == 'camera_frame':
                 if not isinstance(message_data, dict):
