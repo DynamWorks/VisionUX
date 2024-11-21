@@ -638,7 +638,15 @@ function App() {
                             />
                         </Box>
                         <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <RerunViewer />
+                            <Box sx={{ 
+                                flex: 1,
+                                minHeight: '600px',
+                                bgcolor: '#1a1a1a',
+                                borderRadius: '8px',
+                                overflow: 'hidden'
+                            }}>
+                                <RerunViewer />
+                            </Box>
                         </Box>
                     </Box>
                 </Container>
