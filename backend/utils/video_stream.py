@@ -90,9 +90,9 @@ class VideoStream:
                                   timeless=False,
                                   timestamp=timestamp
                                   )
-                    except Exception as e:
-                        self.logger.warning(f"Failed to log to Rerun: {e}")
-                        self.logger.debug(f"Error details: {str(e)}", exc_info=True)
+                        except Exception as e:
+                            self.logger.warning(f"Failed to log to Rerun: {e}")
+                            self.logger.debug(f"Error details: {str(e)}", exc_info=True)
                     
                     self.buffer.put({
                         'frame': frame,
