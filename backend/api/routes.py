@@ -132,26 +132,4 @@ def handle_error(error):
     """Global error handler"""
     logger.error("Unhandled error", exc_info=True)
     return jsonify({'error': str(error)}), 500
-import json
-import time
-import cv2
-import logging
-from pathlib import Path
-from flask import Blueprint, request, jsonify, Response
-from backend.services.scene_service import SceneAnalysisService
-from backend.services.chat_service import ChatService
-from backend.utils.memory_manager import MemoryManager
-from backend.utils.config import Config
-from backend.content_manager import ContentManager
 
-# Configure logging
-logger = logging.getLogger(__name__)
-
-# Create Blueprint
-api = Blueprint('api', __name__)
-
-# Initialize services
-config = Config()
-scene_service = SceneAnalysisService()
-chat_service = ChatService()
-content_manager = ContentManager()
