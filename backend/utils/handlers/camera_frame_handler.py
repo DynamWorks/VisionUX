@@ -78,9 +78,23 @@ class CameraFrameHandler:
             elapsed = current_time - self.start_time
             fps = self.frame_count / elapsed if elapsed > 0 else 0
 
-            # Process frame without Rerun logging
+            # Convert BGR to RGB for visualization
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Log frame to Rerun
             if metadata:
                 self.logger.debug(f"Frame size: {frame.shape[1]}x{frame.shape[0]}")
+                
+                # Get RerunManager instance
+                from ..rerun_manager import RerunManager
+                rerun_manager = RerunManager()
+                
+                # Log frame to world/video/stream
+                rr.reset_time()
+                rr.set_time_sequence("frame_sequence", self.frame_count)
+                rr.log("world/video/stream", 
+                      rr.Image(frame_rgb),
+                      timeless=False)
 
             return True, {
                 'frame': frame_rgb,

@@ -181,12 +181,11 @@ class WebSocketHandler:
     async def start_server(self, host='localhost', port=8001):
         """Start the WebSocket server"""
         try:
-            # Initialize Rerun only once when starting the server
-            if not hasattr(rr, '_recording'):
-                await self._init_rerun()
-            else:
-                # Just clear the world topic if already initialized
-                rr.log("world", rr.Clear(recursive=True))
+            # Initialize/reset Rerun for new connection
+            await self._init_rerun()
+            
+            # Clear any existing stream data
+            rr.log("world", rr.Clear(recursive=True))
             
             async with websockets.serve(
                 ws_handler=self.handle_connection, 

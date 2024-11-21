@@ -60,13 +60,16 @@ class RerunManager:
                     retry_count += 1
                 await asyncio.sleep(min(2 * retry_count, 30))
 
-    def initialize(self):
-        """Initialize Rerun only if not already initialized"""
+    def initialize(self, clear_existing=True):
+        """Initialize Rerun and optionally clear existing data"""
         try:
             self.logger.info("Checking Rerun initialization...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")#, spawn=True)
+                rr.init("video_analytics", spawn=True)
+            elif clear_existing:
+                self.logger.info("Clearing existing Rerun data")
+                rr.log("world", rr.Clear(recursive=True))
                 
                 if not hasattr(self, '_server_started'):
                     rr.serve(

@@ -106,15 +106,15 @@ class CameraStreamHandler(BaseMessageHandler):
                                 
                     cap.release()
                             
-                    # Initialize video stream with Rerun setup
+                    # Initialize video stream
                     self.logger.info(f"Initializing video stream for {file_path}")
                             
-                    # Get RerunManager instance (already initialized)
+                    # Get RerunManager instance
                     from ..rerun_manager import RerunManager
                     rerun_manager = RerunManager()
                     
-                    # Create recording
-                    rr.init("video_analytics", spawn=True)
+                    # Clear previous stream data
+                    rr.log("world", rr.Clear(recursive=True))
                     
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
