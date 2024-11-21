@@ -89,14 +89,19 @@ class VideoStream:
                             timestamp = time.time_ns()
                             rr.log("world/video/stream",
                                   rr.Image(frame_rgb),
-                                  timeless=False
+                                  timeless=False,
+                                  timestamp=timestamp
                                   )
                             
                             # Log frame metadata
                             rr.log("world/video/metadata",
                                   rr.TextLog(f"Frame {self.frame_count}"),
-                                  timeless=False
+                                  timeless=False,
+                                  timestamp=timestamp
                                   )
+                            
+                            # Force flush to ensure frames are displayed
+                            rr.flush()
                         except Exception as e:
                             self.logger.warning(f"Failed to log to Rerun: {e}")
                             self.logger.debug(f"Error details: {str(e)}", exc_info=True)

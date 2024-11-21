@@ -114,6 +114,9 @@ class CameraStreamHandler(BaseMessageHandler):
                     rerun_manager = RerunManager()
                     rerun_manager.initialize()  # Ensure Rerun is initialized
                     
+                    # Create recording
+                    rr.init("video_analytics", spawn=True)
+                    
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
                     self.logger.info("Video stream started successfully")
