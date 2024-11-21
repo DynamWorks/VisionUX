@@ -75,18 +75,15 @@ class VideoStream:
                     # Log frame to Rerun if not paused
                     if not self.pause_event.is_set():
                         try:
-                            # Get RerunManager instance
-                            from .rerun_manager import RerunManager
-                            rerun_manager = RerunManager()
-                            
-                            # Log frame with metadata
-                            rerun_manager.log_frame(
+                            from .frame_logger import FrameLogger
+                            frame_logger = FrameLogger()
+                            frame_logger.log_frame(
                                 frame=frame,
                                 frame_number=self.frame_count,
-                                source="camera"
+                                source=f"video: {self.source}"
                             )
                         except Exception as e:
-                            self.logger.warning(f"Failed to log to Rerun: {e}")
+                            self.logger.warning(f"Failed to log frame: {e}")
                             self.logger.debug(f"Error details: {str(e)}", exc_info=True)
                     
                     self.buffer.put({
