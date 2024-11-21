@@ -88,19 +88,25 @@ class BackendApp:
 
     def run(self, host='localhost', port=8000, debug=False):
         """Run the Flask application with Socket.IO"""
-        
-        # Initialize Rerun server
-        self.rerun_manager.initialize(clear_existing=True)
-        
-        # Start Rerun web server in a separate thread
-        rerun_thread = threading.Thread(
-            target=self.rerun_manager.start_web_server_sync,
-            daemon=True
-        )
-        rerun_thread.start()
-        
-        # Run Flask-SocketIO app
-        self.socket_handler.socketio.run(self.app, host=host, port=port, debug=debug)
+        try:
+            # Initialize Rerun server if not already initialized
+            if not hasattr(self.rerun_manager, '_server_started'):
+                self.rerun_manager.initialize(clear_existing=True)
+            
+            # Start Rerun web server in a separate thread if not already running
+            if not hasattr(self, '_rerun_thread') or not self._rerun_thread.is_alive():
+                self._rerun_thread = threading.Thread(
+                    target=self.rerun_manager.start_web_server_sync,
+                    daemon=True
+                )
+                self._rerun_thread.start()
+                self.logger.info("Started Rerun web server thread")
+            
+            # Run Flask-SocketIO app
+            self.socket_handler.socketio.run(self.app, host=host, port=port, debug=debug)
+        except Exception as e:
+            self.logger.error(f"Failed to start server: {e}")
+            raise
 
     def start(self, port=8000, config=None):
         """Start the backend server in a separate thread"""
