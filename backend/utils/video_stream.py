@@ -58,49 +58,51 @@ class VideoStream:
                             break
                             
                     # Update current frame
-                self.current_frame = frame
-                self.frame_count += 1
-                
-                # Add to buffer, dropping oldest frame if full
-                if self.buffer.full():
-                    try:
-                        self.buffer.get_nowait()
-                    except:
-                        pass
-                # Convert BGR to RGB for visualization
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                # Log frame to Rerun
-                try:
-                    # Initialize Rerun through manager if needed
-                    from .rerun_manager import RerunManager
-                    rerun_manager = RerunManager()
-                    rerun_manager.initialize()
-                    self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
+                    self.current_frame = frame
+                    self.frame_count += 1
                     
-                    # Log frames directly regardless of source type
-                    timestamp = time.time_ns()
-                    rr.log("world/video/stream",
-                          rr.Image(frame_rgb),
-                          timeless=False,
-                          timestamp=timestamp
-                          )
-                except Exception as e:
-                    self.logger.warning(f"Failed to log to Rerun: {e}")
-                    self.logger.debug(f"Error details: {str(e)}", exc_info=True)
+                    # Add to buffer, dropping oldest frame if full
+                    if self.buffer.full():
+                        try:
+                            self.buffer.get_nowait()
+                        except:
+                            pass
+                    
+                    # Convert BGR to RGB for visualization
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    
+                    # Log frame to Rerun
+                    try:
+                        # Initialize Rerun through manager if needed
+                        from .rerun_manager import RerunManager
+                        rerun_manager = RerunManager()
+                        rerun_manager.initialize()
+                        self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
+                        
+                        # Log frames directly regardless of source type
+                        timestamp = time.time_ns()
+                        rr.log("world/video/stream",
+                              rr.Image(frame_rgb),
+                              timeless=False,
+                              timestamp=timestamp
+                              )
+                    except Exception as e:
+                        self.logger.warning(f"Failed to log to Rerun: {e}")
+                        self.logger.debug(f"Error details: {str(e)}", exc_info=True)
+                    
+                    self.buffer.put({
+                        'frame': frame,
+                        'timestamp': time.time(),
+                        'frame_number': self.frame_count
+                    })
+                    
+                    # Control frame rate and add delay if buffer is getting full
+                    if self.buffer.qsize() > self.buffer.maxsize * 0.8:  # Buffer over 80% full
+                        time.sleep(1/15)  # Reduce to 15 FPS when buffer filling up
+                    else:
+                        time.sleep(1/30)  # Normal 30 FPS
                 
-                self.buffer.put({
-                    'frame': frame,
-                    'timestamp': time.time(),
-                    'frame_number': self.frame_count
-                })
-                
-                # Control frame rate and add delay if buffer is getting full
-                if self.buffer.qsize() > self.buffer.maxsize * 0.8:  # Buffer over 80% full
-                    time.sleep(1/15)  # Reduce to 15 FPS when buffer filling up
-                else:
-                    time.sleep(1/30)  # Normal 30 FPS
-                
+                # Release capture when done with this loop iteration
                 cap.release()
                 if not self.loop:
                     break
