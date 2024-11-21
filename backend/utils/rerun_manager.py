@@ -66,7 +66,7 @@ class RerunManager:
             self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics", spawn=True)  # Enable spawn mode for better stability
+                rr.init("video_analytics")#, spawn=True)  # Enable spawn mode for better stability
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
@@ -150,7 +150,7 @@ class RerunManager:
     def reset(self):
         """Clear Rerun data and reinitialize"""
         try:
-            rr.Clear(recursive=True)
+            rr.log("world", rr.Clear(recursive=True))
             self.logger.info("Rerun data cleared successfully")
             # Force reinitialization
             asyncio.create_task(self._reinitialize())
