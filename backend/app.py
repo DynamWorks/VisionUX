@@ -90,12 +90,23 @@ class BackendApp:
         port = int(port)
         ws_port = int(ws_port)
         """Run the Flask application and WebSocket server"""
+        
+        # Initialize Rerun server first
+        self.rerun_manager.initialize(clear_existing=True)
+        
         # Start WebSocket server in a separate thread
         ws_thread = threading.Thread(
             target=lambda: asyncio.run(self.websocket_handler.start_server(host=host, port=ws_port)),
             daemon=True
         )
         ws_thread.start()
+        
+        # Start Rerun web server in a separate thread
+        rerun_thread = threading.Thread(
+            target=lambda: asyncio.run(self.rerun_manager.start_web_server()),
+            daemon=True
+        )
+        rerun_thread.start()
         
         # Run Flask app
         self.app.run(host=host, port=port, debug=debug)

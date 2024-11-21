@@ -63,32 +63,32 @@ class RerunManager:
     def initialize(self, clear_existing=True):
         """Initialize Rerun and optionally clear existing data"""
         try:
-            self.logger.info("Checking Rerun initialization...")
+            self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")#, spawn=True)
-            elif clear_existing:
+                rr.init("video_analytics", spawn=True)
+                
+            if clear_existing:
                 self.logger.info("Clearing existing Rerun data")
                 rr.log("world", rr.Clear(recursive=True))
-                
-                if not hasattr(self, '_server_started'):
-                    rr.serve(
-                        open_browser=False,
-                        ws_port=self._ws_port,
-                        default_blueprint=rr.blueprint.Vertical(
-                            rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
-                        )
+            
+            # Always ensure server is started
+            if not hasattr(self, '_server_started'):
+                rr.serve(
+                    open_browser=False,
+                    ws_port=self._ws_port,
+                    web_port=self._web_port,
+                    default_blueprint=rr.blueprint.Vertical(
+                        rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
                     )
-                    time.sleep(2)  # Allow server to start
-                    self._server_started = True
-                    self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
-                    
-                    # Start keep-alive task
-                    if self._keep_alive_task is None or self._keep_alive_task.done():
-                        self._keep_alive_task = asyncio.create_task(self._keep_alive())
-            else:
-                self.logger.info("Rerun already initialized, clearing world topic")
-                rr.log("world", rr.Clear(recursive=True))
+                )
+                time.sleep(2)  # Allow server to start
+                self._server_started = True
+                self.logger.info(f"Rerun initialized successfully on ports - WS: {self._ws_port}, Web: {self._web_port}")
+                
+                # Start keep-alive task
+                if self._keep_alive_task is None or self._keep_alive_task.done():
+                    self._keep_alive_task = asyncio.create_task(self._keep_alive())
                 
         except Exception as e:
             self.logger.error(f"Failed to initialize/clear Rerun: {e}")
