@@ -90,10 +90,32 @@ class VideoUploadHandler(BaseMessageHandler):
             if file_path.exists():
                 file_size = file_path.stat().st_size
                 self.logger.info(f"Upload completed successfully: {self.current_upload['filename']}")
+                
+                # Get updated file list
+                files = []
+                for f_path in self.uploads_path.glob('*.mp4'):
+                    try:
+                        stat = f_path.stat()
+                        files.append({
+                            'name': f_path.name,
+                            'size': stat.st_size,
+                            'modified': stat.st_mtime,
+                            'path': str(f_path)
+                        })
+                    except OSError as e:
+                        self.logger.error(f"Error accessing file {f_path}: {e}")
+                        continue
+                
+                # Send both completion acknowledgment and updated file list
                 await self.send_response(websocket, {
                     'type': 'upload_complete_ack',
                     'filename': self.current_upload['filename'],
                     'size': file_size
+                })
+                
+                await self.send_response(websocket, {
+                    'type': 'uploaded_files',
+                    'files': sorted(files, key=lambda x: x['modified'], reverse=True)
                 })
             else:
                 raise FileNotFoundError(f"Uploaded file not found: {file_path}")

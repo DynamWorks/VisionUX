@@ -115,6 +115,9 @@ class WebSocketHandler:
                         message_type = data.get('type')
                         self.logger.info(f"Received WebSocket message type: {message_type}")
                         
+                        # Route all messages through the message router
+                        await self.message_router.route_message(websocket, message)
+                        
                         if message_type == 'video_upload_start':
                             # Clear all topics
                             rr.log("world", rr.Clear(recursive=True))
