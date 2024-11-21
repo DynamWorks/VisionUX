@@ -88,38 +88,34 @@ class BackendApp:
     def run(self, host='localhost', port=8000, debug=False):
         """Run the Flask application with Socket.IO"""
         try:
-            # Initialize Rerun once at startup with retry
-            max_retries = 3
-            retry_count = 0
-            while retry_count < max_retries:
+            # Initialize Rerun manager
+            self.rerun_manager.initialize()
+            self.logger.info("Rerun manager initialized")
+
+            # Start Rerun server in a separate thread
+            rerun_thread = threading.Thread(
+                target=self.rerun_manager.start_web_server_sync,
+                daemon=True
+            )
+            rerun_thread.start()
+            self.logger.info("Started Rerun web server thread")
+
+            # Wait for Rerun server to be ready
+            max_retries = 5
+            retry_delay = 2
+            for attempt in range(max_retries):
                 try:
-                    if not hasattr(self.rerun_manager, '_initialized'):
-                        self.rerun_manager.initialize(clear_existing=True)
-                        
-                        # Start Rerun web server in a separate thread
-                        self._rerun_thread = threading.Thread(
-                            target=self.rerun_manager.start_web_server_sync,
-                            daemon=True
-                        )
-                        self._rerun_thread.start()
-                        self.logger.info("Started Rerun web server thread")
-                        
-                        # Verify server is running
-                        time.sleep(2)
-                        import requests
-                        response = requests.get(f"http://localhost:{self.rerun_manager._web_port}/health")
-                        if response.status_code == 200:
-                            self.logger.info("Rerun server verified running")
-                            break
-                    else:
+                    import requests
+                    response = requests.get(f"http://localhost:{self.rerun_manager._web_port}/health")
+                    if response.status_code == 200:
+                        self.logger.info(f"Rerun server verified running on port {self.rerun_manager._web_port}")
                         break
                 except Exception as e:
-                    retry_count += 1
-                    self.logger.warning(f"Rerun initialization attempt {retry_count} failed: {e}")
-                    if retry_count >= max_retries:
-                        self.logger.error("Failed to initialize Rerun after max retries")
+                    if attempt == max_retries - 1:
+                        self.logger.error(f"Failed to verify Rerun server: {e}")
                         raise
-                    time.sleep(2)
+                    self.logger.warning(f"Waiting for Rerun server (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
             
             # Run Flask-SocketIO app with explicit host binding
             self.socket_handler.socketio.run(

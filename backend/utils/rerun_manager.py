@@ -60,18 +60,19 @@ class RerunManager:
                     retry_count += 1
                 await asyncio.sleep(min(2 * retry_count, 30))
 
-    def initialize(self):
+    def initialize(self, clear_existing: bool = True):
         """Initialize Rerun recording and server"""
         try:
             if hasattr(self, '_initialized') and self._initialized:
+                if clear_existing:
+                    rr.log("world", rr.Clear(recursive=True))
                 return
 
             self.logger.info("Initializing Rerun...")
             
-            # Initialize recording if not already done
-            if not hasattr(rr, '_recording'):
-                self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")#, spawn=False)  # Don't spawn viewer
+            # Initialize recording
+            rr.init("video_analytics", spawn=False)
+            self.logger.info("Created new Rerun recording")
                 
             # Configure default blueprint
             blueprint = rr.blueprint.Vertical(
@@ -79,44 +80,26 @@ class RerunManager:
                 rr.blueprint.TextLogView(entity="world/events", name="Events")
             )
             
-            # Start server if not already running
-            if not hasattr(self, '_server_started'):
-                try:
-                    # Start Rerun server
-                    rr.serve(
-                        open_browser=False,
-                        ws_port=self._ws_port,
-                        web_port=self._web_port,
-                        default_blueprint=blueprint
-                    )
-                    # Wait for server to be ready
-                    start_time = time.time()
-                    while time.time() - start_time < 10:  # 10 second timeout
-                        try:
-                            import requests
-                            response = requests.get(f"http://localhost:{self._web_port}/health")
-                            if response.status_code == 200:
-                                self._server_started = True
-                                self._initialized = True
-                                self.logger.info(f"Rerun initialized successfully on ports - WS: {self._ws_port}, Web: {self._web_port}")
-                                break
-                        except:
-                            time.sleep(0.5)
-                    
-                    if not self._server_started:
-                        raise TimeoutError("Rerun server failed to start within timeout")
-                        
-                except Exception as e:
-                    self.logger.error(f"Failed to start Rerun server: {e}")
-                    raise
-                
-                # Start keep-alive task in the current event loop
-                loop = asyncio.get_event_loop()
-                if self._keep_alive_task is None or self._keep_alive_task.done():
-                    self._keep_alive_task = loop.create_task(self._keep_alive())
-                
+            # Start Rerun server
+            rr.serve(
+                open_browser=False,
+                ws_port=self._ws_port,
+                web_port=self._web_port,
+                default_blueprint=blueprint
+            )
+            self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
+            
+            self._initialized = True
+            self._server_started = True
+            
+            # Start keep-alive task
+            loop = asyncio.get_event_loop()
+            if self._keep_alive_task is None or self._keep_alive_task.done():
+                self._keep_alive_task = loop.create_task(self._keep_alive())
+                self.logger.info("Started Rerun keep-alive task")
+            
         except Exception as e:
-            self.logger.error(f"Failed to initialize/clear Rerun: {e}")
+            self.logger.error(f"Failed to initialize Rerun: {e}")
             raise
 
     def start_web_server_sync(self):
