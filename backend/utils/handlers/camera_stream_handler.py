@@ -6,9 +6,11 @@ from pathlib import Path
 import numpy as np
 import time
 import asyncio
+import rerun as rr
 from typing import Optional, Dict, Any
 from collections import deque
 from dataclasses import dataclass
+from ..video_stream import VideoStream
 
 @dataclass
 class FrameMetrics:
@@ -88,17 +90,19 @@ class CameraStreamHandler(BaseMessageHandler):
                     from ..rerun_manager import RerunManager
                     rerun_manager = RerunManager()
                     
-                    # Clear previous stream data
-                    rr.log("world", rr.Clear(recursive=True))
+                    # Clear previous stream data using RerunManager instance
+                    rerun_manager.reset()
                     
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
                     self.logger.info("Video stream started successfully")
                     
-                    # Log stream start event
-                    rr.log("world/events",
-                          rr.TextLog(f"Started streaming: {filename}"),
-                          timeless=False)
+                    # Log stream start event using RerunManager instance
+                    rerun_manager.log_frame(
+                        frame=None,
+                        frame_number=0,
+                        source=f"Started streaming: {filename}"
+                    )
                     
                     # Send success response with video properties
                     await self.send_response(websocket, {
@@ -259,11 +263,16 @@ class CameraStreamHandler(BaseMessageHandler):
             
             timestamp = metadata.get('timestamp', time.time_ns())
             
-            # Set frame sequence timeline and log frame
-            rr.reset_time()
-            rr.set_time_sequence("frame_sequence", self.frame_count)
-            rr.log("world/video/stream", 
-                  rr.Image(frame_rgb))
+            # Get RerunManager instance for frame logging
+            from ..rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+            
+            # Log frame using RerunManager instance
+            rerun_manager.log_frame(
+                frame=frame_rgb,
+                frame_number=self.frame_count,
+                source="camera_stream"
+            )
             
             self.logger.debug(
                 f"Processed frame {self.frame_count}: "
