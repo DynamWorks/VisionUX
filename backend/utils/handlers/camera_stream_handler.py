@@ -106,11 +106,22 @@ class CameraStreamHandler(BaseMessageHandler):
                         
                     cap.release()
                     
-                    # Initialize video stream
+                    # Initialize video stream with Rerun setup
                     self.logger.info(f"Initializing video stream for {file_path}")
+                    
+                    # Initialize Rerun first
+                    from ..rerun_manager import RerunManager
+                    rerun_manager = RerunManager()
+                    rerun_manager.initialize()
+                    
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
                     self.logger.info("Video stream started successfully")
+                    
+                    # Log stream start event
+                    rr.log("world/events",
+                          rr.TextLog(f"Started streaming: {filename}"),
+                          timeless=False)
                     
                     # Send success response with video properties
                     await self.send_response(websocket, {

@@ -81,13 +81,23 @@ class VideoStream:
                             # Initialize Rerun through manager if needed
                             from .rerun_manager import RerunManager
                             rerun_manager = RerunManager()
+                            rerun_manager.initialize()  # Ensure Rerun is initialized
+                            
                             self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
                             
-                            # Log frames with timestamp
+                            # Log frames with timestamp and frame number
                             timestamp = time.time_ns()
                             rr.log("world/video/stream",
                                   rr.Image(frame_rgb),
-                                  timeless=False
+                                  timeless=False,
+                                  timestamp=timestamp
+                                  )
+                            
+                            # Log frame metadata
+                            rr.log("world/video/metadata",
+                                  rr.TextLog(f"Frame {self.frame_count}"),
+                                  timeless=False,
+                                  timestamp=timestamp
                                   )
                         except Exception as e:
                             self.logger.warning(f"Failed to log to Rerun: {e}")
