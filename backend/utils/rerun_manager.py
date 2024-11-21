@@ -17,9 +17,9 @@ class RerunManager:
         self._web_port = int(self.urls['rerun_web'].split(':')[-1])  # Extract port from web URL
         self._ws_host = self.urls['rerun_ws'].split('://')[1].split(':')[0]  # Extract host from WS URL
         self._web_host = self.urls['rerun_web'].split('://')[1].split(':')[0]  # Extract host from web URL
-        self._app: Optional[web.Application] = None
-        self._runner: Optional[web.AppRunner] = None
-        self._site: Optional[web.TCPSite] = None
+        self._app = web.Application()
+        self._runner = web.AppRunner(self._app)
+        self._site = None
     
     def __new__(cls):
         if cls._instance is None:
