@@ -87,21 +87,17 @@ class VideoStream:
                             # Calculate stream time based on frame count and target FPS
                             stream_time = int((self.frame_count / self.target_fps) * 1e9)  # Convert to nanoseconds
                                     
-                            # Log frame as part of sequence with stream time
+                            # Set timeline for frame sequence
+                            rr.reset_time()
+                            rr.set_time_sequence("frame_sequence", self.frame_count)
                             rr.log("world/video/stream",
-                                  rr.Image(frame_rgb),
-                                  timeless=False,
-                                  timestamp=stream_time,
-                                  sequence=self.frame_count
-                                  )
+                                  rr.Image(frame_rgb))
                                     
-                            # Log frame metadata with same timestamp
+                            # Set timeline for real-time data
+                            rr.reset_time()
+                            rr.set_time_seconds("stream_time", stream_time/1e9)
                             rr.log("world/video/metadata",
-                                  rr.TextLog(f"Frame {self.frame_count} - Time: {stream_time/1e9:.3f}s"),
-                                  timeless=False,
-                                  timestamp=stream_time,
-                                  sequence=self.frame_count
-                                  )
+                                  rr.TextLog(f"Frame {self.frame_count} - Time: {stream_time/1e9:.3f}s"))
                             
                             # Force flush to ensure frames are displayed
                             rr.flush()

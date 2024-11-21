@@ -206,6 +206,12 @@ class CameraStreamHandler(BaseMessageHandler):
                     f"Avg process time: {avg_process_time*1000:.1f}ms"
                 )
 
+                # Log performance metrics on their own timeline
+                rr.reset_time()
+                rr.set_time_sequence("metrics", self.frame_count)
+                rr.log("world/performance", 
+                      rr.TextLog(f"FPS: {fps:.1f}\nProcess Time: {avg_process_time*1000:.1f}ms"))
+
             # Process frame with metrics
             await self._process_frame(frame, message_data, metrics)
                 
@@ -266,12 +272,15 @@ class CameraStreamHandler(BaseMessageHandler):
             
             timestamp = metadata.get('timestamp', time.time_ns())
             
-            # Enhanced logging with metrics
+            # Set frame sequence timeline
+            rr.reset_time()
+            rr.set_time_sequence("frame_sequence", self.frame_count)
             rr.log("world/video/stream", 
-                  rr.Image(frame_rgb),
-                  timeless=False)
+                  rr.Image(frame_rgb))
             
-            # Log detailed metrics
+            # Set metrics timeline
+            rr.reset_time()
+            rr.set_time_seconds("metrics_time", timestamp/1e9)
             rr.log("world/metrics/camera",
                   rr.TextLog(
                       f"Frame: {self.frame_count}\n"
