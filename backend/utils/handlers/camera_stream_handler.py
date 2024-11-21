@@ -93,26 +93,25 @@ class CameraStreamHandler(BaseMessageHandler):
                     if not cap.isOpened():
                         await self.send_error(websocket, f"Could not open video file: {filename}")
                         return
-                    
+                            
                     # Get video properties
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     fps = cap.get(cv2.CAP_PROP_FPS)
                     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    
+                            
                     if total_frames <= 0 or fps <= 0:
                         await self.send_error(websocket, f"Invalid video file format: {filename}")
                         return
-                        
+                                
                     cap.release()
-                    
+                            
                     # Initialize video stream with Rerun setup
                     self.logger.info(f"Initializing video stream for {file_path}")
-                    
-                    # Initialize Rerun first
+                            
+                    # Get RerunManager instance (already initialized)
                     from ..rerun_manager import RerunManager
                     rerun_manager = RerunManager()
-                    #rerun_manager.initialize()  # Ensure Rerun is initialized
                     
                     # Create recording
                     rr.init("video_analytics", spawn=True)
