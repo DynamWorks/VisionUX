@@ -60,34 +60,34 @@ class RerunManager:
                     retry_count += 1
                 await asyncio.sleep(min(2 * retry_count, 30))
 
-    def initialize(self, clear_existing=True):
-        """Initialize Rerun and optionally clear existing data"""
+    def initialize(self):
+        """Initialize Rerun recording and server"""
         try:
             if hasattr(self, '_initialized') and self._initialized:
-                if clear_existing:
-                    self.logger.info("Clearing existing Rerun data")
-                    rr.log("world", rr.Clear(recursive=True))
                 return
 
             self.logger.info("Initializing Rerun...")
+            
+            # Initialize recording if not already done
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")
+                rr.init("video_analytics", spawn=False)  # Don't spawn viewer
                 
-            if clear_existing:
-                self.logger.info("Clearing existing Rerun data")
-                rr.log("world", rr.Clear(recursive=True))
+            # Configure default blueprint
+            blueprint = rr.blueprint.Vertical(
+                rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed"),
+                rr.blueprint.TextLogView(entity="world/events", name="Events")
+            )
             
-            # Start server only if not already started
+            # Start server if not already running
             if not hasattr(self, '_server_started'):
                 try:
+                    # Start Rerun server
                     rr.serve(
                         open_browser=False,
                         ws_port=self._ws_port,
                         web_port=self._web_port,
-                        default_blueprint=rr.blueprint.Vertical(
-                            rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
-                        )
+                        default_blueprint=blueprint
                     )
                     # Wait for server to be ready
                     start_time = time.time()
@@ -183,13 +183,40 @@ class RerunManager:
             self.logger.error(f"Failed to reinitialize Rerun: {e}")
             raise
 
+    def log_frame(self, frame, frame_number=None, source=None):
+        """Log a frame to Rerun with metadata"""
+        try:
+            # Convert BGR to RGB if needed
+            if len(frame.shape) == 3 and frame.shape[2] == 3:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            else:
+                frame_rgb = frame
+
+            # Set frame sequence and log frame
+            rr.set_time_sequence("frame_sequence", frame_number if frame_number is not None else 0)
+            rr.log("world/video/stream", rr.Image(frame_rgb))
+            
+            # Log source change event if provided
+            if source:
+                rr.log("world/events", 
+                      rr.TextLog(f"Stream source changed to: {source}"),
+                      timeless=False)
+                
+            # Force flush to ensure frame is displayed
+            rr.flush()
+            
+        except Exception as e:
+            self.logger.error(f"Error logging frame to Rerun: {e}")
+            raise
+
     def reset(self):
-        """Clear Rerun data and reinitialize"""
+        """Clear Rerun data"""
         try:
             rr.log("world", rr.Clear(recursive=True))
+            rr.log("world/events", 
+                  rr.TextLog("Stream reset"),
+                  timeless=False)
             self.logger.info("Rerun data cleared successfully")
-            # Force reinitialization
-            asyncio.create_task(self._reinitialize())
         except Exception as e:
             self.logger.error(f"Failed to reset Rerun: {e}")
             raise

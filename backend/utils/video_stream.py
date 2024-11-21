@@ -72,26 +72,19 @@ class VideoStream:
                         except:
                             pass
                     
-                    # Convert BGR to RGB for visualization
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    
-                    # Always log frames to Rerun if not paused
+                    # Log frame to Rerun if not paused
                     if not self.pause_event.is_set():
                         try:
-                            # Get RerunManager instance (already initialized)
+                            # Get RerunManager instance
                             from .rerun_manager import RerunManager
                             rerun_manager = RerunManager()
-                                    
-                            self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
-                                    
-                            # Set frame sequence timeline
-                            rr.reset_time()
-                            rr.set_time_sequence("frame_sequence", self.frame_count)
-                            rr.log("world/video/stream",
-                                  rr.Image(frame_rgb))
                             
-                            # Force flush to ensure frames are displayed
-                            rr.flush()
+                            # Log frame with metadata
+                            rerun_manager.log_frame(
+                                frame=frame,
+                                frame_number=self.frame_count,
+                                source=f"video: {self.source}"
+                            )
                         except Exception as e:
                             self.logger.warning(f"Failed to log to Rerun: {e}")
                             self.logger.debug(f"Error details: {str(e)}", exc_info=True)
