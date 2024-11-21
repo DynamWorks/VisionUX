@@ -120,10 +120,8 @@ class WebSocketHandler:
                         
                         if message_type == 'video_upload_start':
                             # Clear all topics
-                            rr.log("video", rr.Clear(recursive=True))
-                            rr.log("camera", rr.Clear(recursive=True))
-                            rr.log("edge_detection", rr.Clear(recursive=True))
-                            rr.log("heartbeat", rr.Clear(recursive=True))
+                            # Clear all topics under world
+                            rr.log("world", rr.Clear(recursive=True))
                             self.logger.info("Cleared all Rerun topics on frontend refresh")
                             
                             # Ensure Rerun stays alive
@@ -241,10 +239,8 @@ class WebSocketHandler:
                 await self._init_rerun()
             
             # Clear all topics
+            # Clear all topics under world
             rr.log("world", rr.Clear(recursive=True))
-            rr.log("camera", rr.Clear(recursive=True))
-            rr.log("edge_detection", rr.Clear(recursive=True))
-            rr.log("heartbeat", rr.Clear(recursive=True))
             self.logger.info("Cleared all Rerun topics on frontend refresh")
             
             # Ensure keep-alive task is running

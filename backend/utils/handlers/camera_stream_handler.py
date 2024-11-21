@@ -137,13 +137,13 @@ class CameraStreamHandler(BaseMessageHandler):
             timestamp = metadata.get('timestamp', time.time_ns())
             
             # Enhanced logging with metrics
-            rr.log("world/video", 
+            rr.log("world/video/stream", 
                   rr.Image(frame_rgb),
                   timeless=False,
                   timestamp=timestamp)
             
             # Log detailed metrics
-            rr.log("camera/metrics",
+            rr.log("world/metrics/camera",
                   rr.TextLog(
                       f"Frame: {self.frame_count}\n"
                       f"Size: {metrics.width}x{metrics.height}\n"
@@ -159,7 +159,7 @@ class CameraStreamHandler(BaseMessageHandler):
                 "blur": float(cv2.Laplacian(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var())
             }
             
-            rr.log("camera/quality",
+            rr.log("world/metrics/quality",
                   rr.TextLog(
                       f"Brightness: {quality_metrics['brightness']:.1f}\n"
                       f"Contrast: {quality_metrics['contrast']:.1f}\n"
