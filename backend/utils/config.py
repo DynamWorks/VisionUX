@@ -14,9 +14,8 @@ class Config:
             config_path: Optional path to YAML config file. Environment variables
                         override config file values when prefixed with VIDEO_ANALYTICS_.
         """
-        # Load environment variables first
-        self._load_env_vars()
-        self.config = {
+        # Initialize default config
+        self._config = {
             'models': {
                 'clip': {
                     'name': 'openai/clip-vit-base-patch32',
@@ -90,7 +89,8 @@ class Config:
         
     def __setitem__(self, key: str, value: Any):
         """Set configuration value using dict syntax"""
-        self.config[key] = value
+        self._config[key] = value
+        
     def _load_env_vars(self):
         """Load configuration from environment variables"""
         import os
@@ -116,7 +116,7 @@ class Config:
                             value = value.lower() == 'true'
                 
                 # Set value in config
-                current = self.config
+                current = self._config
                 *parts, last = config_path.split('.')
                 for part in parts:
                     if part not in current:
