@@ -4,14 +4,13 @@ from flask_socketio import SocketIO
 from api.routes import api
 import threading
 import logging
+import time
 from pathlib import Path
 from content_manager import ContentManager
 from utils.socket_handler import SocketHandler
 from utils.rerun_manager import RerunManager
-import logging
 import os
 import yaml
-from pathlib import Path
 
 class BackendApp:
     def __init__(self):
