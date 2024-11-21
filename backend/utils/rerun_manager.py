@@ -86,11 +86,8 @@ class RerunManager:
                     else:
                         raise
             else:
-                # Clear all topics
+                # Clear all topics under world namespace
                 rr.log("world", rr.Clear(recursive=True))
-                rr.log("camera", rr.Clear(recursive=True))
-                rr.log("edge_detection", rr.Clear(recursive=True))
-                rr.log("heartbeat", rr.Clear(recursive=True))
                 self.logger.debug("Cleared all Rerun topics while maintaining existing connection")
                 # Ensure keep-alive task is running
                 if self._keep_alive_task is None or self._keep_alive_task.done():
