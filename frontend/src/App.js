@@ -415,18 +415,18 @@ function App() {
                                                 contentType: file.type
                                             }));
 
-                                            reader.onload = async () => {
+                                            reader.onload = async (event) => {
                                                 try {
                                                     if (!ws || ws.readyState !== WebSocket.OPEN) {
                                                         throw new Error('WebSocket connection lost');
                                                     }
 
-                                                    // Set binary type to blob for better memory handling
-                                                    ws.binaryType = 'blob';
+                                                    // Set binary type to arraybuffer for consistent handling
+                                                    ws.binaryType = 'arraybuffer';
 
                                                     // Split file into chunks
                                                     const chunkSize = 1024 * 1024; // 1MB chunks
-                                                    const fileData = reader.result;
+                                                    const fileData = event.target.result;
                                                     const chunks = [];
 
                                                     for (let i = 0; i < fileData.byteLength; i += chunkSize) {
@@ -529,7 +529,7 @@ function App() {
 
                                             reader.onerror = (error) => {
                                                 console.error('Error reading file:', error);
-                                                alert('Failed to read file');
+                                                alert(`Failed to read file: ${error.target.error.message || 'Unknown error'}`);
                                             };
 
                                             // Read the entire file as ArrayBuffer
