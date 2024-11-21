@@ -195,7 +195,6 @@ function App() {
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
             setIsStreaming(false);
-            setIsPaused(false);
             // Reset frame counter
             window.framesSent = false;
             // Reset Rerun when stopping camera
@@ -203,7 +202,7 @@ function App() {
                 ws.send(JSON.stringify({ type: 'reset_rerun' }));
             }
         }
-    }, [stream]);
+    }, [stream, ws]);
 
 
     const refreshDevices = useCallback(async () => {

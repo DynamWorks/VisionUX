@@ -8,7 +8,8 @@ const RerunViewer = () => {
         const checkConnection = () => {
             const iframe = document.querySelector('iframe');
             if (iframe) {
-                setIsConnected(true);
+                // Connection state is handled by parent component
+                console.log('Rerun viewer iframe detected');
             }
         };
 
