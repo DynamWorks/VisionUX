@@ -2,6 +2,8 @@ from .base_handler import BaseMessageHandler
 import json
 import logging
 import cv2
+from pathlib import Path
+from ..video_stream import VideoStream
 import numpy as np
 import base64
 import rerun as rr
@@ -37,9 +39,33 @@ class CameraStreamHandler(BaseMessageHandler):
     async def handle(self, websocket, message_data: Dict[str, Any]) -> None:
         """Handle incoming camera frame data"""
         try:
-            if not isinstance(message_data, dict) or message_data.get('type') != 'camera_frame':
-                self.logger.warning(f"Invalid message type: {type(message_data)}")
+            message_type = message_data.get('type')
+            
+            if message_type == 'start_video_stream':
+                # Handle start video stream request
+                filename = message_data.get('filename')
+                if not filename:
+                    await self.send_error(websocket, "No filename provided")
+                    return
+                    
+                file_path = Path("tmp_content/uploads") / filename
+                if not file_path.exists():
+                    await self.send_error(websocket, f"Video file not found: {filename}")
+                    return
+                    
+                # Initialize video stream
+                self.video_stream = VideoStream(str(file_path))
+                self.video_stream.start()
+                await self.send_response(websocket, {
+                    'type': 'video_stream_started',
+                    'filename': filename
+                })
                 return
+                
+            elif message_type == 'camera_frame':
+                if not isinstance(message_data, dict):
+                    self.logger.warning(f"Invalid message type: {type(message_data)}")
+                    return
 
             # Get frame data with timeout
             try:
