@@ -75,20 +75,21 @@ class VideoStream:
                     # Convert BGR to RGB for visualization
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     
-                    # Log frame to Rerun
-                    try:
-                        # Initialize Rerun through manager if needed
-                        from .rerun_manager import RerunManager
-                        rerun_manager = RerunManager()
-                        #rerun_manager.initialize()
-                        self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
-                        
-                        # Log frames directly regardless of source type
-                        timestamp = time.time_ns()
-                        rr.log("world/video/stream",
-                              rr.Image(frame_rgb),
-                              timeless=False
-                              )
+                    # Only log to Rerun if not paused
+                    if not self.pause_event.is_set():
+                        try:
+                            # Initialize Rerun through manager if needed
+                            from .rerun_manager import RerunManager
+                            rerun_manager = RerunManager()
+                            self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
+                            
+                            # Log frames with timestamp
+                            timestamp = time.time_ns()
+                            rr.log("world/video/stream",
+                                  rr.Image(frame_rgb),
+                                  timeless=False,
+                                  timestamp=timestamp
+                                  )
                     except Exception as e:
                         self.logger.warning(f"Failed to log to Rerun: {e}")
                         self.logger.debug(f"Error details: {str(e)}", exc_info=True)
@@ -142,19 +143,41 @@ class VideoStream:
                 self.buffer.get_nowait()
             except:
                 pass
-        # Reset Rerun state
-        if hasattr(self, '_rerun_initialized'):
-            delattr(self, '_rerun_initialized')
+        # Clear Rerun visualization
+        try:
             from .rerun_manager import RerunManager
             rerun_manager = RerunManager()
-            rr.log("world", rr.Clear(recursive=True))
+            rr.log("world/video/stream", rr.Clear(recursive=True))
+            # Log stop event
+            rr.log("world/events", 
+                  rr.TextLog("Video stream stopped"),
+                  timeless=False,
+                  timestamp=time.time_ns())
+        except Exception as e:
+            self.logger.error(f"Error clearing Rerun state: {e}")
             
     def pause(self):
         """Pause video streaming"""
         self.pause_event.set()
         self.logger.info("Video stream paused")
+        try:
+            # Log pause event to Rerun
+            rr.log("world/events", 
+                  rr.TextLog("Video stream paused"),
+                  timeless=False,
+                  timestamp=time.time_ns())
+        except Exception as e:
+            self.logger.error(f"Error logging pause event: {e}")
         
     def resume(self):
         """Resume video streaming"""
         self.pause_event.clear()
         self.logger.info("Video stream resumed")
+        try:
+            # Log resume event to Rerun
+            rr.log("world/events", 
+                  rr.TextLog("Video stream resumed"),
+                  timeless=False,
+                  timestamp=time.time_ns())
+        except Exception as e:
+            self.logger.error(f"Error logging resume event: {e}")
