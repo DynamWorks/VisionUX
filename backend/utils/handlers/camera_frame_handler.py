@@ -84,7 +84,7 @@ class CameraFrameHandler:
                   timeless=False)
 
             if metadata:
-                rr.log("camera/info",
+                rr.log("world/camera/info",
                       rr.TextLog(f"Frame size: {frame.shape[1]}x{frame.shape[0]}"),
                       timestamp=int(current_time * 1e9))
 
