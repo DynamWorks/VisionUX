@@ -524,9 +524,22 @@ function App() {
                                                     // Reset Rerun viewer and request file list
                                                     const rerunViewer = document.querySelector('iframe');
                                                     if (rerunViewer) {
-                                                        const currentSrc = rerunViewer.src;
-                                                        rerunViewer.src = '';
-                                                        rerunViewer.src = currentSrc;
+                                                        try {
+                                                            // Send reset command to WebSocket
+                                                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                                                ws.send(JSON.stringify({
+                                                                    type: 'reset_rerun'
+                                                                }));
+                                                            }
+                                                            // Reload iframe with delay
+                                                            setTimeout(() => {
+                                                                const currentSrc = rerunViewer.src;
+                                                                rerunViewer.src = '';
+                                                                rerunViewer.src = currentSrc;
+                                                            }, 1000);
+                                                        } catch (error) {
+                                                            console.error('Error resetting Rerun viewer:', error);
+                                                        }
                                                     }
                                     
                                                     // Request updated file list
