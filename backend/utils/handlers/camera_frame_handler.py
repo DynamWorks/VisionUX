@@ -79,7 +79,7 @@ class CameraFrameHandler:
             fps = self.frame_count / elapsed if elapsed > 0 else 0
 
             # Log to Rerun
-            rr.log("world/video", 
+            rr.log("world/video/stream", 
                   rr.Image(frame_rgb),
                   timeless=False)
 
