@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from api.routes import api
 import threading
+import logging
 from pathlib import Path
 from content_manager import ContentManager
 from utils.socket_handler import SocketHandler
@@ -101,7 +102,7 @@ class BackendApp:
         # Run Flask-SocketIO app
         self.socket_handler.socketio.run(self.app, host=host, port=port, debug=debug)
 
-    def start(self, port=8000, ws_port=8001, config=None):
+    def start(self, port=8000, config=None):
         """Start the backend server in a separate thread"""
         def run_server():
             try:
@@ -118,13 +119,16 @@ class BackendApp:
                 Path("backend/models/clip").mkdir(parents=True, exist_ok=True)
                 Path("backend/models/traffic_signs").mkdir(parents=True, exist_ok=True)
                 
-                # Start both WebSocket and Rerun servers
-                async def start_servers():
-                    await asyncio.gather(
-                        self.websocket_handler.start_server(port=port),
-                        self.rerun_manager.start_web_server()
-                    )
-                asyncio.run(start_servers())
+                # Initialize Rerun
+                self.rerun_manager.initialize(clear_existing=True)
+                
+                # Start the Flask-SocketIO server
+                self.socket_handler.socketio.run(
+                    self.app,
+                    host='localhost',
+                    port=port,
+                    debug=False
+                )
             except Exception as e:
                 raise RuntimeError(f"Failed to start backend server: {e}")
         
