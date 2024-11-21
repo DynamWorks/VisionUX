@@ -457,6 +457,8 @@ function App() {
                                                     // Create promise to wait for upload completion
                                                     const uploadComplete = new Promise((resolve, reject) => {
                                                         let timeoutId;
+                                                        let progressTimeout;
+                                                        let lastProgressTime = Date.now();
 
                                                         const messageHandler = (event) => {
                                                             try {
@@ -465,23 +467,41 @@ function App() {
 
                                                                 if (response.type === 'upload_complete_ack') {
                                                                     clearTimeout(timeoutId);
+                                                                    clearTimeout(progressTimeout);
                                                                     ws.removeEventListener('message', messageHandler);
                                                                     resolve(response);
                                                                 } else if (response.type === 'upload_error') {
                                                                     clearTimeout(timeoutId);
+                                                                    clearTimeout(progressTimeout);
                                                                     ws.removeEventListener('message', messageHandler);
                                                                     reject(new Error(response.error));
+                                                                } else if (response.type === 'upload_progress') {
+                                                                    // Reset progress timeout on any progress update
+                                                                    lastProgressTime = Date.now();
                                                                 }
                                                             } catch (error) {
                                                                 console.warn('Non-JSON message received:', event.data);
                                                             }
                                                         };
 
-                                                        // Set timeout for upload confirmation
+                                                        // Set timeout for overall upload
                                                         timeoutId = setTimeout(() => {
                                                             ws.removeEventListener('message', messageHandler);
-                                                            reject(new Error('Upload confirmation timeout'));
-                                                        }, 30000); // 30 second timeout
+                                                            reject(new Error('Upload timed out after 2 minutes'));
+                                                        }, 120000); // 2 minute total timeout
+
+                                                        // Set timeout for progress updates
+                                                        const checkProgress = () => {
+                                                            const timeSinceLastProgress = Date.now() - lastProgressTime;
+                                                            if (timeSinceLastProgress > 10000) { // 10 seconds
+                                                                clearTimeout(timeoutId);
+                                                                ws.removeEventListener('message', messageHandler);
+                                                                reject(new Error('Upload stalled - no progress updates'));
+                                                            } else {
+                                                                progressTimeout = setTimeout(checkProgress, 2000); // Check every 2 seconds
+                                                            }
+                                                        };
+                                                        progressTimeout = setTimeout(checkProgress, 2000);
 
                                                         ws.addEventListener('message', messageHandler);
                                                     });
