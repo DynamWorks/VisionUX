@@ -76,6 +76,7 @@ class RerunManager:
             if not hasattr(self, '_server_started'):
                 rr.serve(
                     open_browser=False,
+                    host="0.0.0.0",  # Allow external connections
                     ws_port=self._ws_port,
                     web_port=self._web_port,
                     default_blueprint=rr.blueprint.Vertical(
