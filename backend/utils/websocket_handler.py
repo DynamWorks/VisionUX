@@ -119,22 +119,17 @@ class WebSocketHandler:
                         await self.message_router.route_message(websocket, message)
                         
                         if message_type == 'video_upload_start':
-                            # Clear all topics
-                            # Clear all topics under world
-                            rr.log("world", rr.Clear(recursive=True))
-                            self.logger.info("Cleared all Rerun topics on frontend refresh")
+                            # Only clear topics, don't reinitialize
+                            if hasattr(rr, '_recording'):
+                                rr.log("world", rr.Clear(recursive=True))
+                                self.logger.info("Cleared Rerun topics for new upload")
                             
-                            # Ensure Rerun stays alive
-                            # Initialize _keep_alive_task if not present
-                            if not hasattr(self.rerun_manager, '_keep_alive_task'):
-                                self.rerun_manager._keep_alive_task = None
-            
-                            # Create new task if none exists or previous one is done
-                            if self.rerun_manager._keep_alive_task is None or (
-                                hasattr(self.rerun_manager._keep_alive_task, 'done') and 
-                                self.rerun_manager._keep_alive_task.done()
-                            ):
-                                self.rerun_manager._keep_alive_task = asyncio.create_task(self.rerun_manager._keep_alive())
+                            # Ensure keep-alive task is running
+                            if not hasattr(self.rerun_manager, '_keep_alive_task') or \
+                               (hasattr(self.rerun_manager._keep_alive_task, 'done') and 
+                                self.rerun_manager._keep_alive_task.done()):
+                                self.rerun_manager._keep_alive_task = asyncio.create_task(
+                                    self.rerun_manager._keep_alive())
                             
                             await websocket.send(json.dumps({
                                 'type': 'rerun_reset_complete'
@@ -233,19 +228,17 @@ class WebSocketHandler:
     async def _handle_rerun_reset(self, websocket):
         """Handle Rerun reset request"""
         try:
-            # Initialize Rerun if needed
-            if not hasattr(rr, '_recording'):
+            # Only clear topics if Rerun is already initialized
+            if hasattr(rr, '_recording'):
+                rr.log("world", rr.Clear(recursive=True))
+                self.logger.info("Cleared Rerun topics on reset request")
+            else:
+                # Initialize only if not already initialized
                 await self._init_rerun()
-            
-            # Clear all topics
-            # Clear all topics under world
-            rr.log("world", rr.Clear(recursive=True))
-            self.logger.info("Cleared all Rerun topics on frontend refresh")
-            
+                
             # Ensure keep-alive task is running
-            if not hasattr(self, '_keep_alive_task'):
-                self._keep_alive_task = asyncio.create_task(self._keep_alive())
-            elif self._keep_alive_task and self._keep_alive_task.done():
+            if not hasattr(self, '_keep_alive_task') or \
+               (self._keep_alive_task and self._keep_alive_task.done()):
                 self._keep_alive_task = asyncio.create_task(self._keep_alive())
             
             await websocket.send(json.dumps({
