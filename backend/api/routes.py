@@ -12,6 +12,13 @@ from backend.utils.memory_manager import MemoryManager
 from backend.utils.config import Config
 from backend.content_manager import ContentManager
 
+# Initialize services and managers
+content_manager = ContentManager()
+config = Config()
+scene_service = SceneAnalysisService()
+chat_service = ChatService()
+frame_memory = MemoryManager(content_manager=content_manager)
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
