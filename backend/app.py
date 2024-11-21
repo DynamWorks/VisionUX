@@ -121,8 +121,14 @@ class BackendApp:
                         raise
                     time.sleep(2)
             
-            # Run Flask-SocketIO app
-            self.socket_handler.socketio.run(self.app, host=host, port=port, debug=debug)
+            # Run Flask-SocketIO app with explicit host binding
+            self.socket_handler.socketio.run(
+                self.app,
+                host='0.0.0.0',  # Bind to all interfaces
+                port=port,
+                debug=debug,
+                allow_unsafe_werkzeug=True  # Required for production
+            )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
             raise

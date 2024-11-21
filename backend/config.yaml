@@ -1,11 +1,11 @@
 # Server Configuration
 api:
-  host: ${VIDEO_ANALYTICS_API_HOST:-0.0.0.0}
+  host: "0.0.0.0"  # Bind to all interfaces
   port: ${VIDEO_ANALYTICS_API_PORT:-8000}
   debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}
 
 websocket:
-  host: ${VIDEO_ANALYTICS_WS_HOST:-0.0.0.0}
+  host: "0.0.0.0"  # Bind to all interfaces
   port: ${VIDEO_ANALYTICS_WS_PORT:-8001}
   debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}
 
