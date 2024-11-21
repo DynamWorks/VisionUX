@@ -78,10 +78,9 @@ class VideoStream:
                     # Only log to Rerun if not paused
                     if not self.pause_event.is_set():
                         try:
-                            # Initialize Rerun through manager if needed
+                            # Get RerunManager instance (already initialized)
                             from .rerun_manager import RerunManager
                             rerun_manager = RerunManager()
-                            #rerun_manager.initialize()  # Ensure Rerun is initialized
                                     
                             self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
                                     

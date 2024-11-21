@@ -61,40 +61,34 @@ class RerunManager:
                 await asyncio.sleep(min(2 * retry_count, 30))
 
     def initialize(self):
-        """Initialize Rerun if not already initialized"""
+        """Initialize Rerun only if not already initialized"""
         try:
-            self.logger.info("Initializing Rerun...")
+            self.logger.info("Checking Rerun initialization...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")#, spawn=True)  # Enable spawn mode for better stability
-                try:
-                    if not hasattr(self, '_server_started'):
-                        rr.serve(
-                            open_browser=False,
-                            ws_port=self._ws_port,
-                            default_blueprint=rr.blueprint.Vertical(
-                                rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
-                            )
-                            )
-                        # Add delay to ensure server is ready
-                        time.sleep(2)
-                        self._server_started = True
-                        self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
-                except Exception as port_error:
-                    if "address already in use" in str(port_error).lower():
-                        self.logger.info("Rerun server already running, continuing with existing instance")
-                        self._server_started = True
-                    else:
-                        raise
+                rr.init("video_analytics", spawn=True)
+                
+                if not hasattr(self, '_server_started'):
+                    rr.serve(
+                        open_browser=False,
+                        ws_port=self._ws_port,
+                        default_blueprint=rr.blueprint.Vertical(
+                            rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
+                        )
+                    )
+                    time.sleep(2)  # Allow server to start
+                    self._server_started = True
+                    self.logger.info(f"Rerun initialized successfully on port {self._ws_port}")
+                    
+                    # Start keep-alive task
+                    if self._keep_alive_task is None or self._keep_alive_task.done():
+                        self._keep_alive_task = asyncio.create_task(self._keep_alive())
             else:
-                # Clear all topics under world namespace
+                self.logger.info("Rerun already initialized, clearing world topic")
                 rr.log("world", rr.Clear(recursive=True))
-                self.logger.debug("Cleared all Rerun topics while maintaining existing connection")
-                # Ensure keep-alive task is running
-                if self._keep_alive_task is None or self._keep_alive_task.done():
-                    self._keep_alive_task = asyncio.create_task(self._keep_alive())
+                
         except Exception as e:
-            self.logger.error(f"Failed to initialize Rerun: {e}")
+            self.logger.error(f"Failed to initialize/clear Rerun: {e}")
             raise
 
     async def start_web_server(self):
