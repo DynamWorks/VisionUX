@@ -82,20 +82,20 @@ class VideoStream:
                             from .rerun_manager import RerunManager
                             rerun_manager = RerunManager()
                             rerun_manager.initialize()  # Ensure Rerun is initialized
-                            
+                                    
                             self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
-                            
-                            # Calculate stream time in nanoseconds
-                            stream_time = int(cap.get(cv2.CAP_PROP_POS_MSEC) * 1e6)  # ms to ns
-                            
-                            # Log frame as a sequence with stream time
+                                    
+                            # Calculate stream time based on frame count and target FPS
+                            stream_time = int((self.frame_count / self.target_fps) * 1e9)  # Convert to nanoseconds
+                                    
+                            # Log frame as part of sequence with stream time
                             rr.log("world/video/stream",
                                   rr.Image(frame_rgb),
                                   timeless=False,
                                   timestamp=stream_time,
                                   sequence=self.frame_count
                                   )
-                            
+                                    
                             # Log frame metadata with same timestamp
                             rr.log("world/video/metadata",
                                   rr.TextLog(f"Frame {self.frame_count} - Time: {stream_time/1e9:.3f}s"),
