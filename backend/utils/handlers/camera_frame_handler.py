@@ -81,8 +81,7 @@ class CameraFrameHandler:
             # Log to Rerun
             rr.log("world/video", 
                   rr.Image(frame_rgb),
-                  timeless=False,
-                  timestamp=int(current_time * 1e9))
+                  timeless=False)
 
             if metadata:
                 rr.log("camera/info",
