@@ -15,6 +15,7 @@ class VideoStream:
         self.buffer = Queue(maxsize=buffer_size)
         
         self.stop_event = Event()
+        self.pause_event = Event()
         self.frame_count = 0
         self.current_frame = None
         self.logger = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ class VideoStream:
     def _stream_frames(self):
         """Stream frames from video source"""
         while not self.stop_event.is_set():
+            if self.pause_event.is_set():
+                time.sleep(0.1)  # Reduce CPU usage while paused
+                continue
             try:
                 # Handle both string paths and VideoCapture objects
                 cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
@@ -130,6 +134,7 @@ class VideoStream:
     def stop(self):
         """Stop video streaming and clean up resources"""
         self.stop_event.set()
+        self.pause_event.clear()
         if self._stream_thread:
             self._stream_thread.join()
         # Clear buffer
@@ -144,3 +149,13 @@ class VideoStream:
             from .rerun_manager import RerunManager
             rerun_manager = RerunManager()
             rr.log("world", rr.Clear(recursive=True))
+            
+    def pause(self):
+        """Pause video streaming"""
+        self.pause_event.set()
+        self.logger.info("Video stream paused")
+        
+    def resume(self):
+        """Resume video streaming"""
+        self.pause_event.clear()
+        self.logger.info("Video stream resumed")

@@ -41,7 +41,7 @@ class CameraStreamHandler(BaseMessageHandler):
         try:
             message_type = message_data.get('type')
             
-            if message_type == 'start_video_stream':
+            if message_type in ['start_video_stream', 'pause_video_stream', 'resume_video_stream']:
                 # Handle start video stream request
                 filename = message_data.get('filename')
                 if not filename:
@@ -89,6 +89,22 @@ class CameraStreamHandler(BaseMessageHandler):
                         }
                     })
                     self.logger.info(f"Started streaming video: {filename} ({total_frames} frames at {fps} FPS)")
+                    return
+                    
+                elif message_type == 'pause_video_stream':
+                    if hasattr(self, 'video_streamer') and self.video_streamer:
+                        self.video_streamer.pause()
+                        await self.send_response(websocket, {
+                            'type': 'video_stream_paused'
+                        })
+                    return
+                    
+                elif message_type == 'resume_video_stream':
+                    if hasattr(self, 'video_streamer') and self.video_streamer:
+                        self.video_streamer.resume()
+                        await self.send_response(websocket, {
+                            'type': 'video_stream_resumed'
+                        })
                     return
                     
                 except Exception as e:
