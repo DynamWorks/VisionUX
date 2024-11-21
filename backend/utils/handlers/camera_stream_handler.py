@@ -112,7 +112,7 @@ class CameraStreamHandler(BaseMessageHandler):
                     # Initialize Rerun first
                     from ..rerun_manager import RerunManager
                     rerun_manager = RerunManager()
-                    # rerun_manager.initialize()
+                    rerun_manager.initialize()  # Ensure Rerun is initialized
                     
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
