@@ -76,7 +76,7 @@ class VideoStream:
                         # Initialize Rerun through manager if needed
                         from .rerun_manager import RerunManager
                         rerun_manager = RerunManager()
-                        rerun_manager.initialize()
+                        #rerun_manager.initialize()
                         self.logger.debug(f"Logging frame to Rerun, shape: {frame_rgb.shape}")
                         
                         # Log frames directly regardless of source type
