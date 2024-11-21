@@ -20,7 +20,7 @@ const RerunViewer = () => {
                 } catch (error) {
                     console.warn('Rerun viewer connection check failed:', error);
                     setIsConnected(false);
-                    
+
                     if (retryCount < maxRetries) {
                         setRetryCount(prev => prev + 1);
                         // Reload iframe
@@ -43,7 +43,8 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <iframe
-                src="http://localhost:9090"
+                src={`${process.env.REACT_APP_RERUN_URL ||
+                    'http://localhost:9090'}?url=${encodeURIComponent(process.env.REACT_APP_RERUN_WS_URL || 'ws://localhost:4321')}`}
                 style={{
                     width: '100%',
                     height: '100%',
