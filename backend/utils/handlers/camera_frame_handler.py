@@ -5,26 +5,17 @@ import time
 import rerun as rr
 from .base_handler import BaseMessageHandler
 
-class CameraFrameHandler(BaseMessageHandler):
-    """Handles processing of camera frame data"""
+class CameraFrameHandler:
+    """Handles frame processing and metrics"""
     
-    def __init__(self):
-        super().__init__()
-        
-    async def handle(self, websocket, message_data):
-        """Process incoming camera frame data"""
-        try:
-            if isinstance(message_data, bytes):
-                success = await self.handle_frame(message_data)
-                if not success:
-                    await self.send_error(websocket, "Failed to process camera frame")
-            else:
-                self.logger.warning("Received non-binary data for camera frame")
-                await self.send_error(websocket, "Invalid camera frame data")
-                
-        except Exception as e:
-            self.logger.error(f"Error handling camera frame: {e}")
-            await self.send_error(websocket, str(e))
+    def __init__(self, target_fps: int = 30, metrics_window: int = 100):
+        self.logger = logging.getLogger(__name__)
+        self.last_frame_time = 0
+        self.target_fps = target_fps
+        self.min_frame_interval = 1/target_fps
+        self.frame_metrics = deque(maxlen=metrics_window)
+        self.frame_count = 0
+        self.start_time = time.time()
             
     async def handle_frame(self, frame_data, metadata=None):
         """Process incoming camera frame data with metadata"""

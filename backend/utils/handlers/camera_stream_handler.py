@@ -34,61 +34,25 @@ class CameraStreamHandler(BaseMessageHandler):
         self.start_time = time.time()
         
     async def handle(self, websocket, message_data: Dict[str, Any]) -> None:
-        """
-        Handle camera frame data with rate limiting and metrics
-        
-        Args:
-            websocket: WebSocket connection
-            message_data: Frame metadata dictionary
-        """
+        """Handle incoming camera frame data"""
         try:
             if not isinstance(message_data, dict) or message_data.get('type') != 'camera_frame':
                 self.logger.warning(f"Invalid message type: {type(message_data)}")
                 return
 
-            # Adaptive rate limiting
-            current_time = time.time()
-            time_since_last = current_time - self.last_frame_time
-            
-            if time_since_last < self.min_frame_interval:
-                # Skip frame if too soon
-                self.logger.debug(f"Skipping frame - interval {time_since_last:.3f}s < {self.min_frame_interval:.3f}s")
-                return
-                
-            self.last_frame_time = current_time
-            process_start = time.time()
-
-            # Receive frame data with timeout
+            # Get frame data with timeout
             try:
                 frame_data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
             except asyncio.TimeoutError:
                 self.logger.error("Timeout waiting for frame data")
                 await self.send_error(websocket, "Frame data timeout")
                 return
-            except Exception as e:
-                self.logger.error(f"Failed to receive frame data: {e}")
+                
+            # Process frame through CameraFrameHandler
+            success, result = self.frame_handler.process_frame(frame_data, message_data)
+            if not success:
+                await self.send_error(websocket, f"Frame processing failed: {result.get('reason', 'unknown error')}")
                 return
-
-            # Validate frame data
-            if not isinstance(frame_data, bytes):
-                self.logger.error(f"Invalid frame data type: {type(frame_data)}")
-                await self.send_error(websocket, "Invalid frame data format")
-                return
-
-            if len(frame_data) == 0:
-                self.logger.error("Empty frame data received")
-                await self.send_error(websocket, "Empty frame data")
-                return
-
-            # Decode and process frame
-            frame = self._decode_frame(frame_data)
-            if frame is None:
-                await self.send_error(websocket, "Failed to decode frame")
-                return
-
-            # Track metrics
-            self.frame_count += 1
-            process_time = time.time() - process_start
             
             metrics = FrameMetrics(
                 timestamp=current_time,
