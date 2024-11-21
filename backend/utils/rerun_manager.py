@@ -4,6 +4,7 @@ from typing import Optional
 import asyncio
 from aiohttp import web
 import time
+import cv2
 
 class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
