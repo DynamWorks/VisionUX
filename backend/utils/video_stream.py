@@ -87,8 +87,7 @@ class VideoStream:
                             timestamp = time.time_ns()
                             rr.log("world/video/stream",
                                   rr.Image(frame_rgb),
-                                  timeless=False,
-                                  timestamp=timestamp
+                                  timeless=False
                                   )
                         except Exception as e:
                             self.logger.warning(f"Failed to log to Rerun: {e}")

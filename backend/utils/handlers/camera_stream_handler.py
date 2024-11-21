@@ -221,8 +221,7 @@ class CameraStreamHandler(BaseMessageHandler):
             # Enhanced logging with metrics
             rr.log("world/video/stream", 
                   rr.Image(frame_rgb),
-                  timeless=False,
-                  timestamp=timestamp)
+                  timeless=False)
             
             # Log detailed metrics
             rr.log("world/metrics/camera",
@@ -231,8 +230,7 @@ class CameraStreamHandler(BaseMessageHandler):
                       f"Size: {metrics.width}x{metrics.height}\n"
                       f"Process time: {metrics.process_time*1000:.1f}ms\n"
                       f"Data size: {metrics.size/1024:.1f}KB"
-                  ),
-                  timestamp=timestamp)
+                  ))
             
             # Log frame quality metrics
             quality_metrics = {
@@ -246,8 +244,7 @@ class CameraStreamHandler(BaseMessageHandler):
                       f"Brightness: {quality_metrics['brightness']:.1f}\n"
                       f"Contrast: {quality_metrics['contrast']:.1f}\n"
                       f"Blur: {quality_metrics['blur']:.1f}"
-                  ),
-                  timestamp=timestamp)
+                  ))
             
             self.logger.debug(
                 f"Processed frame {self.frame_count}: "
