@@ -112,7 +112,7 @@ class CameraStreamHandler(BaseMessageHandler):
                     # Initialize Rerun first
                     from ..rerun_manager import RerunManager
                     rerun_manager = RerunManager()
-                    rerun_manager.initialize()  # Ensure Rerun is initialized
+                    #rerun_manager.initialize()  # Ensure Rerun is initialized
                     
                     # Create recording
                     rr.init("video_analytics", spawn=True)

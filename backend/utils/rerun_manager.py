@@ -66,7 +66,7 @@ class RerunManager:
             self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics", spawn=True)  # Enable spawn mode for better stability
+                rr.init("video_analytics")#, spawn=True)  # Enable spawn mode for better stability
                 try:
                     if not hasattr(self, '_server_started'):
                         rr.serve(
@@ -74,8 +74,7 @@ class RerunManager:
                             ws_port=self._ws_port,
                             default_blueprint=rr.blueprint.Vertical(
                                 rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
-                            ),
-                            blocking=False
+                            )
                             )
                         # Add delay to ensure server is ready
                         time.sleep(2)
