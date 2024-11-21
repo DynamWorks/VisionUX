@@ -106,11 +106,11 @@ class VideoStream:
                 cap.release()
                 if not self.loop:
                     break
-                
-        def read(self) -> Optional[dict]:
-            """Read the next frame"""
-            if self.buffer.empty():
-                return None
+
+    def read(self) -> Optional[dict]:
+        """Read the next frame"""
+        if self.buffer.empty():
+            return None
         return self.buffer.get()
         
     def get_frames(self, max_frames: int = 30) -> Generator[dict, None, None]:
