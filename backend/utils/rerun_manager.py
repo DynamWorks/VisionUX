@@ -63,16 +63,22 @@ class RerunManager:
     def initialize(self, clear_existing=True):
         """Initialize Rerun and optionally clear existing data"""
         try:
+            if hasattr(self, '_initialized') and self._initialized:
+                if clear_existing:
+                    self.logger.info("Clearing existing Rerun data")
+                    rr.log("world", rr.Clear(recursive=True))
+                return
+
             self.logger.info("Initializing Rerun...")
             if not hasattr(rr, '_recording'):
                 self.logger.info("Creating new Rerun recording")
-                rr.init("video_analytics")#, spawn=True)
+                rr.init("video_analytics")
                 
             if clear_existing:
                 self.logger.info("Clearing existing Rerun data")
                 rr.log("world", rr.Clear(recursive=True))
             
-            # Always ensure server is started
+            # Start server only if not already started
             if not hasattr(self, '_server_started'):
                 rr.serve(
                     open_browser=False,
@@ -84,6 +90,7 @@ class RerunManager:
                 )
                 time.sleep(2)  # Allow server to start
                 self._server_started = True
+                self._initialized = True
                 self.logger.info(f"Rerun initialized successfully on ports - WS: {self._ws_port}, Web: {self._web_port}")
                 
                 # Start keep-alive task in the current event loop

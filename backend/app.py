@@ -89,12 +89,11 @@ class BackendApp:
     def run(self, host='localhost', port=8000, debug=False):
         """Run the Flask application with Socket.IO"""
         try:
-            # Initialize Rerun server if not already initialized
-            if not hasattr(self.rerun_manager, '_server_started'):
+            # Initialize Rerun once at startup
+            if not hasattr(self.rerun_manager, '_initialized'):
                 self.rerun_manager.initialize(clear_existing=True)
-            
-            # Start Rerun web server in a separate thread if not already running
-            if not hasattr(self, '_rerun_thread') or not self._rerun_thread.is_alive():
+                
+                # Start Rerun web server in a separate thread
                 self._rerun_thread = threading.Thread(
                     target=self.rerun_manager.start_web_server_sync,
                     daemon=True
@@ -124,9 +123,6 @@ class BackendApp:
                 Path("backend/models/yolo").mkdir(parents=True, exist_ok=True)
                 Path("backend/models/clip").mkdir(parents=True, exist_ok=True)
                 Path("backend/models/traffic_signs").mkdir(parents=True, exist_ok=True)
-                
-                # Initialize Rerun
-                self.rerun_manager.initialize(clear_existing=True)
                 
                 # Start the Flask-SocketIO server
                 self.socket_handler.socketio.run(
