@@ -80,7 +80,8 @@ class RerunManager:
                     web_port=self._web_port,
                     default_blueprint=rr.blueprint.Vertical(
                         rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed")
-                    )
+                    ),
+                    host="0.0.0.0"  # Allow external connections
                 )
                 time.sleep(2)  # Allow server to start
                 self._server_started = True
