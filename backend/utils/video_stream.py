@@ -81,9 +81,12 @@ class VideoStream:
                             # Log frame directly to Rerun
                             rr.set_time_sequence("frame_sequence", self.frame_count)
                             rr.log("world/video/stream", rr.Image(frame_rgb))
-                            rr.log("world/events", 
-                                  rr.TextLog(f"Frame from: {self.source}"),
-                                  timeless=False)
+                            
+                            # Only log source event on first frame or every 100 frames
+                            if self.frame_count == 1 or self.frame_count % 100 == 0:
+                                rr.log("world/events", 
+                                      rr.TextLog(f"Streaming from: {self.source}"),
+                                      timeless=False)
                         except Exception as e:
                             self.logger.warning(f"Failed to log frame: {e}")
                             self.logger.debug(f"Error details: {str(e)}", exc_info=True)
