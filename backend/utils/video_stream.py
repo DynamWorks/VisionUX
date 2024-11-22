@@ -148,8 +148,6 @@ class VideoStream:
                 pass
                 
         self.logger.info("Video stream stopped successfully")
-        except Exception as e:
-            self.logger.error(f"Error logging stop event: {e}")
             
     def pause(self):
         """Pause video streaming"""
