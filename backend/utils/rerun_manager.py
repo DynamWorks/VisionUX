@@ -48,22 +48,29 @@ class RerunManager:
         """Health check endpoint for the web server with CORS support"""
         from aiohttp import web
         
+        # Common CORS headers
+        cors_headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Max-Age': '86400',  # 24 hours
+        }
+        
         # Handle preflight OPTIONS request
         if request.method == 'OPTIONS':
-            headers = {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                'Access-Control-Allow-Headers': '*',
-                'Access-Control-Max-Age': '86400',  # 24 hours
-            }
-            return web.Response(headers=headers)
+            return web.Response(headers=cors_headers)
             
         # Handle actual GET request
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'text/plain'
+        response_headers = {
+            **cors_headers,
+            'Content-Type': 'application/json'
         }
-        return web.Response(text='healthy', headers=headers)
+        return web.json_response({
+            'status': 'healthy',
+            'service': 'rerun-viewer',
+            'web_port': self._web_port,
+            'ws_port': self._ws_port
+        }, headers=response_headers)
 
     async def _handle_root(self, request):
         """Handle root path request"""
@@ -216,13 +223,13 @@ class RerunManager:
             self._web_host = web_parsed.hostname or self._web_host
             
             # Start Rerun server with SDK
-            rr.init("video_analytics")#, spawn=True)
-            #rr.connect(ws_port=self._ws_port, web_port=self._web_port)
+            rr.init("video_analytics", spawn=True)
             rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint
+                default_blueprint=blueprint,
+                host=self._web_host
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
