@@ -151,6 +151,13 @@ class CameraStreamHandler(BaseMessageHandler):
                     })
                 return
                 
+            elif message_type == 'stop_camera_stream':
+                self.logger.info("Stopping camera stream")
+                await self.send_response(websocket, {
+                    'type': 'camera_stream_stopped'
+                })
+                return
+                
             elif message_type == 'camera_frame':
                 if not isinstance(message_data, dict):
                     self.logger.warning(f"Invalid message type: {type(message_data)}")
