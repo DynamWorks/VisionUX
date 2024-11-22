@@ -216,22 +216,28 @@ class RerunManager:
             import asyncio
             from aiohttp import web
             
-            # Create the web application
-            self._app = web.Application()
-            self._app.router.add_get('/health', self._health_check)
+            # Create the web application if not already created
+            if not self._app:
+                self._app = web.Application()
+                self._app.router.add_get('/health', self._health_check)
             
+            async def start_site():
+                if not self._runner:
+                    self._runner = web.AppRunner(self._app)
+                    await self._runner.setup()
+                    self._site = web.TCPSite(self._runner, self._web_host, self._web_port)
+                    await self._site.start()
+                    self.logger.info(f"Rerun web server started on port {self._web_port}")
+            
+            # Set up and run event loop
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
-            if not self._runner:
-                self._runner = web.AppRunner(self._app)
-                loop.run_until_complete(self._runner.setup())
-                self._site = web.TCPSite(self._runner, self._web_host, self._web_port)
-                loop.run_until_complete(self._site.start())
-                self.logger.info(f"Rerun web server started on port {self._web_port}")
-                
-                # Keep the server running
-                loop.run_forever()
+            # Start the site
+            loop.run_until_complete(start_site())
+            
+            # Keep the server running
+            loop.run_forever()
         except Exception as e:
             self.logger.error(f"Failed to start Rerun web server: {e}")
             raise
