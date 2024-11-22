@@ -114,12 +114,33 @@ class RerunManager:
 
             self.logger.info("Initializing Rerun...")
             
-            # Verify environment
+            # Load and verify config first
+            if not hasattr(self, '_config') or not self._config:
+                self.config = Config()
+                self._config = self.config._config
+            
+            # Get config values with validation
+            rerun_config = self._config.get('rerun', {})
+            if not rerun_config:
+                raise ValueError("Missing 'rerun' section in config")
+                
+            # Set required attributes from config
+            self._ws_port = int(rerun_config.get('ws_port', 4321))
+            self._web_port = int(rerun_config.get('web_port', 9090))
+            self._ws_host = rerun_config.get('ws_host', 'localhost')
+            self._web_host = rerun_config.get('web_host', 'localhost')
+            
+            # Verify ports are in valid range
+            for port in [self._ws_port, self._web_port]:
+                if not (1024 <= port <= 65535):
+                    raise ValueError(f"Invalid port number: {port}")
+            
+            # Verify environment after config is loaded
             if not self._verify_environment():
                 raise RuntimeError("Environment verification failed")
             
             # Initialize recording
-            rr.init("video_analytics")#, spawn=False)
+            rr.init("video_analytics")
             self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
