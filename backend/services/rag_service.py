@@ -22,11 +22,22 @@ class RAGService:
     def __init__(self, user_id: str = None, project_id: str = None):
         # Load config
         self.config = Config()
+        if not self.config._config:  # If config is empty, load defaults
+            self.config.reset()
         
-        # Initialize embeddings with API key from env or config
+        # Get OpenAI settings with fallbacks
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if not openai_api_key:
+            openai_api_key = self.config.get('services', 'openai', 'api_key')
+            
+        openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+        if not openai_api_base:
+            openai_api_base = self.config.get('services', 'openai', 'api_base', default='https://api.openai.com/v1')
+        
+        # Initialize embeddings with API key and base URL
         self.embeddings = OpenAIEmbeddings(
-            openai_api_key=os.getenv('OPENAI_API_KEY') or self.config.get('services', {}).get('openai', {}).get('api_key'),
-            openai_api_base=os.getenv('OPENAI_API_BASE') or self.config.get('services', {}).get('openai', {}).get('api_base')
+            openai_api_key=openai_api_key,
+            openai_api_base=openai_api_base
         )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
