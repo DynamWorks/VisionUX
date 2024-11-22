@@ -199,39 +199,52 @@ function App() {
             canvas.width = 1280;
             canvas.height = 720;
 
+            let animationFrameId;
             const sendFrame = () => {
-                if (isStreaming && ws && ws.readyState === WebSocket.OPEN) {
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob(async (blob) => {
-                        if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) return;
+                if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) {
+                    cancelAnimationFrame(animationFrameId);
+                    return;
+                }
+
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(async (blob) => {
+                    try {
+                        const arrayBuffer = await blob.arrayBuffer();
                         
-                        try {
-                            // Convert blob to array buffer for more efficient transfer
-                            const arrayBuffer = await blob.arrayBuffer();
-                            
-                            // Send frame type indicator first
-                            ws.send(JSON.stringify({ 
-                                type: 'camera_frame',
-                                width: canvas.width,
-                                height: canvas.height,
-                                timestamp: Date.now()
-                            }));
-                            
-                            // Send the frame data as binary
-                            ws.send(arrayBuffer);
-                        } catch (error) {
-                            console.error('Error sending frame:', error);
-                            setIsStreaming(false);
-                        }
-                    }, 'image/jpeg', 0.85);
-                }
-                if (isStreaming) {
-                    requestAnimationFrame(sendFrame);
-                }
+                        // Send frame type indicator first
+                        ws.send(JSON.stringify({ 
+                            type: 'camera_frame',
+                            width: canvas.width,
+                            height: canvas.height,
+                            timestamp: Date.now()
+                        }));
+                        
+                        // Send the frame data as binary
+                        ws.send(arrayBuffer);
+                        
+                        // Schedule next frame only after successful send
+                        animationFrameId = requestAnimationFrame(sendFrame);
+                    } catch (error) {
+                        console.error('Error sending frame:', error);
+                        setIsStreaming(false);
+                        cancelAnimationFrame(animationFrameId);
+                    }
+                }, 'image/jpeg', 0.85);
             };
 
             video.onloadedmetadata = () => {
-                sendFrame();
+                video.play();
+                animationFrameId = requestAnimationFrame(sendFrame);
+            };
+
+            // Cleanup function
+            return () => {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                }
             };
         } catch (error) {
             console.error('Error accessing camera:', error);
