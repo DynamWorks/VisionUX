@@ -173,7 +173,6 @@ const RerunViewer = () => {
                             </Box>
                         )}
                     </>
-                )}
             </Box>
         </Box>
     );
