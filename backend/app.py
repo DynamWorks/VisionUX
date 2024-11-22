@@ -144,7 +144,7 @@ class BackendApp:
             self.logger.error(f"Failed to start server: {e}")
             raise
 
-    def start(self, port=8000, config=None):
+    def start(self, default_port=8000, config=None):
         """Start the backend server in a separate thread"""
         def run_server():
             try:
@@ -164,7 +164,7 @@ class BackendApp:
                 # Get server config with default port from parameter
                 host = self.config.get('api', 'host', default='0.0.0.0')
                 configured_port = self.config.get('api', 'port')
-                port = configured_port if configured_port is not None else port
+                port = configured_port if configured_port is not None else default_port
                 debug = self.config.get('api', 'debug', default=False)
                 
                 # Start the Flask-SocketIO server
