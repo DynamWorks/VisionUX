@@ -40,6 +40,18 @@ class RerunManager:
             self._active_connections = 0
             self._initialized = False
             self._shutdown_event = asyncio.Event()
+            
+            # Store config reference
+            self._config = self.config
+            
+            # Initialize web server components
+            self._app = web.Application()
+            self._runner = web.AppRunner(self._app)
+            self._site = None
+            self._keep_alive_task = None
+            self._active_connections = 0
+            self._initialized = False
+            self._shutdown_event = asyncio.Event()
     
     async def _keep_alive(self):
         """Keep Rerun connection alive with periodic heartbeats"""
@@ -88,7 +100,7 @@ class RerunManager:
             self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
-            blueprint_config = self.config['rerun']['blueprint']
+            blueprint_config = self._config.get('rerun', {}).get('blueprint', {})
             views = []
             
             for view_config in blueprint_config['views']:
