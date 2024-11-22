@@ -10,28 +10,26 @@ class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
     _instance = None
     _initialized = False
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        from ..config.urls import get_urls
-        self.urls = get_urls()
-        self._ws_port = int(self.urls['rerun_ws'].split(':')[-1])  # Extract port from WS URL
-        self._web_port = int(self.urls['rerun_web'].split(':')[-1])  # Extract port from web URL
-        self._ws_host = self.urls['rerun_ws'].split('://')[1].split(':')[0]  # Extract host from WS URL
-        self._web_host = self.urls['rerun_web'].split('://')[1].split(':')[0]  # Extract host from web URL
-        self._app = web.Application()
-        self._runner = web.AppRunner(self._app)
-        self._site = None
-        self._initialized = False
-    
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def __init__(self):
-        if not self._initialized:
+        if not hasattr(self, '_initialized'):
+            self.logger = logging.getLogger(__name__)
+            from ..config.urls import get_urls
+            self.urls = get_urls()
+            self._ws_port = int(self.urls['rerun_ws'].split(':')[-1])  # Extract port from WS URL
+            self._web_port = int(self.urls['rerun_web'].split(':')[-1])  # Extract port from web URL
+            self._ws_host = self.urls['rerun_ws'].split('://')[1].split(':')[0]  # Extract host from WS URL
+            self._web_host = self.urls['rerun_web'].split('://')[1].split(':')[0]  # Extract host from web URL
+            self._app = web.Application()
+            self._runner = web.AppRunner(self._app)
+            self._site = None
             self._keep_alive_task = None
             self._active_connections = 0
+            self._initialized = False
     
     async def _keep_alive(self):
         """Keep Rerun connection alive with periodic heartbeats"""
