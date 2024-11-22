@@ -25,7 +25,7 @@ const RerunViewer = () => {
                     'Cache-Control': 'no-cache'
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error('Rerun server not responding');
             }
@@ -54,7 +54,7 @@ const RerunViewer = () => {
 
     useEffect(() => {
         // Only check once after initialization
-        checkConnection();
+        //checkConnection();
     }, [checkConnection]);
 
     const handleRefresh = () => {
@@ -87,7 +87,7 @@ const RerunViewer = () => {
                     <RefreshIcon />
                 </IconButton>
             </Box>
-            
+
             <Box sx={{
                 width: '100%',
                 height: '100%',
@@ -114,56 +114,56 @@ const RerunViewer = () => {
                         </Typography>
                     </Box>
                 )}
-                    <>
-                        <iframe
-                            src={`${rerunWebUrl}?url=${encodeURIComponent(rerunWsUrl)}`}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                border: 'none',
-                                opacity: isConnected ? 1 : 0.5,
-                                transition: 'opacity 0.3s ease',
-                                backgroundColor: '#1a1a1a'
-                            }}
-                            title="Rerun Viewer"
-                            allow="camera"
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-                            onError={(e) => {
-                                console.error('Rerun viewer iframe error:', e);
-                                setIsConnected(false);
-                                setIsLoading(false);
-                                setError('Failed to load Rerun viewer');
-                            }}
-                            onLoad={() => {
-                                setIsLoading(false);
-                                checkConnection();
-                            }}
-                        />
-                        {(!isConnected && retryCount >= maxRetries) && (
-                            <Box sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                textAlign: 'center',
-                                color: '#bd9544',
-                                bgcolor: 'rgba(0, 0, 0, 0.8)',
-                                p: 3,
-                                borderRadius: 2,
-                                maxWidth: '80%'
-                            }}>
-                                <Typography variant="h6" sx={{ mb: 1 }}>
-                                    Failed to connect to Rerun viewer
-                                </Typography>
-                                <Typography variant="body2" sx={{ mb: 2 }}>
-                                    {error || 'Please check if the Rerun server is running'}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Server URL: {rerunWebUrl}
-                                </Typography>
-                            </Box>
-                        )}
-                    </>
+                <>
+                    <iframe
+                        src={`${rerunWebUrl}?url=${encodeURIComponent(rerunWsUrl)}`}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            border: 'none',
+                            opacity: isConnected ? 1 : 0.5,
+                            transition: 'opacity 0.3s ease',
+                            backgroundColor: '#1a1a1a'
+                        }}
+                        title="Rerun Viewer"
+                        allow="camera"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                        onError={(e) => {
+                            console.error('Rerun viewer iframe error:', e);
+                            setIsConnected(false);
+                            setIsLoading(false);
+                            setError('Failed to load Rerun viewer');
+                        }}
+                        onLoad={() => {
+                            setIsLoading(false);
+                            checkConnection();
+                        }}
+                    />
+                    {(!isConnected && retryCount >= maxRetries) && (
+                        <Box sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            textAlign: 'center',
+                            color: '#bd9544',
+                            bgcolor: 'rgba(0, 0, 0, 0.8)',
+                            p: 3,
+                            borderRadius: 2,
+                            maxWidth: '80%'
+                        }}>
+                            <Typography variant="h6" sx={{ mb: 1 }}>
+                                Failed to connect to Rerun viewer
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 2 }}>
+                                {error || 'Please check if the Rerun server is running'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Server URL: {rerunWebUrl}
+                            </Typography>
+                        </Box>
+                    )}
+                </>
             </Box>
         </Box>
     );

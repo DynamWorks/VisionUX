@@ -110,30 +110,30 @@ class BackendApp:
             self.rerun_manager.initialize()
             self.logger.info("Rerun manager initialized")
 
-            # Start Rerun server in a separate thread
-            rerun_thread = threading.Thread(
-                target=self.rerun_manager.start_web_server_sync,
-                daemon=True
-            )
-            rerun_thread.start()
-            self.logger.info("Started Rerun web server thread")
+            # # Start Rerun server in a separate thread
+            # rerun_thread = threading.Thread(
+            #     target=self.rerun_manager.start_web_server_sync,
+            #     daemon=True
+            # )
+            # rerun_thread.start()
+            # self.logger.info("Started Rerun web server thread")
 
-            # Wait for Rerun server to be ready
-            max_retries = 5
-            retry_delay = 2
-            for attempt in range(max_retries):
-                try:
-                    import requests
-                    response = requests.get(f"http://{self.rerun_manager._web_host}:{self.rerun_manager._web_port}/health")
-                    if response.status_code == 200:
-                        self.logger.info(f"Rerun server verified running on port {self.rerun_manager._web_port}")
-                        break
-                except Exception as e:
-                    if attempt == max_retries - 1:
-                        self.logger.error(f"Failed to verify Rerun server: {e}")
-                        raise
-                    self.logger.warning(f"Waiting for Rerun server (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(retry_delay)
+            # # Wait for Rerun server to be ready
+            # max_retries = 5
+            # retry_delay = 2
+            # for attempt in range(max_retries):
+            #     try:
+            #         import requests
+            #         response = requests.get(f"http://{self.rerun_manager._web_host}:{self.rerun_manager._web_port}/health")
+            #         if response.status_code == 200:
+            #             self.logger.info(f"Rerun server verified running on port {self.rerun_manager._web_port}")
+            #             break
+            #     except Exception as e:
+            #         if attempt == max_retries - 1:
+            #             self.logger.error(f"Failed to verify Rerun server: {e}")
+            #             raise
+            #         self.logger.warning(f"Waiting for Rerun server (attempt {attempt + 1}/{max_retries})")
+            #         time.sleep(retry_delay)
             
             # Get host/port from config with fallbacks
             host = self.config.get('api', 'host', default='0.0.0.0')
