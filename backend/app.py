@@ -116,7 +116,7 @@ class BackendApp:
             for attempt in range(max_retries):
                 try:
                     import requests
-                    response = requests.get(f"http://localhost:{self.rerun_manager._web_port}/health")
+                    response = requests.get(f"http://{self.rerun_manager._web_host}:{self.rerun_manager._web_port}/health")
                     if response.status_code == 200:
                         self.logger.info(f"Rerun server verified running on port {self.rerun_manager._web_port}")
                         break
