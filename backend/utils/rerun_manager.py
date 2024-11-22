@@ -20,18 +20,17 @@ class RerunManager:
             self.logger = logging.getLogger(__name__)
             
             # Load config
-            import yaml
-            with open("backend/config.yaml") as f:
-                self.config = yaml.safe_load(f)
+            from ..utils.config import Config
+            self.config = Config()
             
             # Get URLs from config with environment variable overrides
             import os
             self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 
-                                        self.config['rerun']['ws_port']))
+                                        self.config.get('rerun', {}).get('ws_port', 4321)))
             self._web_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WEB_PORT',
-                                         self.config['rerun']['web_port']))
+                                         self.config.get('rerun', {}).get('web_port', 9090)))
             self._host = os.getenv('VIDEO_ANALYTICS_HOST_IP',
-                                 self.config['rerun']['host'])
+                                 self.config.get('rerun', {}).get('host', 'localhost'))
             
             # Initialize web server components
             self._app = web.Application()
