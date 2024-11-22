@@ -240,19 +240,15 @@ function App() {
 
 
     const stopCamera = useCallback(() => {
-        if (!ws) return;
         if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+            // Stop all tracks
+            stream.getTracks().forEach(track => {
+                track.stop();
+            });
             setStream(null);
             setIsStreaming(false);
-            // Reset frame counter
-            window.framesSent = false;
-            // Reset Rerun when stopping camera
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'reset_rerun' }));
-            }
         }
-    }, [stream, ws]);
+    }, [stream]);
 
 
     const refreshDevices = useCallback(async () => {
