@@ -22,15 +22,16 @@ class RerunManager:
             # Load config
             from ..utils.config import Config
             self.config = Config()
+            self._config = self.config._config  # Store config dict directly
             
             # Get URLs from config with environment variable overrides
             import os
             self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 
-                                        self.config.get('rerun', {}).get('ws_port', 4321)))
+                                        self.config.get('rerun', 'ws_port', default=4321)))
             self._web_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WEB_PORT',
-                                         self.config.get('rerun', {}).get('web_port', 9090)))
+                                         self.config.get('rerun', 'web_port', default=9090)))
             self._host = os.getenv('VIDEO_ANALYTICS_HOST_IP',
-                                 self.config.get('rerun', {}).get('host', 'localhost'))
+                                 self.config.get('rerun', 'host', default='localhost'))
             
             # Initialize web server components
             self._app = web.Application()
