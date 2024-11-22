@@ -223,13 +223,12 @@ class RerunManager:
             self._web_host = web_parsed.hostname or self._web_host
             
             # Start Rerun server with SDK
-            rr.init("video_analytics", spawn=True)
+            rr.init("video_analytics")#, spawn=True)
             rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint,
-                host=self._web_host
+                default_blueprint=blueprint
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
