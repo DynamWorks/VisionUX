@@ -201,26 +201,22 @@ class CameraStreamHandler(BaseMessageHandler):
             if self.frame_count % 100 == 0:
                 self.logger.info(f"Processed {self.frame_count} frames")
 
-            # Process frame and log
-            await self._process_frame(frame, message_data, metrics)
-            
-            # Get RerunManager instance
-            from ..rerun_manager import RerunManager
-            rerun_manager = RerunManager()
+            # Process frame through video stream
+            from ..video_stream import VideoStream
+            if not hasattr(self, 'stream_processor'):
+                self.stream_processor = VideoStream(source="camera")
+                self.stream_processor.start()
 
-            # Log frame to Rerun if not paused
-            try:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                # Log frame using RerunManager
-                # Use "camera_stream" source identifier for webcam/camera device streams
-                rerun_manager.log_frame(
-                    frame=frame_rgb,
-                    frame_number=self.frame_count,
-                    source="camera_stream"  # Identifies frames coming from browser camera API
-                )
-                
-                self.frame_count += 1
+            # Add frame to stream processor
+            self.stream_processor.add_frame({
+                'frame': frame,
+                'timestamp': time.time(),
+                'frame_number': self.frame_count,
+                'source': 'camera_stream',
+                'metrics': metrics
+            })
+            
+            self.frame_count += 1
             except Exception as e:
                 self.logger.warning(f"Failed to log frame: {e}")
                 self.logger.debug(f"Error details: {str(e)}", exc_info=True)

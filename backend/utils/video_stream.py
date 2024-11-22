@@ -13,6 +13,7 @@ class VideoStream:
         self.source = source
         self.loop = loop and isinstance(source, str)  # Only loop for file sources
         self.buffer = Queue(maxsize=buffer_size)
+        self.subscribers = set()  # For frame processors
         
         self.stop_event = Event()
         self.pause_event = Event()
@@ -120,7 +121,33 @@ class VideoStream:
         """Read the next frame"""
         if self.buffer.empty():
             return None
-        return self.buffer.get()
+        frame_data = self.buffer.get()
+        
+        # Notify subscribers
+        for subscriber in self.subscribers:
+            try:
+                subscriber.process_frame(frame_data)
+            except Exception as e:
+                self.logger.error(f"Subscriber error: {e}")
+                
+        return frame_data
+        
+    def add_subscriber(self, subscriber):
+        """Add a frame processing subscriber"""
+        self.subscribers.add(subscriber)
+        
+    def remove_subscriber(self, subscriber):
+        """Remove a frame processing subscriber"""
+        self.subscribers.discard(subscriber)
+        
+    def add_frame(self, frame_data: dict):
+        """Add a frame to the stream"""
+        if self.buffer.full():
+            try:
+                self.buffer.get_nowait()
+            except:
+                pass
+        self.buffer.put(frame_data)
     
     def get_frames(self, max_frames: int = 30) -> Generator[dict, None, None]:
         """Get a sequence of frames"""
