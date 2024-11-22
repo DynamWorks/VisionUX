@@ -9,6 +9,7 @@ from pathlib import Path
 from content_manager import ContentManager
 from utils.socket_handler import SocketHandler
 from utils.rerun_manager import RerunManager
+from utils.config import Config
 import os
 import yaml
 
