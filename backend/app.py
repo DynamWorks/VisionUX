@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
-from .api.routes import api
+from api.routes import api
 import threading
 import logging
 import time
