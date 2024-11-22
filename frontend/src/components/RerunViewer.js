@@ -2,7 +2,8 @@ import React from 'react';
 import { Box } from '@mui/material';
 
 const RerunViewer = () => {
-    const rerunWebUrl = process.env.REACT_APP_RERUN_WEB_URL || 'http://localhost:9090';
+    const rerunWebUrl = `${process.env.REACT_APP_RERUN_WEB_URL}?url=${encodeURIComponent(process.env.REACT_APP_RERUN_WS_URL)}'
+        // process.env.REACT_APP_RERUN_WEB_URL || 'http://localhost:9090';
 
     return (
         <Box sx={{
@@ -13,7 +14,7 @@ const RerunViewer = () => {
             overflow: 'hidden'
         }}>
             <iframe
-                src={`${rerunWebUrl}`}
+                src=${rerunWebUrl}
                 style={{
                     width: '100%',
                     height: '100%',
