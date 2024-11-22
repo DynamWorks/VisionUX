@@ -129,14 +129,6 @@ function App() {
                 setVideoFile(null);
                 setIsStreaming(false);
             }
-
-            // // Reset Rerun video topic before starting camera
-            // if (ws && ws.readyState === WebSocket.OPEN) {
-            //     ws.send(JSON.stringify({
-            //         type: 'reset_rerun'
-            //     }));
-            // }
-
             const constraints = {
                 video: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
@@ -510,10 +502,7 @@ function App() {
                                                             }));
                                                         };
                                                     }, 1000); // Wait 1 second before reconnecting
-                                                    // Reset Rerun after successful upload
-                                                    // ws.send(JSON.stringify({
-                                                    //     type: 'reset_rerun'
-                                                    // }));
+
                                                 } catch (error) {
                                                     console.error('Upload failed:', error);
                                                     alert(`Upload failed: ${error.message}`);
