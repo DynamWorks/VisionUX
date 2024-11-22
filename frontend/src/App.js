@@ -232,61 +232,30 @@ function App() {
 
     useEffect(() => {
         refreshDevices();
-        fetchUploadedFiles(); // Initial fetch
+        
+        // Only fetch files on initial load
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            fetchUploadedFiles();
+        }
 
         // Handle WebSocket messages for file list updates
         const handleMessages = (event) => {
             if (!event.data) return;
             try {
                 const data = JSON.parse(event.data);
-                console.log('Received WebSocket message:', data);
                 
-                if (data.type === 'uploaded_files') {
-                    console.log('Processing uploaded files:', data.files);
-                    if (Array.isArray(data.files)) {
-                        // Sort files by last modified date
-                        const sortedFiles = data.files.sort((a, b) => b.modified - a.modified);
-                        const files = sortedFiles.map(file => ({
-                            name: file.name,
-                            size: file.size,
-                            lastModified: file.modified * 1000,
-                            type: 'video/mp4',
-                            path: file.path
-                        }));
-                        console.log('Updating file list with:', files);
-                        setUploadedFiles(prev => {
-                            // Only update if the file list has changed
-                            const currentPaths = prev.map(f => f.path);
-                            const newPaths = files.map(f => f.path);
-                            if (JSON.stringify(currentPaths) !== JSON.stringify(newPaths)) {
-                                return files;
-                            }
-                            return prev;
-                        });
-                    } else {
-                        console.warn('Received invalid file list format:', data.files);
-                    }
-                } else if (data.type === 'error') {
-                    console.error('Server error:', data.error);
-                } else if (data.type === 'upload_complete_ack') {
-                    console.log('Upload complete, refreshing file list');
-                    fetchUploadedFiles();
-                }
-            } catch (error) {
-                console.error('Error processing WebSocket message:', error);
-            }
-        };
-
-        const handleFileListMessages = (event) => {
-            if (!event.data) return;
-            try {
-                const data = JSON.parse(event.data);
                 if (data.type === 'uploaded_files') {
                     console.log('Processing uploaded files:', data.files);
                     if (Array.isArray(data.files)) {
                         const sortedFiles = data.files.sort((a, b) => b.modified - a.modified);
                         setUploadedFiles(sortedFiles);
                     }
+                } else if (data.type === 'connection_established') {
+                    console.log('Connection established, fetching files');
+                    fetchUploadedFiles();
+                } else if (data.type === 'upload_complete_ack') {
+                    console.log('Upload complete, fetching updated file list');
+                    fetchUploadedFiles();
                 }
             } catch (error) {
                 console.error('Error processing WebSocket message:', error);
@@ -294,39 +263,18 @@ function App() {
         };
 
         if (ws) {
-            ws.addEventListener('message', handleFileListMessages);
+            ws.addEventListener('message', handleMessages);
             
-            // Set up connection and file list request handlers
-            const handleConnection = () => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    console.log('WebSocket ready, fetching files');
-                    fetchUploadedFiles();
-                }
-            };
-
-            // Request immediately if already open
-            handleConnection();
-
-            // Set up listener for when connection opens
-            ws.addEventListener('open', handleConnection);
-
-            // Also request files after successful connection message
-            ws.addEventListener('message', (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'connection_established') {
-                        console.log('Connection established, fetching files');
-                        fetchUploadedFiles();
-                    }
-                } catch (error) {
-                    console.error('Error parsing message:', error);
-                }
+            // Request files when WebSocket first connects
+            ws.addEventListener('open', () => {
+                console.log('WebSocket connected, fetching files');
+                fetchUploadedFiles();
             });
         }
 
         return () => {
             if (ws) {
-                ws.removeEventListener('message', handleFileListMessages);
+                ws.removeEventListener('message', handleMessages);
             }
         };
     }, [refreshDevices, ws, fetchUploadedFiles]);
