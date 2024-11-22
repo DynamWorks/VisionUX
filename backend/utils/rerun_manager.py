@@ -5,6 +5,7 @@ import asyncio
 from aiohttp import web
 import time
 import cv2
+from pathlib import Path
 
 class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
