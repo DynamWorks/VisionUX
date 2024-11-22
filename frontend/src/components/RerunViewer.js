@@ -17,18 +17,34 @@ const RerunViewer = () => {
         if (!iframe) return;
 
         try {
-            // Try to access iframe content
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            // First check if Rerun server is responding
+            const response = await fetch(`${rerunWebUrl}/health`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
             
-            // Check if Rerun server is responding
-            const response = await fetch(`${rerunWebUrl}/health`);
-            if (!response.ok) throw new Error('Rerun server not responding');
+            if (!response.ok) {
+                throw new Error('Rerun server not responding');
+            }
 
-            setIsConnected(true);
-            setRetryCount(0);
-            setIsLoading(false);
-            setError(null);
-            console.log('Rerun viewer connected successfully');
+            // Then check WebSocket connection
+            const ws = new WebSocket(rerunWsUrl);
+            
+            ws.onopen = () => {
+                setIsConnected(true);
+                setRetryCount(0);
+                setIsLoading(false);
+                setError(null);
+                console.log('Rerun viewer connected successfully');
+                ws.close();
+            };
+            
+            ws.onerror = () => {
+                throw new Error('WebSocket connection failed');
+            };
         } catch (error) {
             console.warn('Rerun viewer connection check failed:', error);
             setIsConnected(false);
@@ -86,11 +102,27 @@ const RerunViewer = () => {
                 height: '100%',
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                position: 'relative'
             }}>
-                {isLoading ? (
-                    <CircularProgress sx={{ color: '#bd9544' }} />
-                ) : (
+                {isLoading && (
+                    <Box sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2
+                    }}>
+                        <CircularProgress sx={{ color: '#bd9544' }} />
+                        <Typography variant="body2" color="#bd9544">
+                            Connecting to Rerun viewer...
+                        </Typography>
+                    </Box>
+                )}
                     <>
                         <iframe
                             src={`${rerunWebUrl}?url=${encodeURIComponent(rerunWsUrl)}`}
@@ -99,11 +131,12 @@ const RerunViewer = () => {
                                 height: '100%',
                                 border: 'none',
                                 opacity: isConnected ? 1 : 0.5,
-                                transition: 'opacity 0.3s ease'
+                                transition: 'opacity 0.3s ease',
+                                backgroundColor: '#1a1a1a'
                             }}
                             title="Rerun Viewer"
                             allow="camera"
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
                             onError={(e) => {
                                 console.error('Rerun viewer iframe error:', e);
                                 setIsConnected(false);
