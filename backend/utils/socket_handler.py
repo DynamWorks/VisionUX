@@ -14,7 +14,7 @@ class SocketHandler:
             app,
             cors_allowed_origins="*",
             max_http_buffer_size=100 * 1024 * 1024,  # 100MB
-            async_mode='eventlet',
+            async_mode=None,  # Let SocketIO choose best available mode
             logger=True,
             engineio_logger=True
         )
