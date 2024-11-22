@@ -34,12 +34,19 @@ frame_memory = MemoryManager(content_manager=None)
 
 @api.route('/health', methods=['GET'])
 def health_check():
-    """Simple health check endpoint"""
-    return jsonify({
+    """Health check endpoint with CORS support"""
+    # Add CORS headers
+    response = jsonify({
         'status': 'healthy',
         'service': 'video-analytics-api',
-        'timestamp': time.time()
+        'timestamp': time.time(),
+        'websocket': True,
+        'rerun': True
     })
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', '*')
+    return response
 
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():

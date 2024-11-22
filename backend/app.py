@@ -148,13 +148,25 @@ class BackendApp:
             port = self.config.get('api', 'port', default=port)
             debug = self.config.get('api', 'debug', default=debug)
             
-            # Run Flask-SocketIO app
+            # Configure CORS for both REST and WebSocket
+            CORS(self.app, resources={
+                r"/api/*": {
+                    "origins": "*",
+                    "allow_headers": ["Content-Type"],
+                    "methods": ["GET", "POST", "OPTIONS"]
+                }
+            })
+
+            # Run Flask-SocketIO app with proper configuration
             self.socket_handler.socketio.run(
                 self.app,
                 host=host,
                 port=port,
                 debug=debug,
-                allow_unsafe_werkzeug=True  # Required for production
+                allow_unsafe_werkzeug=True,  # Required for production
+                cors_allowed_origins="*",
+                ping_timeout=20,
+                ping_interval=25
             )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
