@@ -20,6 +20,11 @@ function App() {
 
     const [ws, setWs] = useState(null);
 
+    // Fetch files on component mount
+    useEffect(() => {
+        fetchUploadedFiles();
+    }, [fetchUploadedFiles]);
+
     useEffect(() => {
         if (ws) return; // Prevent recreating if ws exists
         
@@ -30,7 +35,6 @@ function App() {
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
         let reconnectTimeout;
-        let isFirstConnection = true;
 
         const connectWebSocket = () => {
             try {
@@ -42,20 +46,10 @@ function App() {
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket); // Only set ws when connection is established
 
-                    // Send initial connection message
+                    // Send initial connection message and request file list
                     websocket.send(JSON.stringify({ type: 'connection_established' }));
-                    
-                    // Immediately request file list
-                    console.log('Requesting initial file list...');
-                    websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
-                    
-                    // Request file list on initial connection and reconnects
                     websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
                     console.log('Requested initial file list');
-                    
-                    if (isFirstConnection) {
-                        isFirstConnection = false;
-                    }
                 };
 
                 websocket.onmessage = (event) => {
