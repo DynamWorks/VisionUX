@@ -41,9 +41,6 @@ class RerunManager:
             self._initialized = False
             self._shutdown_event = asyncio.Event()
             
-            # Store config reference
-            self._config = self.config
-            
             # Initialize web server components
             self._app = web.Application()
             self._runner = web.AppRunner(self._app)
