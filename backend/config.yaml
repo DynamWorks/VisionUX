@@ -9,6 +9,11 @@ websocket:
   port: ${VIDEO_ANALYTICS_WS_PORT:-8001}
   debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}
 
+rerun:
+  web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}
+  ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}
+  host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}
+
 frontend:
   host: localhost
   port: 8501

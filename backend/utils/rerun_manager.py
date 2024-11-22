@@ -83,13 +83,19 @@ class RerunManager:
                 rr.blueprint.TextLogView(origin="world/events", name="Events")
             )
             
-            # Extract ports from URLs
+            # Get URLs from config
             ws_url = self.urls['rerun_ws']
             web_url = self.urls['rerun_web']
             
-            # Extract ports from URLs
-            self._ws_port = int(ws_url.split(':')[-1])
-            self._web_port = int(web_url.split(':')[-1])
+            # Parse URLs to get host and port
+            from urllib.parse import urlparse
+            ws_parsed = urlparse(ws_url)
+            web_parsed = urlparse(web_url)
+            
+            self._ws_port = ws_parsed.port or 4321  # Default WS port
+            self._web_port = web_parsed.port or 9090  # Default web port
+            self._ws_host = ws_parsed.hostname or 'localhost'
+            self._web_host = web_parsed.hostname or 'localhost'
             
             # Start Rerun server
             rr.serve(
