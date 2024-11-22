@@ -125,7 +125,7 @@ const RerunViewer = () => {
                 )}
                     <>
                         <iframe
-                            src={`${rerunWebUrl}/viewer?url=${encodeURIComponent(rerunWsUrl)}`}
+                            src={`${rerunWebUrl}?url=${encodeURIComponent(rerunWsUrl)}`}
                             style={{
                                 width: '100%',
                                 height: '100%',
