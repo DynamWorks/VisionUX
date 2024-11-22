@@ -84,15 +84,6 @@ class RerunManager:
             self._active_connections = 0
             self._initialized = False
             self._shutdown_event = asyncio.Event()
-            
-            # Initialize web server components
-            self._app = web.Application()
-            self._runner = web.AppRunner(self._app)
-            self._site = None
-            self._keep_alive_task = None
-            self._active_connections = 0
-            self._initialized = False
-            self._shutdown_event = asyncio.Event()
     
     async def _keep_alive(self):
         """Keep Rerun connection alive with periodic heartbeats"""
