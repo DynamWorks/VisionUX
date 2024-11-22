@@ -75,7 +75,7 @@ class RerunManager:
     async def _handle_root(self, request):
         """Handle root path request"""
         from aiohttp import web
-        return web.Response(text='Rerun server is running', content_type='text/plain')
+        return web.Response(text='Rerun server is running', headers={'Content-Type': 'text/plain'})
             
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
