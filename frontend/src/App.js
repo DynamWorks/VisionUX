@@ -317,9 +317,12 @@ function App() {
                                         }
                                         // Clear previous video file and update with new one
                                         if (videoFile) {
-                                            URL.revokeObjectURL(URL.createObjectURL(videoFile));
+                                            URL.revokeObjectURL(videoFile.url);
                                         }
-                                        setVideoFile(file);
+                                        setVideoFile({
+                                            file: file,
+                                            url: URL.createObjectURL(file)
+                                        });
                                         // Update uploaded files list, checking for duplicates
                                         setUploadedFiles(prev => {
                                             // Check if file already exists
@@ -332,13 +335,19 @@ function App() {
                                                 return prev;
                                             }
 
-                                            // Add new file and keep only 5 most recent
-                                            const newFiles = [file, ...prev.slice(0, 4)];
                                             // Clean up old URLs
-                                            prev.slice(5).forEach(oldFile => {
-                                                URL.revokeObjectURL(URL.createObjectURL(oldFile));
+                                            prev.slice(4).forEach(oldFile => {
+                                                if (oldFile.url) {
+                                                    URL.revokeObjectURL(oldFile.url);
+                                                }
                                             });
-                                            return newFiles;
+
+                                            // Add new file and keep only 5 most recent
+                                            const newFile = {
+                                                ...file,
+                                                url: URL.createObjectURL(file)
+                                            };
+                                            return [newFile, ...prev.slice(0, 4)];
                                         });
 
                                         // Upload file via API

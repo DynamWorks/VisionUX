@@ -11,7 +11,13 @@ const VideoUpload = ({ onUpload }) => {
         maxFiles: 1,
         onDrop: files => {
             if (files?.[0]) {
-                onUpload(files[0]);
+                const file = files[0];
+                // Verify it's a video file
+                if (!file.type.startsWith('video/')) {
+                    alert('Please upload a video file');
+                    return;
+                }
+                onUpload(file);
             }
         }
     });
