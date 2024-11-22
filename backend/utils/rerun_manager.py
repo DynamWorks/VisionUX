@@ -42,27 +42,18 @@ class RerunManager:
                 self._web_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WEB_PORT', 9090))
 
             # Create required directories first
-            for path in ['tmp_content', 'tmp_content/uploads', 'tmp_content/analysis']:
-                Path(path).mkdir(parents=True, exist_ok=True)
+            base_dir = Path('tmp_content')
+            base_dir.mkdir(parents=True, exist_ok=True)
+            
+            for subdir in ['uploads', 'analysis', 'chat_history']:
+                (base_dir / subdir).mkdir(exist_ok=True)
                 
-            # Check if ports are already in use
-            import socket
-            for port in [self._ws_port, self._web_port]:
-                try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    # Set socket options for immediate reuse
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    sock.bind(('localhost', port))
-                    sock.close()
-                except OSError as e:
-                    # Log but don't fail - port might be from previous instance
-                    self.logger.warning(f"Port {port} may be in use: {e}")
-                    continue
-                
-            # Set URLs after port verification
+            # Set host values
             self._ws_host = 'localhost'
             self._web_host = 'localhost'
-                
+            
+            # Don't check ports - Rerun will handle port conflicts
+            self.logger.info(f"Environment verified. WS Port: {self._ws_port}, Web Port: {self._web_port}")
             return True
             
         except Exception as e:
