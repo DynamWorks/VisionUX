@@ -4,7 +4,7 @@ import os
 
 def get_urls() -> Dict[str, str]:
     """Get URL configuration from environment variables with defaults"""
-    from .config import Config
+    from ..config import Config
     config = Config()
     
     # Get host IP and ports from config with environment variable overrides
