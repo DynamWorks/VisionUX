@@ -53,8 +53,8 @@ const RerunViewer = () => {
     }, [rerunWebUrl, rerunWsUrl, retryCount]);
 
     useEffect(() => {
-        const interval = setInterval(checkConnection, 5000);
-        return () => clearInterval(interval);
+        // Only check once after initialization
+        checkConnection();
     }, [checkConnection]);
 
     const handleRefresh = () => {
