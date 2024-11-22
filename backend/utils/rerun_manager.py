@@ -5,6 +5,7 @@ import asyncio
 from aiohttp import web
 import time
 import cv2
+import os
 from pathlib import Path
 
 class RerunManager:
@@ -34,6 +35,12 @@ class RerunManager:
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
         try:
+            # Initialize ports from config if not already set
+            if not hasattr(self, '_ws_port'):
+                self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 4321))
+            if not hasattr(self, '_web_port'):
+                self._web_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WEB_PORT', 9090))
+
             # Check ports are available
             import socket
             for port in [self._ws_port, self._web_port]:
