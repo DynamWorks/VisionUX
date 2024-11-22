@@ -36,6 +36,11 @@ class RerunManager:
             self._site = None
             self._app = None
             self._keep_alive_task = None
+
+    async def _health_check(self, request):
+        """Health check endpoint for the web server"""
+        from aiohttp import web
+        return web.Response(text='healthy')
             
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
@@ -209,6 +214,12 @@ class RerunManager:
         """Start the web server for Rerun viewer (synchronous version)"""
         try:
             import asyncio
+            from aiohttp import web
+            
+            # Create the web application
+            self._app = web.Application()
+            self._app.router.add_get('/health', self._health_check)
+            
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
