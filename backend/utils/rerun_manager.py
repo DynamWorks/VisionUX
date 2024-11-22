@@ -18,6 +18,7 @@ class RerunManager:
         return cls._instance
 
     def __init__(self):
+        import pdb; pdb.set_trace()
         if not hasattr(self, '_initialized'):
             self.logger = logging.getLogger(__name__)
             
@@ -66,24 +67,6 @@ class RerunManager:
         except Exception as e:
             self.logger.error(f"Environment verification failed: {e}")
             return False
-            
-            # Get URLs from config with environment variable overrides
-            import os
-            self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 
-                                        self.config.get('rerun', 'ws_port', default=4321)))
-            self._web_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WEB_PORT',
-                                         self.config.get('rerun', 'web_port', default=9090)))
-            self._host = os.getenv('VIDEO_ANALYTICS_HOST_IP',
-                                 self.config.get('rerun', 'host', default='localhost'))
-            
-            # Initialize web server components
-            self._app = web.Application()
-            self._runner = web.AppRunner(self._app)
-            self._site = None
-            self._keep_alive_task = None
-            self._active_connections = 0
-            self._initialized = False
-            self._shutdown_event = asyncio.Event()
     
     async def _keep_alive(self):
         """Keep Rerun connection alive with periodic heartbeats"""
