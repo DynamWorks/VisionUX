@@ -18,18 +18,29 @@ class RerunManager:
     def __init__(self):
         if not hasattr(self, '_initialized'):
             self.logger = logging.getLogger(__name__)
-            from ..config.urls import get_urls
-            self.urls = get_urls()
-            self._ws_port = int(self.urls['rerun_ws'].split(':')[-1])  # Extract port from WS URL
-            self._web_port = int(self.urls['rerun_web'].split(':')[-1])  # Extract port from web URL
-            self._ws_host = self.urls['rerun_ws'].split('://')[1].split(':')[0]  # Extract host from WS URL
-            self._web_host = self.urls['rerun_web'].split('://')[1].split(':')[0]  # Extract host from web URL
+            
+            # Load config
+            import yaml
+            with open("backend/config.yaml") as f:
+                self.config = yaml.safe_load(f)
+            
+            # Get URLs from config with environment variable overrides
+            import os
+            self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 
+                                        self.config['rerun']['ws_port']))
+            self._web_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WEB_PORT',
+                                         self.config['rerun']['web_port']))
+            self._host = os.getenv('VIDEO_ANALYTICS_HOST_IP',
+                                 self.config['rerun']['host'])
+            
+            # Initialize web server components
             self._app = web.Application()
             self._runner = web.AppRunner(self._app)
             self._site = None
             self._keep_alive_task = None
             self._active_connections = 0
             self._initialized = False
+            self._shutdown_event = asyncio.Event()
     
     async def _keep_alive(self):
         """Keep Rerun connection alive with periodic heartbeats"""
@@ -77,11 +88,26 @@ class RerunManager:
             rr.init("video_analytics", spawn=False)
             self.logger.info("Created new Rerun recording")
                 
-            # Configure default blueprint
-            blueprint = rr.blueprint.Vertical(
-                rr.blueprint.Spatial2DView(origin="world/video/stream", name="Video Feed"),
-                rr.blueprint.TextLogView(origin="world/events", name="Events")
-            )
+            # Load blueprint configuration from config
+            blueprint_config = self.config['rerun']['blueprint']
+            views = []
+            
+            for view_config in blueprint_config['views']:
+                if view_config['type'] == 'spatial2d':
+                    views.append(rr.blueprint.Spatial2DView(
+                        origin=view_config['origin'],
+                        name=view_config['name']
+                    ))
+                elif view_config['type'] == 'text_log':
+                    views.append(rr.blueprint.TextLogView(
+                        origin=view_config['origin'],
+                        name=view_config['name']
+                    ))
+                    
+            if blueprint_config['layout'] == 'vertical':
+                blueprint = rr.blueprint.Vertical(*views)
+            else:
+                blueprint = rr.blueprint.Horizontal(*views)
             
             # Get URLs from config
             ws_url = self.urls['rerun_ws']
