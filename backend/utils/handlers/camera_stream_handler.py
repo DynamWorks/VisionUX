@@ -202,24 +202,26 @@ class CameraStreamHandler(BaseMessageHandler):
                 self.logger.info(f"Processed {self.frame_count} frames")
 
             # Process frame through video stream
-            from ..video_stream import VideoStream
-            if not hasattr(self, 'stream_processor'):
-                self.stream_processor = VideoStream(source="camera")
-                self.stream_processor.start()
+            try:
+                from ..video_stream import VideoStream
+                if not hasattr(self, 'stream_processor'):
+                    self.stream_processor = VideoStream(source="camera")
+                    self.stream_processor.start()
 
-            # Add frame to stream processor
-            self.stream_processor.add_frame({
-                'frame': frame,
-                'timestamp': time.time(),
-                'frame_number': self.frame_count,
-                'source': 'camera_stream',
-                'metrics': metrics
-            })
-            
-            self.frame_count += 1
+                # Add frame to stream processor
+                self.stream_processor.add_frame({
+                    'frame': frame,
+                    'timestamp': time.time(),
+                    'frame_number': self.frame_count,
+                    'source': 'camera_stream',
+                    'metrics': metrics
+                })
+                
+                self.frame_count += 1
             except Exception as e:
-                self.logger.warning(f"Failed to log frame: {e}")
+                self.logger.warning(f"Failed to process frame: {e}")
                 self.logger.debug(f"Error details: {str(e)}", exc_info=True)
+                raise  # Re-raise to be caught by outer exception handler
 
         except Exception as e:
             self.logger.error(f"Error handling camera frame: {e}", exc_info=True)
