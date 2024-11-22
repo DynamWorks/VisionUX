@@ -1,6 +1,7 @@
 import os
 import sys
 import yaml
+import argparse
 
 # Add the project root directory to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -10,9 +11,19 @@ from backend.app import app
 from backend.utils.rerun_manager import RerunManager
 
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run the video analytics backend server')
+    parser.add_argument('--config', type=str, 
+                       default=os.path.join(os.path.dirname(__file__), "config.yaml"),
+                       help='Path to config.yaml file')
+    args = parser.parse_args()
+
     # Load config
-    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-    with open(config_path, "r") as f:
+    if not os.path.exists(args.config):
+        print(f"Error: Config file not found: {args.config}")
+        sys.exit(1)
+
+    with open(args.config, "r") as f:
         config = yaml.safe_load(f)
     
     # Get server config
