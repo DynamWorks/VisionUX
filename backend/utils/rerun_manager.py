@@ -167,13 +167,28 @@ class RerunManager:
         finally:
             loop.close()
 
-    async def stop_web_server(self):
-        """Stop the web server"""
+    async def cleanup(self):
+        """Clean up resources and stop servers"""
+        self.logger.info("Cleaning up Rerun manager...")
+        
+        # Signal keep-alive task to stop
+        self._shutdown_event.set()
+        
+        # Stop keep-alive task
+        if self._keep_alive_task and not self._keep_alive_task.done():
+            self._keep_alive_task.cancel()
+            try:
+                await self._keep_alive_task
+            except asyncio.CancelledError:
+                pass
+                
+        # Stop web server
         if self._site:
             await self._site.stop()
         if self._runner:
             await self._runner.cleanup()
-        self.logger.info("Rerun web server stopped")
+            
+        self.logger.info("Rerun manager cleanup complete")
     
     def register_connection(self):
         """Register a new frontend connection"""
