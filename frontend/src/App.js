@@ -52,20 +52,29 @@ function App() {
         let reconnectTimeout;
 
         const connectWebSocket = () => {
-            try {
-                console.log('Connecting to WebSocket:', wsUrl);
-                const websocket = new WebSocket(wsUrl);
+            console.log('Connecting to WebSocket:', wsUrl);
+            const websocket = new WebSocket(wsUrl);
+            let connectionTimeout;
 
-                websocket.onopen = () => {
-                    console.log('WebSocket Connected');
-                    reconnectAttempts = 0; // Reset attempts on successful connection
-                    setWs(websocket); // Only set ws when connection is established
+            // Set connection timeout
+            connectionTimeout = setTimeout(() => {
+                if (websocket.readyState !== WebSocket.OPEN) {
+                    console.log('Connection attempt timed out');
+                    websocket.close();
+                }
+            }, 5000); // 5 second timeout
 
-                    // Send initial connection message and request file list
-                    websocket.send(JSON.stringify({ type: 'connection_established' }));
-                    websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
-                    console.log('Requested initial file list');
-                };
+            websocket.onopen = () => {
+                clearTimeout(connectionTimeout);
+                console.log('WebSocket Connected');
+                reconnectAttempts = 0; // Reset attempts on successful connection
+                setWs(websocket); // Only set ws when connection is established
+
+                // Send initial connection message and request file list
+                websocket.send(JSON.stringify({ type: 'connection_established' }));
+                websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
+                console.log('Requested initial file list');
+            };
 
                 websocket.onmessage = (event) => {
                     try {
@@ -84,26 +93,31 @@ function App() {
                 };
 
                 websocket.onclose = (event) => {
+                    clearTimeout(connectionTimeout);
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
-                    if (!event.wasClean) {
-                        if (reconnectAttempts < maxReconnectAttempts) {
-                            reconnectAttempts++;
-                            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-                            console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
-                            reconnectTimeout = setTimeout(connectWebSocket, delay);
-                        } else {
-                            console.error('Max reconnection attempts reached');
-                        }
+                    setWs(null); // Clear the websocket reference
+
+                    // Don't attempt reconnect if closing was intentional
+                    if (event.wasClean) {
+                        console.log('Clean websocket closure');
+                        return;
+                    }
+
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+                        console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
+                        reconnectTimeout = setTimeout(connectWebSocket, delay);
+                    } else {
+                        console.error('Max reconnection attempts reached');
+                        // Implement user feedback here if needed
                     }
                 };
 
                 websocket.onerror = (error) => {
                     console.error('WebSocket Error:', error);
-                    // Attempt to reconnect on error
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        console.log('Attempting to reconnect due to error...');
-                        setTimeout(connectWebSocket, 3000);
-                    }
+                    // Let onclose handle reconnection
+                    websocket.close();
                 };
 
                 setWs(websocket);
