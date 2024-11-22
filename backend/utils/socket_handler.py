@@ -159,7 +159,7 @@ class SocketHandler:
             rerun_manager.log_frame(
                 frame=frame_rgb,
                 frame_number=frame_number,
-                source="socket_stream"
+                source="socket_stream"  # Identifies frames coming through WebSocket (uploaded videos)
             )
             
             self._frame_count = frame_number + 1

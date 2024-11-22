@@ -213,10 +213,11 @@ class CameraStreamHandler(BaseMessageHandler):
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
                 # Log frame using RerunManager
+                # Use "camera_stream" source identifier for webcam/camera device streams
                 rerun_manager.log_frame(
                     frame=frame_rgb,
                     frame_number=self.frame_count,
-                    source="camera_stream"
+                    source="camera_stream"  # Identifies frames coming from browser camera API
                 )
                 
                 self.frame_count += 1
