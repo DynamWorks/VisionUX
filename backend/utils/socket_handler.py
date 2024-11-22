@@ -10,7 +10,14 @@ class SocketHandler:
     """Handles Socket.IO events"""
     
     def __init__(self, app):
-        self.socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=100 * 1024 * 1024)  # 100MB
+        self.socketio = SocketIO(
+            app,
+            cors_allowed_origins="*",
+            max_http_buffer_size=100 * 1024 * 1024,  # 100MB
+            async_mode='eventlet',
+            logger=True,
+            engineio_logger=True
+        )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
         self.rerun_manager = RerunManager()
@@ -82,10 +89,15 @@ class SocketHandler:
         def handle_camera_frame(data):
             try:
                 # Process camera frame
-                if isinstance(data, dict) and 'frame' in data:
-                    frame_data = data['frame']
-                    # Process frame with Rerun
-                    self._process_frame(frame_data)
+                if isinstance(data, dict):
+                    self.logger.debug("Received camera frame data")
+                    # Get next binary frame
+                    frame_data = self.socketio.receive(binary=True)
+                    if frame_data:
+                        # Process frame with Rerun
+                        self._process_frame(frame_data)
+                    else:
+                        self.logger.warning("No binary frame data received")
             except Exception as e:
                 self.logger.error(f"Frame processing error: {e}")
                 emit('error', {'message': str(e)})
@@ -125,6 +137,8 @@ class SocketHandler:
         try:
             import numpy as np
             import cv2
+            
+            self.logger.debug(f"Processing frame data of size: {len(frame_data)} bytes")
 
             # Decode frame
             nparr = np.frombuffer(frame_data, np.uint8)

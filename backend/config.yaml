@@ -6,9 +6,9 @@ api:
   cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-"*"}  # CORS allowed origins
 
 websocket:
-  host: ${VIDEO_ANALYTICS_WS_HOST:-0.0.0.0}    # WebSocket bind address
+  host: ${VIDEO_ANALYTICS_WS_HOST:-localhost}    # WebSocket bind address
   port: ${VIDEO_ANALYTICS_WS_PORT:-8001}        # WebSocket server port
-  debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}      # Enable WebSocket debug mode
+  debug: ${VIDEO_ANALYTICS_WS_DEBUG:-true}      # Enable WebSocket debug mode
   max_buffer_size: 104857600  # 100MB in bytes
 
 rerun:
