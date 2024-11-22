@@ -20,6 +20,7 @@ class FrameMetrics:
     width: int 
     height: int
 
+
 class CameraStreamHandler(BaseMessageHandler):
     """Handles camera stream messages with rate limiting and metrics"""
     
