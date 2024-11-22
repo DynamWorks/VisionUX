@@ -38,10 +38,11 @@ class RerunManager:
             self._keep_alive_task = None
             
             # Initialize web server attributes
-            self._web_host = self._config.get('rerun', 'web_host', default='localhost')
-            self._web_port = int(self._config.get('rerun', 'web_port', default=9090))
-            self._ws_host = self._config.get('rerun', 'ws_host', default='localhost')
-            self._ws_port = int(self._config.get('rerun', 'ws_port', default=4321))
+            rerun_config = self._config.get('rerun', {})
+            self._web_host = rerun_config.get('web_host', 'localhost')
+            self._web_port = int(rerun_config.get('web_port', 9090))
+            self._ws_host = rerun_config.get('ws_host', 'localhost')
+            self._ws_port = int(rerun_config.get('ws_port', 4321))
 
     async def _health_check(self, request):
         """Health check endpoint for the web server"""
