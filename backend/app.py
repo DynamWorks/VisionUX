@@ -25,10 +25,14 @@ class BackendApp:
         # Setup logging
         self.setup_logging()
         self.logger = logging.getLogger(__name__)
-        self.app = Flask(__name__, static_folder='../frontend/build')
-        # Enable CORS
-        CORS(self.app, resources={r"/api/*": {"origins": "*"}})
-        logging.info("Flask app initialized with CORS support")
+        # Get frontend path from config
+        frontend_path = self.config.get('frontend', 'build_path', default='../frontend/build')
+        self.app = Flask(__name__, static_folder=frontend_path)
+        
+        # Get CORS settings from config
+        cors_origins = self.config.get('api', 'cors_origins', default="*")
+        CORS(self.app, resources={r"/api/*": {"origins": cors_origins}})
+        logging.info(f"Flask app initialized with CORS origins: {cors_origins}")
         self.server = None
         self.content_manager = None
         self.models_loaded = False
@@ -123,10 +127,15 @@ class BackendApp:
                     self.logger.warning(f"Waiting for Rerun server (attempt {attempt + 1}/{max_retries})")
                     time.sleep(retry_delay)
             
-            # Run Flask-SocketIO app with explicit host binding
+            # Get host/port from config with fallbacks
+            host = self.config.get('api', 'host', default='0.0.0.0')
+            port = self.config.get('api', 'port', default=port)
+            debug = self.config.get('api', 'debug', default=debug)
+            
+            # Run Flask-SocketIO app
             self.socket_handler.socketio.run(
                 self.app,
-                host='0.0.0.0',  # Bind to all interfaces
+                host=host,
                 port=port,
                 debug=debug,
                 allow_unsafe_werkzeug=True  # Required for production
@@ -152,12 +161,17 @@ class BackendApp:
                 Path("backend/models/clip").mkdir(parents=True, exist_ok=True)
                 Path("backend/models/traffic_signs").mkdir(parents=True, exist_ok=True)
                 
+                # Get server config
+                host = self.config.get('api', 'host', default='0.0.0.0')
+                port = self.config.get('api', 'port', default=port)
+                debug = self.config.get('api', 'debug', default=False)
+                
                 # Start the Flask-SocketIO server
                 self.socket_handler.socketio.run(
                     self.app,
-                    host='0.0.0.0',  # Listen on all interfaces
-                    port=port,
-                    debug=False,
+                    host=host,
+                    port=port, 
+                    debug=debug,
                     allow_unsafe_werkzeug=True  # Required for production
                 )
             except Exception as e:
