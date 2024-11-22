@@ -182,18 +182,18 @@ class RerunManager:
                 blueprint = rr.blueprint.Horizontal(*views)
             
             # Get URLs from config
-            ws_url = self.urls['rerun_ws']
-            web_url = self.urls['rerun_web']
+            from ..config.urls import get_urls
+            urls = get_urls()
             
             # Parse URLs to get host and port
             from urllib.parse import urlparse
-            ws_parsed = urlparse(ws_url)
-            web_parsed = urlparse(web_url)
+            ws_parsed = urlparse(urls['rerun_ws'])
+            web_parsed = urlparse(urls['rerun_web'])
             
-            self._ws_port = ws_parsed.port or 4321  # Default WS port
-            self._web_port = web_parsed.port or 9090  # Default web port
-            self._ws_host = ws_parsed.hostname or 'localhost'
-            self._web_host = web_parsed.hostname or 'localhost'
+            self._ws_port = ws_parsed.port or self._ws_port  # Use existing port if URL parsing fails
+            self._web_port = web_parsed.port or self._web_port
+            self._ws_host = ws_parsed.hostname or self._ws_host
+            self._web_host = web_parsed.hostname or self._web_host
             
             # Start Rerun server with SDK
             rr.init("video_analytics")#, spawn=True)
