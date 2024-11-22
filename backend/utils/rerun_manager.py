@@ -7,6 +7,7 @@ import time
 import cv2
 import os
 from pathlib import Path
+from .config import Config
 
 class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
@@ -23,7 +24,6 @@ class RerunManager:
             self.logger = logging.getLogger(__name__)
             
             # Load config
-            from ..utils.config import Config
             self.config = Config()
             self._config = self.config._config  # Store config dict directly
             
