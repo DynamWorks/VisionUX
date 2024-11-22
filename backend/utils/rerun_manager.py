@@ -24,6 +24,36 @@ class RerunManager:
             self.config = Config()
             self._config = self.config._config  # Store config dict directly
             
+            # Initialize state
+            self._initialized = False
+            self._server_started = False
+            self._active_connections = 0
+            self._shutdown_event = None
+            
+    def _verify_environment(self) -> bool:
+        """Verify required environment settings"""
+        try:
+            # Check ports are available
+            import socket
+            for port in [self._ws_port, self._web_port]:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                try:
+                    sock.bind(('localhost', port))
+                    sock.close()
+                except OSError:
+                    self.logger.error(f"Port {port} is already in use")
+                    return False
+                    
+            # Verify tmp directories exist
+            for path in ['tmp_content', 'tmp_content/uploads', 'tmp_content/analysis']:
+                Path(path).mkdir(parents=True, exist_ok=True)
+                
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Environment verification failed: {e}")
+            return False
+            
             # Get URLs from config with environment variable overrides
             import os
             self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 
@@ -81,17 +111,25 @@ class RerunManager:
                 await asyncio.sleep(min(2 * retry_count, 30))
 
     def initialize(self, clear_existing: bool = True):
-        """Initialize Rerun recording and server"""
+        """Initialize Rerun recording and server with error handling"""
         try:
             # Initialize logger first
             self.logger = logging.getLogger(__name__)
             
             if hasattr(self, '_initialized') and self._initialized:
                 if clear_existing:
-                    rr.log("world", rr.Clear(recursive=True))
+                    try:
+                        rr.log("world", rr.Clear(recursive=True))
+                        self.logger.info("Cleared existing Rerun recording")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to clear Rerun recording: {e}")
                 return
 
             self.logger.info("Initializing Rerun...")
+            
+            # Verify environment
+            if not self._verify_environment():
+                raise RuntimeError("Environment verification failed")
             
             # Initialize recording
             rr.init("video_analytics", spawn=False)

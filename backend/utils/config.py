@@ -9,12 +9,13 @@ class Config:
     
     def __init__(self, config_path: Optional[str] = None):
         """
-        Initialize configuration
+        Initialize configuration with environment variable support
         
         Args:
             config_path: Optional path to YAML config file
         """
         self._config = {}
+        self._env_prefix = 'VIDEO_ANALYTICS_'
         
         # Try to find config file in standard locations
         if not config_path:
@@ -27,6 +28,12 @@ class Config:
                 if os.path.exists(path):
                     config_path = path
                     break
+                    
+        # Load .env file if present
+        from dotenv import load_dotenv
+        env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+        if os.path.exists(env_path):
+            load_dotenv(env_path)
                     
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
