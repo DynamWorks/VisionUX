@@ -212,15 +212,12 @@ class CameraStreamHandler(BaseMessageHandler):
             try:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                # Set frame sequence and log frame
-                rr.set_time_sequence("frame_sequence", self.frame_count)
-                rr.log("world/video/stream", rr.Image(frame_rgb))
-                
-                # Log source info periodically
-                if self.frame_count % 100 == 0:
-                    rr.log("world/events", 
-                          rr.TextLog("Streaming from camera"),
-                          timeless=False)
+                # Log frame using RerunManager
+                rerun_manager.log_frame(
+                    frame=frame_rgb,
+                    frame_number=self.frame_count,
+                    source="camera_stream"
+                )
                 
                 self.frame_count += 1
             except Exception as e:
