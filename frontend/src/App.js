@@ -52,29 +52,30 @@ function App() {
         let reconnectTimeout;
 
         const connectWebSocket = () => {
-            console.log('Connecting to WebSocket:', wsUrl);
-            const websocket = new WebSocket(wsUrl);
-            let connectionTimeout;
+            try {
+                console.log('Connecting to WebSocket:', wsUrl);
+                const websocket = new WebSocket(wsUrl);
+                let connectionTimeout;
 
-            // Set connection timeout
-            connectionTimeout = setTimeout(() => {
-                if (websocket.readyState !== WebSocket.OPEN) {
-                    console.log('Connection attempt timed out');
-                    websocket.close();
-                }
-            }, 5000); // 5 second timeout
+                // Set connection timeout
+                connectionTimeout = setTimeout(() => {
+                    if (websocket.readyState !== WebSocket.OPEN) {
+                        console.log('Connection attempt timed out');
+                        websocket.close();
+                    }
+                }, 5000); // 5 second timeout
 
-            websocket.onopen = () => {
-                clearTimeout(connectionTimeout);
-                console.log('WebSocket Connected');
-                reconnectAttempts = 0; // Reset attempts on successful connection
-                setWs(websocket); // Only set ws when connection is established
+                websocket.onopen = () => {
+                    clearTimeout(connectionTimeout);
+                    console.log('WebSocket Connected');
+                    reconnectAttempts = 0; // Reset attempts on successful connection
+                    setWs(websocket); // Only set ws when connection is established
 
-                // Send initial connection message and request file list
-                websocket.send(JSON.stringify({ type: 'connection_established' }));
-                websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
-                console.log('Requested initial file list');
-            };
+                    // Send initial connection message and request file list
+                    websocket.send(JSON.stringify({ type: 'connection_established' }));
+                    websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
+                    console.log('Requested initial file list');
+                };
 
                 websocket.onmessage = (event) => {
                     try {
@@ -120,9 +121,15 @@ function App() {
                     websocket.close();
                 };
 
-                setWs(websocket);
             } catch (error) {
                 console.error('WebSocket connection error:', error);
+                // Schedule reconnect on connection error
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+                    console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
+                    reconnectTimeout = setTimeout(connectWebSocket, delay);
+                }
             }
         };
 
