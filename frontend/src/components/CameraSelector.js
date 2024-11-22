@@ -15,10 +15,6 @@ const CameraSelector = ({
     const handleStartStop = async () => {
         if (isStreaming) {
             stopCamera();
-            // Send stop message to WebSocket
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'stop_camera_stream' }));
-            }
         } else {
             startCamera(selectedDevice);
         }
