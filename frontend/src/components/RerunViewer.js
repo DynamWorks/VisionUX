@@ -154,7 +154,7 @@ const RerunViewer = () => {
                             borderRadius: 2,
                             maxWidth: '80%'
                         }}>
-                            <Typography variant="h6" sx={{ mb: 1 }}>
+                            {/* <Typography variant="h6" sx={{ mb: 1 }}>
                                 Failed to connect to Rerun viewer
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 2 }}>
@@ -162,7 +162,7 @@ const RerunViewer = () => {
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 Server URL: {rerunWebUrl}
-                            </Typography>
+                            </Typography> */}
                         </Box>
                     )}
                 </>
