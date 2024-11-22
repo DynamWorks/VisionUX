@@ -149,6 +149,7 @@ class RerunManager:
             self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
+            import pdb; pdb.set_trace()
             blueprint_config = self._config.get('rerun', {}).get('blueprint', {})
             views = []
             
