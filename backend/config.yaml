@@ -15,6 +15,8 @@ rerun:
   host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}    # Rerun server host
   web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}  # Web viewer port
   ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}    # WebSocket port
+  web_host: ${VIDEO_ANALYTICS_RERUN_WEB_HOST:-localhost}  # Web viewer host
+  ws_host: ${VIDEO_ANALYTICS_RERUN_WS_HOST:-localhost}    # WebSocket host
   blueprint:
     layout: "vertical"  # Main layout orientation
     views:

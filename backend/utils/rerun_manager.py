@@ -48,9 +48,14 @@ class RerunManager:
             for subdir in ['uploads', 'analysis', 'chat_history']:
                 (base_dir / subdir).mkdir(exist_ok=True)
                 
-            # Set host values
-            self._ws_host = 'localhost'
-            self._web_host = 'localhost'
+            # Get host values from config/env
+            from ..utils.config import Config
+            config = Config()
+            
+            self._ws_host = os.getenv('VIDEO_ANALYTICS_RERUN_WS_HOST', 
+                                    config.get('rerun', 'host', default='localhost'))
+            self._web_host = os.getenv('VIDEO_ANALYTICS_RERUN_WEB_HOST',
+                                     config.get('rerun', 'host', default='localhost'))
             
             # Don't check ports - Rerun will handle port conflicts
             self.logger.info(f"Environment verified. WS Port: {self._ws_port}, Web Port: {self._web_port}")
