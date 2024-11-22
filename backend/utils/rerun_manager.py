@@ -119,14 +119,14 @@ class RerunManager:
             # Initialize logger first
             self.logger = logging.getLogger(__name__)
             
-            if hasattr(self, '_initialized') and self._initialized:
-                if clear_existing:
-                    try:
-                        rr.log("world", rr.Clear(recursive=True))
-                        self.logger.info("Cleared existing Rerun recording")
-                    except Exception as e:
-                        self.logger.warning(f"Failed to clear Rerun recording: {e}")
-                return
+            # if hasattr(self, '_initialized') and self._initialized:
+            #     if clear_existing:
+            #         try:
+            #             rr.log("world", rr.Clear(recursive=True))
+            #             self.logger.info("Cleared existing Rerun recording")
+            #         except Exception as e:
+            #             self.logger.warning(f"Failed to clear Rerun recording: {e}")
+            #     return
 
             self.logger.info("Initializing Rerun...")
             
@@ -156,7 +156,7 @@ class RerunManager:
                 raise RuntimeError("Environment verification failed")
             
             # Initialize recording with spawn option
-            rr.init("video_analytics", spawn=True)
+            rr.init("video_analytics")#, spawn=True)
             self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
@@ -196,14 +196,13 @@ class RerunManager:
             self._web_host = web_parsed.hostname or 'localhost'
             
             # Start Rerun server with SDK
-            rr.init("video_analytics", spawn=True)
-            rr.connect(ws_port=self._ws_port, web_port=self._web_port)
+            rr.init("video_analytics")#, spawn=True)
+            #rr.connect(ws_port=self._ws_port, web_port=self._web_port)
             rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint,
-                blocking=False
+                default_blueprint=blueprint
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
