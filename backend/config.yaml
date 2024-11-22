@@ -1,20 +1,29 @@
- # Server Configuration                                                            
- api:                                                                              
-   host: "0.0.0.0"  # Bind to all interfaces                                       
-   port: ${VIDEO_ANALYTICS_API_PORT:-8000}                                         
-   debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}                                      
+# Server Configuration                                                            
+api:                                                                              
+  host: "0.0.0.0"  # Bind to all interfaces                                       
+  port: ${VIDEO_ANALYTICS_API_PORT:-8000}                                         
+  debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}                                      
                                                                                    
- websocket:                                                                        
-   host: "0.0.0.0"  # Bind to all interfaces                                       
-   port: ${VIDEO_ANALYTICS_WS_PORT:-8001}                                          
-   debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}                                       
+websocket:                                                                        
+  host: "0.0.0.0"  # Bind to all interfaces                                       
+  port: ${VIDEO_ANALYTICS_WS_PORT:-8001}                                          
+  debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}                                       
                                                                                    
- rerun:                                                                            
-   web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}                               
-   ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}                                 
-   host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}                                     
+rerun:                                                                            
+  web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}                               
+  ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}                                 
+  host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}
+  blueprint:
+    layout: "vertical"
+    views:
+      - type: "spatial2d"
+        name: "Video Feed"
+        origin: "world/video/stream"
+      - type: "text_log"
+        name: "Events"
+        origin: "world/events"
                                                                                    
- frontend:   
+frontend:   
   host: localhost
   port: 8501
   title: "Video Analytics Dashboard"
