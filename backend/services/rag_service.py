@@ -49,10 +49,15 @@ class RAGService:
             memory_key="chat_history",
             return_messages=True
         )
+        # Get model settings with fallbacks
+        model_name = os.getenv('OPENAI_MODEL', 'gpt-4-turbo-preview')
+        if self.config._config:  # Only try to get from config if it exists
+            model_name = self.config.get('services', 'rag', 'model', default='gpt-4-turbo-preview')
+            
         self.llm = ChatOpenAI(
-            model_name=self.config.get('services', {}).get('rag', {}).get('model', 'gpt-4-turbo-preview'),
-            openai_api_key=os.getenv('OPENAI_API_KEY') or self.config.get('services', {}).get('openai', {}).get('api_key'),
-            openai_api_base=os.getenv('OPENAI_API_BASE') or self.config.get('services', {}).get('openai', {}).get('api_base')
+            model_name=model_name,
+            openai_api_key=openai_api_key,
+            openai_api_base=openai_api_base
         )
         self.logger = logging.getLogger(__name__)
         self.persist_dir = Path("tmp_content/vector_store")
