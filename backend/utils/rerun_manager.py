@@ -68,7 +68,7 @@ class RerunManager:
                 (base_dir / subdir).mkdir(exist_ok=True)
                 
             # Get host values from config/env
-            from ..utils.config import Config
+            from backend.utils.config import Config
             config = Config()
             
             self._ws_host = os.getenv('VIDEO_ANALYTICS_RERUN_WS_HOST', 
@@ -181,7 +181,7 @@ class RerunManager:
                 blueprint = rr.blueprint.Horizontal(*views)
             
             # Get URLs from config
-            from ..config.urls import get_urls
+            from backend.config.urls import get_urls
             urls = get_urls()
             
             # Parse URLs to get host and port
