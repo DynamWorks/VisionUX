@@ -110,13 +110,13 @@ class BackendApp:
             self.rerun_manager.initialize(clear_existing=True)
             self.logger.info("Rerun manager initialized")
 
-            # Start Rerun server in a separate thread
-            rerun_thread = threading.Thread(
-                target=self.rerun_manager.start_web_server_sync,
-                daemon=True
-            )
-            rerun_thread.start()
-            self.logger.info("Started Rerun web server thread")
+            # # Start Rerun server in a separate thread
+            # rerun_thread = threading.Thread(
+            #     target=self.rerun_manager.start_web_server_sync,
+            #     daemon=True
+            # )
+            # rerun_thread.start()
+            # self.logger.info("Started Rerun web server thread")
 
             # # Start Rerun server in a separate thread
             # rerun_thread = threading.Thread(

@@ -43,7 +43,7 @@ class EdgeDetectionService:
         timestamp = time.time()
         rr.log("edge_detection/edges", 
                rr.Image(edges_rgb),
-               timeless=False,
-               timestamp=timestamp)
+               timeless=False
+               )
         
         return edges_rgb

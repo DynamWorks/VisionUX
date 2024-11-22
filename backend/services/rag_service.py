@@ -50,7 +50,7 @@ class RAGService:
             return_messages=True
         )
         # Get model settings with fallbacks
-        model_name = os.getenv('OPENAI_MODEL', 'gpt-4-turbo-preview')
+        model_name = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         if self.config._config:  # Only try to get from config if it exists
             model_name = self.config.get('services', 'rag', 'model', default='gpt-4-turbo-preview')
             

@@ -200,8 +200,8 @@ class RerunManager:
                 raise RuntimeError("Environment verification failed")
             
             # Initialize recording with spawn option
-            rr.init("video_analytics")#, spawn=True)
-            self.logger.info("Created new Rerun recording")
+            # rr.init("video_analytics")#, spawn=True)
+            # self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
             blueprint_config = self._config.get('rerun', {}).get('blueprint', {})
@@ -239,13 +239,12 @@ class RerunManager:
             self._web_host = web_parsed.hostname or self._web_host
             
             # Start Rerun server with SDK
-            rr.init("video_analytics", spawn=True)
+            rr.init("video_analytics")#, spawn=True)
             rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint,
-                host=self._web_host
+                default_blueprint=blueprint
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
@@ -349,7 +348,7 @@ class RerunManager:
                 delattr(self, '_server_started')
             
             # Reinitialize
-            self.initialize()
+            #self.initialize()
             self.logger.info("Successfully reinitialized Rerun connection")
         except Exception as e:
             self.logger.error(f"Failed to reinitialize Rerun: {e}")

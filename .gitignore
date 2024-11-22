@@ -1,7 +1,6 @@
 *_Dataset
 *.avi
 *.mp4
-*.png
 *.jpg
 .aider*
 .env
@@ -37,3 +36,4 @@ logs/
 # Project specific
 tmp_content/
 models/
+node_modules/
