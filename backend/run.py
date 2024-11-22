@@ -30,7 +30,7 @@ if __name__ == "__main__":
     
     # Initialize Rerun
     rerun_manager = RerunManager()
-    rerun_manager.initialize(clear_existing=True)
+    rerun_manager.initialize()
     
     # Run server
     app.run(host=host, port=port, debug=debug)
