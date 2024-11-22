@@ -1,16 +1,15 @@
 from .base_handler import BaseMessageHandler
 import json
-import logging
 import cv2
 from pathlib import Path
 import numpy as np
 import time
 import asyncio
-import rerun as rr
 from typing import Optional, Dict, Any
 from collections import deque
 from dataclasses import dataclass
 from ..video_stream import VideoStream
+
 
 @dataclass
 class FrameMetrics:
@@ -166,16 +165,16 @@ class CameraStreamHandler(BaseMessageHandler):
             # Get current time for metrics
             current_time = time.time()
             process_start = current_time
-                
+
             # Decode frame
             frame = self._decode_frame(frame_data)
             if frame is None:
                 await self.send_error(websocket, "Failed to decode frame")
                 return
-                
+
             # Calculate processing time
             process_time = time.time() - process_start
-            
+
             metrics = FrameMetrics(
                 timestamp=current_time,
                 process_time=process_time,
@@ -188,24 +187,21 @@ class CameraStreamHandler(BaseMessageHandler):
             # Calculate FPS
             elapsed = current_time - self.start_time
             fps = self.frame_count / elapsed if elapsed > 0 else 0
-            
+
             # Log basic frame info periodically
             if self.frame_count % 100 == 0:
                 self.logger.info(f"Processed {self.frame_count} frames")
 
-            # Process frame and log to Rerun
+            # Process frame and log
             await self._process_frame(frame, message_data, metrics)
             
             # Get RerunManager instance
             from ..rerun_manager import RerunManager
             rerun_manager = RerunManager()
-            
-            # Log frame to Rerun if not paused
+
+            # Log frame if not paused
             try:
-                # Convert BGR to RGB for visualization
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                # Log frame using RerunManager
                 rerun_manager.log_frame(
                     frame=frame_rgb,
                     frame_number=self.frame_count,
@@ -215,7 +211,7 @@ class CameraStreamHandler(BaseMessageHandler):
             except Exception as e:
                 self.logger.warning(f"Failed to log frame: {e}")
                 self.logger.debug(f"Error details: {str(e)}", exc_info=True)
-                
+
         except Exception as e:
             self.logger.error(f"Error handling camera frame: {e}", exc_info=True)
             await self.send_error(websocket, str(e))
