@@ -17,6 +17,10 @@ class BackendApp:
         # Create logs directory
         Path('logs').mkdir(exist_ok=True)
         
+        # Load config
+        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        self.config = Config(config_path)
+        
         # Setup logging
         self.setup_logging()
         self.logger = logging.getLogger(__name__)

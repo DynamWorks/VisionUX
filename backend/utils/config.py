@@ -16,8 +16,21 @@ class Config:
         """
         self._config = {}
         
+        # Try to find config file in standard locations
+        if not config_path:
+            possible_paths = [
+                os.path.join(os.path.dirname(__file__), '..', 'config.yaml'),
+                os.path.join(os.path.dirname(__file__), '..', '..', 'backend', 'config.yaml'),
+                'config.yaml'
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    config_path = path
+                    break
+                    
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
+            self._config_path = config_path
             
     def load_config(self, config_path: Union[str, Path]) -> None:
         """
