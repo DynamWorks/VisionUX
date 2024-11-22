@@ -45,9 +45,25 @@ class RerunManager:
             self._ws_port = int(rerun_config.get('ws_port', 4321))
 
     async def _health_check(self, request):
-        """Health check endpoint for the web server"""
+        """Health check endpoint for the web server with CORS support"""
         from aiohttp import web
-        return web.Response(text='healthy')
+        
+        # Handle preflight OPTIONS request
+        if request.method == 'OPTIONS':
+            headers = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Max-Age': '86400',  # 24 hours
+            }
+            return web.Response(headers=headers)
+            
+        # Handle actual GET request
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'text/plain'
+        }
+        return web.Response(text='healthy', headers=headers)
             
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
@@ -227,7 +243,8 @@ class RerunManager:
             # Create the web application if not already created
             if not self._app:
                 self._app = web.Application()
-                self._app.router.add_get('/health', self._health_check)
+                self._app.router.add_route('OPTIONS', '/health', self._health_check)
+                self._app.router.add_route('GET', '/health', self._health_check)
             
             async def start_site():
                 if not self._runner:
