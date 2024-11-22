@@ -11,15 +11,15 @@ from pathlib import Path
 class RerunManager:
     """Singleton class to manage Rerun initialization and state"""
     _instance = None
-    _initialized = False
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):
-        import pdb; pdb.set_trace()
-        if not hasattr(self, '_initialized'):
+        if not self._initialized:
             self.logger = logging.getLogger(__name__)
             
             # Load config
@@ -28,10 +28,10 @@ class RerunManager:
             self._config = self.config._config  # Store config dict directly
             
             # Initialize state
-            self._initialized = False
             self._server_started = False
             self._active_connections = 0
             self._shutdown_event = None
+            self._initialized = True
             
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
