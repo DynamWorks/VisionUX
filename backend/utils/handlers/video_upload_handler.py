@@ -112,6 +112,12 @@ class VideoUploadHandler(BaseMessageHandler):
                     'filename': self.current_upload['filename'],
                     'size': file_size
                 })
+
+                # Start streaming the uploaded video
+                await self.send_response(websocket, {
+                    'type': 'start_video_stream',
+                    'filename': self.current_upload['filename']
+                })
                 
                 await self.send_response(websocket, {
                     'type': 'uploaded_files',
