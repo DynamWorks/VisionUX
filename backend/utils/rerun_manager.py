@@ -35,6 +35,7 @@ class RerunManager:
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
         try:
+            import pdb; pdb.set_trace()
             # Initialize ports from config if not already set
             if not hasattr(self, '_ws_port'):
                 self._ws_port = int(os.getenv('VIDEO_ANALYTICS_RERUN_WS_PORT', 4321))
