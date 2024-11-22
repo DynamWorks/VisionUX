@@ -542,20 +542,27 @@ function App() {
                                                         }
                                                     }
                                     
-                                                    // Request updated file list
+                                                    // Request updated file list immediately
                                                     fetchUploadedFiles();
                                     
-                                                    // Set up retry mechanism for file list
-                                                    let retryCount = 0;
-                                                    const maxRetries = 3;
-                                                    const retryInterval = setInterval(() => {
-                                                        if (retryCount < maxRetries) {
+                                                    // Set up polling for file list updates
+                                                    let pollCount = 0;
+                                                    const maxPolls = 5;
+                                                    const pollInterval = setInterval(() => {
+                                                        if (pollCount < maxPolls) {
                                                             fetchUploadedFiles();
-                                                            retryCount++;
+                                                            pollCount++;
                                                         } else {
-                                                            clearInterval(retryInterval);
+                                                            clearInterval(pollInterval);
                                                         }
-                                                    }, 1000);
+                                                    }, 500); // Poll every 500ms for 2.5 seconds
+                                                    
+                                                    // Request file list via WebSocket as well
+                                                    if (ws && ws.readyState === WebSocket.OPEN) {
+                                                        ws.send(JSON.stringify({
+                                                            type: 'get_uploaded_files'
+                                                        }));
+                                                    }
                                                     // Reset Rerun after successful upload
                                                     // ws.send(JSON.stringify({
                                                     //     type: 'reset_rerun'
