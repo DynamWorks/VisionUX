@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 from collections import deque
 from dataclasses import dataclass
 from ..video_stream import VideoStream
+import rerun as rr
 
 
 @dataclass
