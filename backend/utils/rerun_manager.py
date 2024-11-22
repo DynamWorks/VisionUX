@@ -64,6 +64,11 @@ class RerunManager:
             'Content-Type': 'text/plain'
         }
         return web.Response(text='healthy', headers=headers)
+
+    async def _handle_root(self, request):
+        """Handle root path request"""
+        from aiohttp import web
+        return web.Response(text='Rerun server is running', content_type='text/plain')
             
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
@@ -243,6 +248,7 @@ class RerunManager:
             # Create the web application if not already created
             if not self._app:
                 self._app = web.Application()
+                self._app.router.add_route('GET', '/', self._handle_root)
                 self._app.router.add_route('OPTIONS', '/health', self._health_check)
                 self._app.router.add_route('GET', '/health', self._health_check)
             
