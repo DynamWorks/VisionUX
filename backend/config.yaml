@@ -3,7 +3,7 @@ api:
   host: ${VIDEO_ANALYTICS_API_HOST:-0.0.0.0}  # Bind address (0.0.0.0 for all interfaces)
   port: ${VIDEO_ANALYTICS_API_PORT:-8000}      # API server port
   debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}    # Enable debug mode
-  cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-*}  # CORS allowed origins
+  cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-"*"}  # CORS allowed origins
 
 websocket:
   host: ${VIDEO_ANALYTICS_WS_HOST:-0.0.0.0}    # WebSocket bind address
