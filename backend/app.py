@@ -161,9 +161,10 @@ class BackendApp:
                 Path("backend/models/clip").mkdir(parents=True, exist_ok=True)
                 Path("backend/models/traffic_signs").mkdir(parents=True, exist_ok=True)
                 
-                # Get server config
+                # Get server config with default port from parameter
                 host = self.config.get('api', 'host', default='0.0.0.0')
-                port = self.config.get('api', 'port', default=port)
+                configured_port = self.config.get('api', 'port')
+                port = configured_port if configured_port is not None else port
                 debug = self.config.get('api', 'debug', default=False)
                 
                 # Start the Flask-SocketIO server
