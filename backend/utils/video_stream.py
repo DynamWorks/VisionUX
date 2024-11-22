@@ -82,10 +82,10 @@ class VideoStream:
                             rr.set_time_sequence("frame_sequence", self.frame_count)
                             rr.log("world/video/stream", rr.Image(frame_rgb))
                             
-                            # Only log source event on first frame or every 100 frames
-                            if self.frame_count == 1 or self.frame_count % 100 == 0:
+                            # Only log source event on first frame
+                            if self.frame_count == 1:
                                 rr.log("world/events", 
-                                      rr.TextLog(f"Streaming from: {self.source}"),
+                                      rr.TextLog(f"Started streaming: {self.source}"),
                                       timeless=False)
                         except Exception as e:
                             self.logger.warning(f"Failed to log frame: {e}")
@@ -147,12 +147,7 @@ class VideoStream:
             except:
                 pass
                 
-        try:
-            # Log stop event without clearing visualization
-            rr.log("world/events", 
-                  rr.TextLog("Video stream stopped"),
-                  timeless=False)
-            self.logger.info("Video stream stopped successfully")
+        self.logger.info("Video stream stopped successfully")
         except Exception as e:
             self.logger.error(f"Error logging stop event: {e}")
             
