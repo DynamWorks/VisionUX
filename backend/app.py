@@ -91,6 +91,14 @@ class BackendApp:
                 return send_from_directory(self.app.static_folder, path)
             return send_from_directory(self.app.static_folder, 'index.html')
 
+        @self.app.route('/favicon.ico')
+        def favicon():
+            return send_from_directory(
+                self.app.static_folder,
+                'favicon.ico',
+                mimetype='image/vnd.microsoft.icon'
+            )
+
     def is_ready(self):
         """Check if backend is ready"""
         return True
