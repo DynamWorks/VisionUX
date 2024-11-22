@@ -113,6 +113,74 @@ def chat_analysis():
         logger.error("Chat analysis failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@api.route('/stream/start', methods=['POST'])
+def start_stream():
+    """Start video streaming"""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        if not filename:
+            return jsonify({'error': 'No filename provided'}), 400
+            
+        file_path = Path("tmp_content/uploads") / filename
+        if not file_path.exists():
+            return jsonify({'error': f"Video file not found: {filename}"}), 400
+            
+        # Initialize RerunManager
+        from backend.utils.rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.reset()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Stream started',
+            'filename': filename
+        })
+    except Exception as e:
+        logger.error(f"Failed to start stream: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/stream/stop', methods=['POST'])
+def stop_stream():
+    """Stop video streaming"""
+    try:
+        # Reset Rerun viewer
+        from backend.utils.rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.reset()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Stream stopped'
+        })
+    except Exception as e:
+        logger.error(f"Failed to stop stream: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/stream/pause', methods=['POST'])
+def pause_stream():
+    """Pause video streaming"""
+    try:
+        return jsonify({
+            'status': 'success',
+            'message': 'Stream paused'
+        })
+    except Exception as e:
+        logger.error(f"Failed to pause stream: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/stream/resume', methods=['POST'])
+def resume_stream():
+    """Resume video streaming"""
+    try:
+        return jsonify({
+            'status': 'success',
+            'message': 'Stream resumed'
+        })
+    except Exception as e:
+        logger.error(f"Failed to resume stream: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @api.route('/upload', methods=['POST'])
 def upload_file():
     """Upload a video file"""

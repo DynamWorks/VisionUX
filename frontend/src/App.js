@@ -610,31 +610,69 @@ function App() {
                                 onPlayPause={(file, shouldPlay) => {
                                     if (shouldPlay && !isStreaming) {
                                         // Start streaming the selected file
-                                        if (ws && ws.readyState === WebSocket.OPEN) {
-                                            ws.send(JSON.stringify({
-                                                type: 'start_video_stream',
+                                        // Start streaming via API
+                                        fetch(`${process.env.REACT_APP_API_URL}/api/v1/stream/start`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({
                                                 filename: file.name
-                                            }));
-                                        }
-                                        setIsStreaming(true);
+                                            })
+                                        })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.error) {
+                                                throw new Error(data.error);
+                                            }
+                                            setIsStreaming(true);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error starting stream:', error);
+                                            alert(`Failed to start stream: ${error.message}`);
+                                        });
                                     } else if (!shouldPlay && isStreaming) {
                                         // Pause streaming
-                                        if (ws && ws.readyState === WebSocket.OPEN) {
-                                            ws.send(JSON.stringify({
-                                                type: 'pause_video_stream'
-                                            }));
-                                        }
-                                        setIsStreaming(false);
+                                        // Pause streaming via API
+                                        fetch(`${process.env.REACT_APP_API_URL}/api/v1/stream/pause`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            }
+                                        })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.error) {
+                                                throw new Error(data.error);
+                                            }
+                                            setIsStreaming(false);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error pausing stream:', error);
+                                            alert(`Failed to pause stream: ${error.message}`);
+                                        });
                                     }
                                 }}
                                 onStop={(file) => {
-                                    if (ws && ws.readyState === WebSocket.OPEN) {
-                                        ws.send(JSON.stringify({
-                                            type: 'stop_video_stream'
-                                        }));
-                                    }
-                                    setIsStreaming(false);
-                                    setVideoFile(null);
+                                    // Stop streaming via API
+                                    fetch(`${process.env.REACT_APP_API_URL}/api/v1/stream/stop`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        }
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.error) {
+                                            throw new Error(data.error);
+                                        }
+                                        setIsStreaming(false);
+                                        setVideoFile(null);
+                                    })
+                                    .catch(error => {
+                                        console.error('Error stopping stream:', error);
+                                        alert(`Failed to stop stream: ${error.message}`);
+                                    });
                                 }}
                             />
                         </Box>
