@@ -32,6 +32,10 @@ class RerunManager:
             self._active_connections = 0
             self._shutdown_event = None
             self._initialized = True
+            self._runner = None
+            self._site = None
+            self._app = None
+            self._keep_alive_task = None
             
     def _verify_environment(self) -> bool:
         """Verify required environment settings"""
