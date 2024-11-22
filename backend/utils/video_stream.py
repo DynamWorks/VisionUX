@@ -78,15 +78,17 @@ class VideoStream:
                             # Convert BGR to RGB for visualization
                             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                             
-                            # Log frame directly to Rerun
-                            rr.set_time_sequence("frame_sequence", self.frame_count)
-                            rr.log("world/video/stream", rr.Image(frame_rgb))
+                            # Get RerunManager instance
+                            from .rerun_manager import RerunManager
+                            rerun_manager = RerunManager()
                             
-                            # Only log source event on first frame
-                            if self.frame_count == 1:
-                                rr.log("world/events", 
-                                      rr.TextLog(f"Started streaming: {self.source}"),
-                                      timeless=False)
+                            # Log frame using RerunManager
+                            rerun_manager.log_frame(
+                                frame=frame_rgb,
+                                frame_number=self.frame_count,
+                                source=str(self.source)
+                            )
+                            
                         except Exception as e:
                             self.logger.warning(f"Failed to log frame: {e}")
                             self.logger.debug(f"Error details: {str(e)}", exc_info=True)
