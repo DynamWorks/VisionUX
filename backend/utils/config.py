@@ -34,7 +34,7 @@ class Config:
             
     def load_config(self, config_path: Union[str, Path]) -> None:
         """
-        Load configuration from YAML file
+        Load configuration from YAML file with environment variable substitution
         
         Args:
             config_path: Path to YAML config file
@@ -48,8 +48,24 @@ class Config:
             raise FileNotFoundError(f"Config file not found: {config_path}")
             
         try:
+            # Read raw YAML content
             with open(config_path, 'r') as f:
-                yaml_config = yaml.safe_load(f)
+                content = f.read()
+                
+            # Replace environment variables
+            import os
+            import re
+            
+            def env_var_replacer(match):
+                var_name = match.group(1)
+                default = match.group(2) if match.group(2) else None
+                return os.getenv(var_name, default if default else '')
+                
+            # Replace ${VAR:-default} or ${VAR} patterns
+            content = re.sub(r'\${([^:-]+)(?::-([^}]+))?}', env_var_replacer, content)
+            
+            # Parse YAML
+            yaml_config = yaml.safe_load(content)
                 
             if not isinstance(yaml_config, dict):
                 raise ValueError("Config file must contain a YAML dictionary")
