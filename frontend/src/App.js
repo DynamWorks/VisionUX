@@ -43,15 +43,22 @@ function App() {
     useEffect(() => {
         if (ws) return; // Prevent recreating if ws exists
         
+        // Get WebSocket URL from environment with fallbacks
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
-        const wsHost = process.env.REACT_APP_WS_HOST || 'localhost';
-        const wsUrl = `ws://${wsHost}:${wsPort}`;
+        const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
 
         let reconnectAttempts = 0;
-        const maxReconnectAttempts = 5;
+        const maxReconnectAttempts = 10; // Increased max attempts
         let reconnectTimeout;
 
         const connectWebSocket = () => {
+            if (ws?.readyState === WebSocket.OPEN) {
+                console.log('WebSocket already connected');
+                return;
+            }
+
             try {
                 console.log('Connecting to WebSocket:', wsUrl);
                 const websocket = new WebSocket(wsUrl);
@@ -63,7 +70,7 @@ function App() {
                         console.log('Connection attempt timed out');
                         websocket.close();
                     }
-                }, 5000); // 5 second timeout
+                }, 10000); // Increased timeout to 10 seconds
 
                 websocket.onopen = () => {
                     clearTimeout(connectionTimeout);
@@ -96,29 +103,35 @@ function App() {
                 websocket.onclose = (event) => {
                     clearTimeout(connectionTimeout);
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
-                    setWs(null); // Clear the websocket reference
+                    setWs(null);
 
-                    // Don't attempt reconnect if closing was intentional
-                    if (event.wasClean) {
-                        console.log('Clean websocket closure');
-                        return;
-                    }
-
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        reconnectAttempts++;
-                        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-                        console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
-                        reconnectTimeout = setTimeout(connectWebSocket, delay);
-                    } else {
-                        console.error('Max reconnection attempts reached');
-                        // Implement user feedback here if needed
-                    }
+                    // Check if server is completely down
+                    fetch(`${window.location.protocol}//${wsHost}:${wsPort}/health`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Server health check failed');
+                            // Server is up, try reconnecting
+                            if (reconnectAttempts < maxReconnectAttempts) {
+                                reconnectAttempts++;
+                                const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
+                                console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
+                                reconnectTimeout = setTimeout(connectWebSocket, delay);
+                            } else {
+                                console.error('Max reconnection attempts reached');
+                                alert('Unable to connect to server. Please refresh the page or try again later.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Server appears to be down:', error);
+                            alert('Server appears to be offline. Please try again later.');
+                        });
                 };
 
                 websocket.onerror = (error) => {
                     console.error('WebSocket Error:', error);
-                    // Let onclose handle reconnection
-                    websocket.close();
+                    // Only close if not already closing/closed
+                    if (websocket.readyState !== WebSocket.CLOSING && websocket.readyState !== WebSocket.CLOSED) {
+                        websocket.close();
+                    }
                 };
 
             } catch (error) {
@@ -136,10 +149,15 @@ function App() {
         connectWebSocket();
 
         return () => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.close();
+            if (ws) {
+                // Set a flag to prevent reconnection attempts
+                ws.intentionalClose = true;
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close();
+                }
             }
             clearTimeout(reconnectTimeout);
+            reconnectAttempts = 0;
         };
     }, []);
 
