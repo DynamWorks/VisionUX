@@ -22,8 +22,10 @@ const RerunViewer = () => {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
-                }
+                    'Cache-Control': 'no-cache',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                mode: 'cors'
             });
 
             if (!response.ok) {
@@ -116,7 +118,7 @@ const RerunViewer = () => {
                 )}
                 <>
                     <iframe
-                        src={`${rerunWebUrl}?url=${encodeURIComponent(rerunWsUrl)}`}
+                        src={`${rerunWebUrl}`}
                         style={{
                             width: '100%',
                             height: '100%',
