@@ -6,6 +6,7 @@ from aiohttp import web
 import time
 import cv2
 import os
+import json
 from pathlib import Path
 from .config import Config
 
@@ -60,17 +61,33 @@ class RerunManager:
         if request.method == 'OPTIONS':
             return web.Response(headers=cors_headers)
             
-        # Handle actual GET request
-        response_headers = {
-            **cors_headers,
-            'Content-Type': 'application/json'
-        }
-        return web.json_response({
-            'status': 'healthy',
-            'service': 'rerun-viewer',
-            'web_port': self._web_port,
-            'ws_port': self._ws_port
-        }, headers=response_headers)
+        try:
+            # Handle actual GET request
+            response_headers = {
+                **cors_headers,
+                'Content-Type': 'application/json'
+            }
+            return web.Response(
+                text=json.dumps({
+                    'status': 'healthy',
+                    'service': 'rerun-viewer',
+                    'web_port': self._web_port,
+                    'ws_port': self._ws_port
+                }),
+                headers=response_headers,
+                content_type='application/json'
+            )
+        except Exception as e:
+            self.logger.error(f"Health check error: {e}")
+            return web.Response(
+                text=json.dumps({
+                    'status': 'error',
+                    'error': str(e)
+                }),
+                headers=response_headers,
+                status=500,
+                content_type='application/json'
+            )
 
     async def _handle_root(self, request):
         """Handle root path request"""
