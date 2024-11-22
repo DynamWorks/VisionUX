@@ -86,15 +86,29 @@ class CameraStreamHandler(BaseMessageHandler):
                     # Initialize video stream
                     self.logger.info(f"Initializing video stream for {file_path}")
                     
-                    # Clear previous Rerun data
-                    rr.log("world", rr.Clear(recursive=True))
-                    rr.log("world/events", 
-                          rr.TextLog("Starting new video stream"),
-                          timeless=False)
+                    # Get RerunManager instance
+                    from ..rerun_manager import RerunManager
+                    rerun_manager = RerunManager()
                     
+                    # Clear previous Rerun data and initialize
+                    rerun_manager.reset()
+                    
+                    # Initialize and start video stream
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
                     self.logger.info("Video stream started successfully")
+                    
+                    # Log initial frame
+                    cap = cv2.VideoCapture(str(file_path))
+                    ret, frame = cap.read()
+                    if ret:
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        rerun_manager.log_frame(
+                            frame=frame_rgb,
+                            frame_number=0,
+                            source=f"Started streaming: {filename}"
+                        )
+                    cap.release()
                     
                     # Log stream start event using RerunManager instance
                     rerun_manager.log_frame(
@@ -179,21 +193,25 @@ class CameraStreamHandler(BaseMessageHandler):
             if self.frame_count % 100 == 0:
                 self.logger.info(f"Processed {self.frame_count} frames")
 
-            # Process frame
+            # Process frame and log to Rerun
             await self._process_frame(frame, message_data, metrics)
             
+            # Get RerunManager instance
+            from ..rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+            
             # Log frame to Rerun if not paused
-            if not self.pause_event.is_set():
-                try:
-                    # Convert BGR to RGB for visualization
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    
-                    # Log frame directly to Rerun
-                    rr.set_time_sequence("frame_sequence", self.frame_count)
-                    rr.log("world/video/stream", rr.Image(frame_rgb))
-                    rr.log("world/events", 
-                          rr.TextLog("Frame from: camera"),
-                          timeless=False)
+            try:
+                # Convert BGR to RGB for visualization
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Log frame using RerunManager
+                rerun_manager.log_frame(
+                    frame=frame_rgb,
+                    frame_number=self.frame_count,
+                    source="camera_stream"
+                )
+                self.frame_count += 1
                 except Exception as e:
                     self.logger.warning(f"Failed to log frame: {e}")
                     self.logger.debug(f"Error details: {str(e)}", exc_info=True)

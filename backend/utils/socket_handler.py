@@ -136,15 +136,18 @@ class SocketHandler:
             # Convert BGR to RGB for visualization
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # Log frame to Rerun with metadata
-            frame_number = getattr(self, '_frame_count', 0)
-            self._frame_count = frame_number + 1
+            # Get RerunManager instance
+            from .rerun_manager import RerunManager
+            rerun_manager = RerunManager()
             
-            rr.set_time_sequence("frame_sequence", frame_number)
-            rr.log("world/video/stream", rr.Image(frame_rgb))
-            rr.log("world/events", 
-                  rr.TextLog("Frame from: socket stream"),
-                  timeless=False)
+            # Log frame using RerunManager
+            frame_number = getattr(self, '_frame_count', 0)
+            rerun_manager.log_frame(
+                frame=frame_rgb,
+                frame_number=frame_number,
+                source="socket_stream"
+            )
+            self._frame_count = frame_number + 1
 
         except Exception as e:
             self.logger.error(f"Frame processing error: {e}")
