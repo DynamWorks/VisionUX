@@ -74,8 +74,7 @@ class RerunManager:
                     'web_port': self._web_port,
                     'ws_port': self._ws_port
                 }),
-                headers=response_headers,
-                content_type='application/json'
+                headers={**response_headers, 'Content-Type': 'application/json'}
             )
         except Exception as e:
             self.logger.error(f"Health check error: {e}")
