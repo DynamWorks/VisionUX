@@ -485,27 +485,31 @@ function App() {
                                                         }
                                                     }
                                     
+                                                    // Close existing WebSocket connection
+                                                    if (ws) {
+                                                        ws.close();
+                                                    }
+
                                                     // Request updated file list immediately
                                                     fetchUploadedFiles();
-                                    
-                                                    // Set up polling for file list updates
-                                                    let pollCount = 0;
-                                                    const maxPolls = 5;
-                                                    const pollInterval = setInterval(() => {
-                                                        if (pollCount < maxPolls) {
-                                                            fetchUploadedFiles();
-                                                            pollCount++;
-                                                        } else {
-                                                            clearInterval(pollInterval);
-                                                        }
-                                                    }, 500); // Poll every 500ms for 2.5 seconds
-                                                    
-                                                    // Request file list via WebSocket as well
-                                                    if (ws && ws.readyState === WebSocket.OPEN) {
-                                                        ws.send(JSON.stringify({
-                                                            type: 'get_uploaded_files'
-                                                        }));
-                                                    }
+
+                                                    // Reconnect WebSocket after a short delay
+                                                    setTimeout(() => {
+                                                        const wsPort = process.env.REACT_APP_WS_PORT || '8001';
+                                                        const wsHost = process.env.REACT_APP_WS_HOST || 'localhost';
+                                                        const wsUrl = `ws://${wsHost}:${wsPort}`;
+                                                        
+                                                        const newWs = new WebSocket(wsUrl);
+                                                        
+                                                        newWs.onopen = () => {
+                                                            console.log('WebSocket reconnected after upload');
+                                                            setWs(newWs);
+                                                            // Request fresh file list
+                                                            newWs.send(JSON.stringify({
+                                                                type: 'get_uploaded_files'
+                                                            }));
+                                                        };
+                                                    }, 1000); // Wait 1 second before reconnecting
                                                     // Reset Rerun after successful upload
                                                     // ws.send(JSON.stringify({
                                                     //     type: 'reset_rerun'
