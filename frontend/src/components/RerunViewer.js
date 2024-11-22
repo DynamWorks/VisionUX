@@ -17,7 +17,7 @@ const RerunViewer = () => {
         if (!iframe) return;
 
         try {
-            // First check if Rerun server is responding
+            // Only check HTTP health endpoint
             const response = await fetch(`${rerunWebUrl}/health`, {
                 method: 'GET',
                 headers: {
@@ -30,21 +30,12 @@ const RerunViewer = () => {
                 throw new Error('Rerun server not responding');
             }
 
-            // Then check WebSocket connection
-            const ws = new WebSocket(rerunWsUrl);
-            
-            ws.onopen = () => {
-                setIsConnected(true);
-                setRetryCount(0);
-                setIsLoading(false);
-                setError(null);
-                console.log('Rerun viewer connected successfully');
-                ws.close();
-            };
-            
-            ws.onerror = () => {
-                throw new Error('WebSocket connection failed');
-            };
+            // Update connection state based on health check
+            setIsConnected(true);
+            setRetryCount(0);
+            setIsLoading(false);
+            setError(null);
+            console.log('Rerun viewer health check successful');
         } catch (error) {
             console.warn('Rerun viewer connection check failed:', error);
             setIsConnected(false);
