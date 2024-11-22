@@ -155,8 +155,8 @@ class RerunManager:
             if not self._verify_environment():
                 raise RuntimeError("Environment verification failed")
             
-            # Initialize recording
-            rr.init("video_analytics")
+            # Initialize recording with spawn option
+            rr.init("video_analytics", spawn=True)
             self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
@@ -195,12 +195,15 @@ class RerunManager:
             self._ws_host = ws_parsed.hostname or 'localhost'
             self._web_host = web_parsed.hostname or 'localhost'
             
-            # Start Rerun server
+            # Start Rerun server with SDK
+            rr.init("video_analytics", spawn=True)
+            rr.connect(ws_port=self._ws_port, web_port=self._web_port)
             rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint
+                default_blueprint=blueprint,
+                blocking=False
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
