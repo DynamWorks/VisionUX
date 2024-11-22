@@ -1,27 +1,35 @@
-# Server Configuration                                                            
-api:                                                                              
-  host: "0.0.0.0"  # Bind to all interfaces                                       
-  port: ${VIDEO_ANALYTICS_API_PORT:-8000}                                         
-  debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}                                      
-                                                                                   
-websocket:                                                                        
-  host: "0.0.0.0"  # Bind to all interfaces                                       
-  port: ${VIDEO_ANALYTICS_WS_PORT:-8001}                                          
-  debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}                                       
-                                                                                   
-rerun:                                                                            
-  web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}                               
-  ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}                                 
-  host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}
+# Server Configuration
+api:
+  host: ${VIDEO_ANALYTICS_API_HOST:-0.0.0.0}  # Bind address (0.0.0.0 for all interfaces)
+  port: ${VIDEO_ANALYTICS_API_PORT:-8000}      # API server port
+  debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}    # Enable debug mode
+  cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-*}  # CORS allowed origins
+
+websocket:
+  host: ${VIDEO_ANALYTICS_WS_HOST:-0.0.0.0}    # WebSocket bind address
+  port: ${VIDEO_ANALYTICS_WS_PORT:-8001}        # WebSocket server port
+  debug: ${VIDEO_ANALYTICS_WS_DEBUG:-false}      # Enable WebSocket debug mode
+  max_buffer_size: 104857600  # 100MB in bytes
+
+rerun:
+  host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}    # Rerun server host
+  web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}  # Web viewer port
+  ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}    # WebSocket port
   blueprint:
-    layout: "vertical"
+    layout: "vertical"  # Main layout orientation
     views:
       - type: "spatial2d"
         name: "Video Feed"
         origin: "world/video/stream"
+        settings:
+          fit_to_content: true
+          background_color: [26, 26, 26]  # Dark background (RGB)
       - type: "text_log"
         name: "Events"
         origin: "world/events"
+        settings:
+          max_lines: 1000
+          show_timestamps: true
                                                                                    
 frontend:   
   host: localhost
