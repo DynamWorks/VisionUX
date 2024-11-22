@@ -158,15 +158,18 @@ class BackendApp:
             })
 
             # Run Flask-SocketIO app with proper configuration
+            self.socket_handler.socketio.init_app(
+                self.app,
+                cors_allowed_origins="*",
+                ping_timeout=20,
+                ping_interval=25
+            )
             self.socket_handler.socketio.run(
                 self.app,
                 host=host,
                 port=port,
                 debug=debug,
-                allow_unsafe_werkzeug=True,  # Required for production
-                cors_allowed_origins="*",
-                ping_timeout=20,
-                ping_interval=25
+                allow_unsafe_werkzeug=True  # Required for production
             )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
