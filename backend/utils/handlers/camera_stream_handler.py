@@ -212,9 +212,9 @@ class CameraStreamHandler(BaseMessageHandler):
                     source="camera_stream"
                 )
                 self.frame_count += 1
-                except Exception as e:
-                    self.logger.warning(f"Failed to log frame: {e}")
-                    self.logger.debug(f"Error details: {str(e)}", exc_info=True)
+            except Exception as e:
+                self.logger.warning(f"Failed to log frame: {e}")
+                self.logger.debug(f"Error details: {str(e)}", exc_info=True)
                 
         except Exception as e:
             self.logger.error(f"Error handling camera frame: {e}", exc_info=True)
