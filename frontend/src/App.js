@@ -12,7 +12,7 @@ import FileList from './components/FileList';
 function App() {
     const [inputType, setInputType] = useState('camera');
     const [devices, setDevices] = useState([]);
-    const [selectedDevice, setSelectedDevice] = useState('');
+    const [selectedDevice, setSelectedDevice] = useState(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [stream, setStream] = useState(null);
     const [videoFile, setVideoFile] = useState(null);
@@ -319,10 +319,15 @@ function App() {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             setDevices(videoDevices);
+            
+            // Set default device if none selected
+            if (!selectedDevice && videoDevices.length > 0) {
+                setSelectedDevice(videoDevices[0].deviceId);
+            }
         } catch (error) {
             console.error('Error enumerating devices:', error);
         }
-    }, []);
+    }, [selectedDevice]);
 
 
     useEffect(() => {
