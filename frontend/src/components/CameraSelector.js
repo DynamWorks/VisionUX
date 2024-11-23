@@ -23,10 +23,8 @@ const CameraSelector = ({
     return (
         <Box sx={{ mb: 2 }}>
             <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Select Camera</InputLabel>
                 <Select
                     value={selectedDevice}
-                    label="Select Camera"
                     onChange={(e) => setSelectedDevice(e.target.value)}
                     disabled={isStreaming}
                     sx={{
