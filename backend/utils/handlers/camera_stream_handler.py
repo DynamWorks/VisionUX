@@ -163,13 +163,17 @@ class CameraStreamHandler(BaseMessageHandler):
                     self.logger.warning(f"Invalid message type: {type(message_data)}")
                     return
 
-            # Get frame data with timeout
-            try:
-                frame_data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
-            except asyncio.TimeoutError:
-                self.logger.error("Timeout waiting for frame data")
-                await self.send_error(websocket, "Frame data timeout")
-                return
+            # For camera frames, the binary data comes in the next message
+            if message_type == 'camera_frame':
+                try:
+                    frame_data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
+                    if not frame_data:
+                        self.logger.error("Empty frame data received")
+                        return
+                except asyncio.TimeoutError:
+                    self.logger.error("Timeout waiting for frame data")
+                    await self.send_error(websocket, "Frame data timeout")
+                    return
 
             # Get current time for metrics
             current_time = time.time()
@@ -193,31 +197,25 @@ class CameraStreamHandler(BaseMessageHandler):
             )
             self.frame_metrics.append(metrics)
 
-            # Calculate FPS
-            elapsed = current_time - self.start_time
-            fps = self.frame_count / elapsed if elapsed > 0 else 0
+            # Get RerunManager instance
+            from ..rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+
+            # Convert BGR to RGB for visualization
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Log frame to Rerun
+            rerun_manager.log_frame(
+                frame=frame_rgb,
+                frame_number=self.frame_count,
+                source="camera_stream"
+            )
+
+            self.frame_count += 1
 
             # Log basic frame info periodically
             if self.frame_count % 100 == 0:
                 self.logger.info(f"Processed {self.frame_count} frames")
-
-            # Process frame through video stream
-            try:
-                from ..video_stream import VideoStream
-                if not hasattr(self, 'stream_processor'):
-                    self.stream_processor = VideoStream(source="camera")
-                    self.stream_processor.start()
-
-                # Add frame to stream processor
-                self.stream_processor.add_frame({
-                    'frame': frame,
-                    'timestamp': time.time(),
-                    'frame_number': self.frame_count,
-                    'source': 'camera_stream',
-                    'metrics': metrics
-                })
-                
-                self.frame_count += 1
             except Exception as e:
                 self.logger.warning(f"Failed to process frame: {e}")
                 self.logger.debug(f"Error details: {str(e)}", exc_info=True)
