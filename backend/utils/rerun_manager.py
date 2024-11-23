@@ -175,7 +175,7 @@ class RerunManager:
             
             # Initialize recording if not already done
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics", spawn=True)
+                rr.init("video_analytics")#, spawn=True)
                 self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
