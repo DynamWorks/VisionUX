@@ -277,24 +277,46 @@ class RerunManager:
         """Clean up resources and stop servers"""
         self.logger.info("Cleaning up Rerun manager...")
         
-        # Signal keep-alive task to stop
-        self._shutdown_event.set()
-        
-        # Stop keep-alive task
-        if self._keep_alive_task and not self._keep_alive_task.done():
-            self._keep_alive_task.cancel()
-            try:
-                await self._keep_alive_task
-            except asyncio.CancelledError:
-                pass
-                
-        # Stop web server
-        if self._site:
-            await self._site.stop()
-        if self._runner:
-            await self._runner.cleanup()
+        try:
+            # Signal keep-alive task to stop
+            if hasattr(self, '_shutdown_event'):
+                self._shutdown_event.set()
             
-        self.logger.info("Rerun manager cleanup complete")
+            # Stop keep-alive task
+            if hasattr(self, '_keep_alive_task') and self._keep_alive_task and not self._keep_alive_task.done():
+                self._keep_alive_task.cancel()
+                try:
+                    await asyncio.wait_for(self._keep_alive_task, timeout=5.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    self.logger.warning("Keep-alive task cleanup timed out")
+                    
+            # Stop web server with timeout
+            if hasattr(self, '_site') and self._site:
+                try:
+                    await asyncio.wait_for(self._site.stop(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    self.logger.warning("Web server stop timed out")
+                    
+            if hasattr(self, '_runner') and self._runner:
+                try:
+                    await asyncio.wait_for(self._runner.cleanup(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    self.logger.warning("Runner cleanup timed out")
+            
+            # Reset initialization flag
+            self._initialized = False
+            
+            # Clear Rerun recording
+            try:
+                rr.log("world", rr.Clear(recursive=True))
+            except Exception as e:
+                self.logger.warning(f"Failed to clear Rerun recording: {e}")
+                
+            self.logger.info("Rerun manager cleanup complete")
+            
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")
+            raise
     
     def register_connection(self):
         """Register a new frontend connection"""
@@ -333,24 +355,44 @@ class RerunManager:
     def log_frame(self, frame, frame_number=None, source=None):
         """Log a frame to Rerun with metadata"""
         try:
+            if frame is None:
+                self.logger.warning("Received None frame")
+                return
+
+            if not hasattr(rr, '_recording'):
+                self.logger.warning("Rerun not initialized, initializing now")
+                self.initialize(clear_existing=False)
+
+            # Input validation
+            if not isinstance(frame_number, (type(None), int)):
+                raise ValueError(f"Invalid frame_number type: {type(frame_number)}")
+
             # Convert BGR to RGB if needed
             if len(frame.shape) == 3 and frame.shape[2] == 3:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                try:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                except cv2.error as e:
+                    self.logger.error(f"Color conversion failed: {e}")
+                    return
             else:
                 frame_rgb = frame
 
             # Set frame sequence and log frame
-            rr.set_time_sequence("frame_sequence", frame_number if frame_number is not None else 0)
-            rr.log("world/video/stream", rr.Image(frame_rgb))
+            try:
+                rr.set_time_sequence("frame_sequence", frame_number if frame_number is not None else 0)
+                rr.log("world/video/stream", rr.Image(frame_rgb))
+            except Exception as e:
+                self.logger.error(f"Failed to log frame to Rerun: {e}")
+                return
             
             # Log source change event if provided
             if source:
-                rr.log("world/events", 
-                      rr.TextLog(f"Stream source changed to: {source}"),
-                      timeless=False)
-                
-            # Force flush to ensure frame is displayed
-            #rr.flush()
+                try:
+                    rr.log("world/events", 
+                          rr.TextLog(f"Stream source changed to: {source}"),
+                          timeless=False)
+                except Exception as e:
+                    self.logger.warning(f"Failed to log source change event: {e}")
             
         except Exception as e:
             self.logger.error(f"Error logging frame to Rerun: {e}")
