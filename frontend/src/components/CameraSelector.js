@@ -23,15 +23,30 @@ const CameraSelector = ({
     return (
         <Box sx={{ mb: 2 }}>
             <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Camera</InputLabel>
+                <InputLabel>Select Camera</InputLabel>
                 <Select
                     value={selectedDevice}
-                    label="Camera"
+                    label="Select Camera"
                     onChange={(e) => setSelectedDevice(e.target.value)}
                     disabled={isStreaming}
+                    sx={{
+                        '& .MuiSelect-select': {
+                            whiteSpace: 'normal',
+                            minHeight: '1.4375em',
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden'
+                        }
+                    }}
                 >
                     {devices.map((device) => (
-                        <MenuItem key={device.deviceId} value={device.deviceId}>
+                        <MenuItem 
+                            key={device.deviceId} 
+                            value={device.deviceId}
+                            sx={{
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word'
+                            }}
+                        >
                             {device.label || `Camera ${device.deviceId}`}
                         </MenuItem>
                     ))}
