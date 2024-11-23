@@ -146,6 +146,10 @@ class RerunManager:
             #             self.logger.warning(f"Failed to clear Rerun recording: {e}")
             #     return
 
+            if hasattr(self, '_initialized') and self._initialized and not clear_existing:
+                self.logger.info("Rerun already initialized")
+                return
+                
             self.logger.info("Initializing Rerun...")
             
             # Load and verify config first
@@ -158,16 +162,17 @@ class RerunManager:
             if not rerun_config:
                 raise ValueError("Missing 'rerun' section in config")
                 
-            # Set required attributes from config
-            self._ws_port = int(rerun_config.get('ws_port', 4321))
-            self._web_port = int(rerun_config.get('web_port', 9090))
+            # Set required attributes from config with validation
+            try:
+                self._ws_port = int(rerun_config.get('ws_port', 4321))
+                self._web_port = int(rerun_config.get('web_port', 9090))
+                if not (1024 <= self._ws_port <= 65535 and 1024 <= self._web_port <= 65535):
+                    raise ValueError("Port numbers must be between 1024 and 65535")
+            except ValueError as e:
+                raise ValueError(f"Invalid port configuration: {str(e)}")
+                
             self._ws_host = rerun_config.get('ws_host', 'localhost')
             self._web_host = rerun_config.get('web_host', 'localhost')
-            
-            # Verify ports are in valid range
-            for port in [self._ws_port, self._web_port]:
-                if not (1024 <= port <= 65535):
-                    raise ValueError(f"Invalid port number: {port}")
             
             # Verify environment after config is loaded
             if not self._verify_environment():
