@@ -216,10 +216,11 @@ class CameraStreamHandler(BaseMessageHandler):
             # Log basic frame info periodically
             if self.frame_count % 100 == 0:
                 self.logger.info(f"Processed {self.frame_count} frames")
-            except Exception as e:
-                self.logger.warning(f"Failed to process frame: {e}")
-                self.logger.debug(f"Error details: {str(e)}", exc_info=True)
-                raise  # Re-raise to be caught by outer exception handler
+
+        except Exception as e:
+            self.logger.warning(f"Failed to process frame: {e}")
+            self.logger.debug(f"Error details: {str(e)}", exc_info=True)
+            raise  # Re-raise to be caught by outer exception handler
 
         except Exception as e:
             self.logger.error(f"Error handling camera frame: {e}", exc_info=True)
