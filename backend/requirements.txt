@@ -4,6 +4,7 @@ flask-cors==4.0.0
 flask-socketio==5.3.6
 python-socketio==5.11.1
 gevent==23.9.1
+gevent-websocket==0.10.1
 numpy>=1.24.0
 opencv-contrib-python==4.9.0.80
 Pillow==10.2.0

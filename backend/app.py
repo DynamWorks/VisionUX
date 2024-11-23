@@ -174,7 +174,9 @@ class BackendApp:
                 reconnection=True,
                 reconnection_attempts=10,
                 reconnection_delay=1000,
-                reconnection_delay_max=5000
+                reconnection_delay_max=5000,
+                websocket=True,  # Enable WebSocket transport
+                http_compression=True  # Enable HTTP compression
             )
             self.socket_handler.socketio.run(
                 self.app,
