@@ -45,48 +45,22 @@ class RerunManager:
             self._ws_host = rerun_config.get('ws_host', 'localhost')
             self._ws_port = int(rerun_config.get('ws_port', 4321))
 
-    async def _health_check(self, request):
-        """Health check endpoint for the web server with CORS support"""
-        from aiohttp import web
-        
-        # Common CORS headers
-        cors_headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Max-Age': '86400',  # 24 hours
-        }
-        
-        # Handle preflight OPTIONS request
-        if request.method == 'OPTIONS':
-            return web.Response(headers=cors_headers)
-            
+    async def check_health(self):
+        """Explicit health check method"""
         try:
-            # Handle actual GET request
-            response_headers = {
-                **cors_headers,
-                'Content-Type': 'application/json'
+            return {
+                'status': 'healthy',
+                'service': 'rerun-viewer',
+                'web_port': self._web_port,
+                'ws_port': self._ws_port,
+                'timestamp': time.time()
             }
-            return web.Response(
-                text=json.dumps({
-                    'status': 'healthy',
-                    'service': 'rerun-viewer',
-                    'web_port': self._web_port,
-                    'ws_port': self._ws_port
-                }),
-                headers={**response_headers, 'Content-Type': 'application/json'}
-            )
         except Exception as e:
             self.logger.error(f"Health check error: {e}")
-            return web.Response(
-                text=json.dumps({
-                    'status': 'error',
-                    'error': str(e)
-                }),
-                headers=response_headers,
-                status=500,
-                content_type='application/json'
-            )
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
 
     async def _handle_root(self, request):
         """Handle root path request"""

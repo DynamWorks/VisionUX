@@ -34,19 +34,45 @@ frame_memory = MemoryManager(content_manager=None)
 
 @api.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint with CORS support"""
-    # Add CORS headers
-    response = jsonify({
-        'status': 'healthy',
-        'service': 'video-analytics-api',
-        'timestamp': time.time(),
-        'websocket': True,
-        'rerun': True
-    })
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', '*')
-    return response
+    """Health check endpoint with detailed service status"""
+    try:
+        # Get RerunManager instance for its health check
+        from backend.utils.rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_status = asyncio.run(rerun_manager.check_health())
+        
+        # Check content manager
+        content_status = {
+            'status': 'healthy',
+            'uploads_dir': content_manager.uploads_dir.exists(),
+            'analysis_dir': content_manager.analysis_dir.exists(),
+            'chat_dir': content_manager.chat_dir.exists()
+        }
+        
+        response = jsonify({
+            'status': 'healthy',
+            'service': 'video-analytics-api',
+            'timestamp': time.time(),
+            'components': {
+                'api': {'status': 'healthy'},
+                'rerun': rerun_status,
+                'content': content_status
+            }
+        })
+        
+        # Add CORS headers
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': time.time()
+        }), 500
 
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():

@@ -105,35 +105,16 @@ function App() {
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
                     setWs(null);
 
-                    // Check if server is completely down using API endpoint
-                    const apiPort = process.env.REACT_APP_API_PORT || '8000';
-                    fetch(`${window.location.protocol}//${wsHost}:${apiPort}/api/v1/health`, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json',
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Health check response:', data);
-                        if (!data.websocket || !data.status === 'healthy') {
-                            throw new Error('WebSocket service unavailable');
-                        }
-                        // Server is up, try reconnecting
-                        if (reconnectAttempts < maxReconnectAttempts) {
-                            reconnectAttempts++;
-                            const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
-                            console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
-                            reconnectTimeout = setTimeout(connectWebSocket, delay);
-                        } else {
-                            console.error('Max reconnection attempts reached');
-                            alert('Unable to connect to WebSocket server. Please refresh the page or try again later.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Server health check failed:', error);
-                        alert('Server appears to be offline. Please check your connection and try again later.');
-                    });
+                    // Try reconnecting with exponential backoff
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
+                        console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
+                        reconnectTimeout = setTimeout(connectWebSocket, delay);
+                    } else {
+                        console.error('Max reconnection attempts reached');
+                        alert('Unable to connect to WebSocket server. Please refresh the page or try again later.');
+                    }
                 };
 
                 websocket.onerror = (error) => {
