@@ -166,10 +166,15 @@ class BackendApp:
             self.socket_handler.socketio.init_app(
                 self.app,
                 cors_allowed_origins="*",
-                ping_timeout=60,
-                ping_interval=25,
+                ping_timeout=120,
+                ping_interval=30,
                 async_mode='gevent',
-                engineio_logger=True
+                engineio_logger=True,
+                logger=True,
+                reconnection=True,
+                reconnection_attempts=10,
+                reconnection_delay=1000,
+                reconnection_delay_max=5000
             )
             self.socket_handler.socketio.run(
                 self.app,

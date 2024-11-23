@@ -66,14 +66,26 @@ function App() {
                 let connectionTimeout;
 
                 // Set connection timeout
-                // Set connection timeout with exponential backoff
-                const timeoutDuration = Math.min(2000 * Math.pow(2, reconnectAttempts), 30000);
+                // Set connection timeout with improved exponential backoff
+                const baseDelay = 1000; // 1 second base delay
+                const maxDelay = 30000; // 30 seconds max delay
+                const timeoutDuration = Math.min(baseDelay * Math.pow(1.5, reconnectAttempts), maxDelay);
+                
                 connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
                         console.log(`Connection attempt timed out after ${timeoutDuration}ms`);
                         websocket.close();
+                        // Trigger immediate reconnect
+                        clearTimeout(reconnectTimeout);
+                        reconnectTimeout = setTimeout(connectWebSocket, 100);
                     }
                 }, timeoutDuration);
+
+                // Add connection error handler
+                websocket.addEventListener('error', (error) => {
+                    console.error('WebSocket connection error:', error);
+                    clearTimeout(connectionTimeout);
+                });
 
                 websocket.onopen = () => {
                     clearTimeout(connectionTimeout);

@@ -50,6 +50,17 @@ def health_check():
             'chat_dir': content_manager.chat_dir.exists()
         }
         
+        # Check WebSocket server status
+        ws_status = {'status': 'healthy'}
+        try:
+            if hasattr(app, 'socket_handler') and app.socket_handler.socketio:
+                ws_status['connections'] = len(app.socket_handler.clients)
+            else:
+                ws_status['status'] = 'not_initialized'
+        except Exception as e:
+            ws_status['status'] = 'error'
+            ws_status['error'] = str(e)
+
         response = jsonify({
             'status': 'healthy',
             'service': 'video-analytics-api',
@@ -57,7 +68,8 @@ def health_check():
             'components': {
                 'api': {'status': 'healthy'},
                 'rerun': rerun_status,
-                'content': content_status
+                'content': content_status,
+                'websocket': ws_status
             }
         })
         
