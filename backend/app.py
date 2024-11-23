@@ -154,6 +154,11 @@ class BackendApp:
                     "origins": "*",
                     "allow_headers": ["Content-Type"],
                     "methods": ["GET", "POST", "OPTIONS"]
+                },
+                r"/socket.io/*": {
+                    "origins": "*",
+                    "allow_headers": ["Content-Type"],
+                    "methods": ["GET", "POST", "OPTIONS"]
                 }
             })
 
@@ -161,8 +166,10 @@ class BackendApp:
             self.socket_handler.socketio.init_app(
                 self.app,
                 cors_allowed_origins="*",
-                ping_timeout=20,
-                ping_interval=25
+                ping_timeout=60,
+                ping_interval=25,
+                async_mode='gevent',
+                engineio_logger=True
             )
             self.socket_handler.socketio.run(
                 self.app,

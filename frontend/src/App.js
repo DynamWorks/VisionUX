@@ -44,10 +44,11 @@ function App() {
         if (ws) return; // Prevent recreating if ws exists
         
         // Get WebSocket URL from environment with fallbacks
+        // Get WebSocket URL with fallbacks
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
+        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
 
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 10; // Increased max attempts
@@ -65,12 +66,14 @@ function App() {
                 let connectionTimeout;
 
                 // Set connection timeout
+                // Set connection timeout with exponential backoff
+                const timeoutDuration = Math.min(2000 * Math.pow(2, reconnectAttempts), 30000);
                 connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
-                        console.log('Connection attempt timed out');
+                        console.log(`Connection attempt timed out after ${timeoutDuration}ms`);
                         websocket.close();
                     }
-                }, 10000); // Increased timeout to 10 seconds
+                }, timeoutDuration);
 
                 websocket.onopen = () => {
                     clearTimeout(connectionTimeout);
