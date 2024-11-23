@@ -250,6 +250,7 @@ class RerunManager:
             
             self._initialized = True
             self._server_started = True
+            rr.log("world", rr.Clear(recursive=True))
             
             # Start keep-alive task
             loop = asyncio.get_event_loop()
@@ -374,7 +375,7 @@ class RerunManager:
                       timeless=False)
                 
             # Force flush to ensure frame is displayed
-            rr.flush()
+            #rr.flush()
             
         except Exception as e:
             self.logger.error(f"Error logging frame to Rerun: {e}")
