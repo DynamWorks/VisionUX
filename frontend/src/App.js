@@ -64,15 +64,38 @@ function App() {
                 console.log('Connecting to WebSocket:', wsUrl);
                 const websocket = new WebSocket(wsUrl);
                 let connectionTimeout;
+                let pingInterval;
+                let lastPongTime = Date.now();
 
-                // Set connection timeout with jitter
+                // Set connection timeout with jitter and backoff
                 const baseDelay = 1000;
-                const maxDelay = 10000; // Reduced max delay to 10 seconds
-                const jitter = Math.random() * 1000; // Add random jitter
+                const maxDelay = 10000;
+                const jitter = Math.random() * 1000;
                 const timeoutDuration = Math.min(
                     baseDelay * Math.pow(1.5, reconnectAttempts) + jitter,
                     maxDelay
                 );
+
+                // Setup ping interval
+                const setupPing = () => {
+                    if (pingInterval) clearInterval(pingInterval);
+                    pingInterval = setInterval(() => {
+                        if (websocket.readyState === WebSocket.OPEN) {
+                            try {
+                                websocket.send(JSON.stringify({ type: 'ping' }));
+                                
+                                // Check if we haven't received a pong in too long
+                                if (Date.now() - lastPongTime > 10000) {
+                                    console.warn('No pong received in 10s, closing connection');
+                                    websocket.close();
+                                }
+                            } catch (e) {
+                                console.error('Error sending ping:', e);
+                                websocket.close();
+                            }
+                        }
+                    }, 5000);
+                };
                 
                 connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
@@ -94,10 +117,19 @@ function App() {
                     clearTimeout(connectionTimeout);
                     console.log('WebSocket Connected');
                     reconnectAttempts = 0; // Reset attempts on successful connection
-                    setWs(websocket); // Only set ws when connection is established
+                    setWs(websocket);
+
+                    // Setup ping/pong
+                    setupPing();
 
                     // Send initial connection message and request file list
-                    websocket.send(JSON.stringify({ type: 'connection_established' }));
+                    websocket.send(JSON.stringify({ 
+                        type: 'connection_established',
+                        client_info: {
+                            userAgent: navigator.userAgent,
+                            timestamp: Date.now()
+                        }
+                    }));
                     websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
                     console.log('Requested initial file list');
                 };
@@ -108,10 +140,14 @@ function App() {
                         console.log('WebSocket message received:', data);
                         
                         if (data.type === 'ping') {
-                            websocket.send('pong');
+                            websocket.send(JSON.stringify({ type: 'pong' }));
+                        } else if (data.type === 'pong') {
+                            lastPongTime = Date.now();
                         } else if (data.type === 'uploaded_files') {
                             console.log('Received file list:', data.files);
                             setUploadedFiles(data.files || []);
+                        } else if (data.type === 'error') {
+                            console.error('Server error:', data.error);
                         }
                     } catch (error) {
                         console.error('Error processing WebSocket message:', error);
@@ -120,16 +156,23 @@ function App() {
 
                 websocket.onclose = (event) => {
                     clearTimeout(connectionTimeout);
+                    if (pingInterval) clearInterval(pingInterval);
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
                     setWs(null);
+
+                    // Don't reconnect if this was an intentional close
+                    if (websocket.intentionalClose) {
+                        console.log('Connection closed intentionally');
+                        return;
+                    }
 
                     // Try reconnecting with improved backoff strategy
                     if (reconnectAttempts < maxReconnectAttempts) {
                         reconnectAttempts++;
                         const jitter = Math.random() * 1000;
                         const delay = Math.min(
-                            1000 * Math.pow(1.5, reconnectAttempts) + jitter,
-                            10000 // Cap at 10 seconds
+                            1000 * Math.pow(2, reconnectAttempts) + jitter, // Use exponential backoff
+                            30000 // Cap at 30 seconds
                         );
                         console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
                         reconnectTimeout = setTimeout(connectWebSocket, delay);
@@ -139,7 +182,7 @@ function App() {
                         setTimeout(() => {
                             reconnectAttempts = 0;
                             connectWebSocket();
-                        }, 30000); // Wait 30 seconds before resetting
+                        }, 60000); // Wait 60 seconds before resetting
                     }
                 };
 
