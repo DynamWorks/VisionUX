@@ -166,17 +166,20 @@ class BackendApp:
             self.socket_handler.socketio.init_app(
                 self.app,
                 cors_allowed_origins="*",
-                ping_timeout=120,
-                ping_interval=30,
+                ping_timeout=60,  # Reduced timeout
+                ping_interval=25,  # More frequent pings
                 async_mode='gevent',
                 engineio_logger=True,
                 logger=True,
                 reconnection=True,
-                reconnection_attempts=10,
+                reconnection_attempts=5,  # Reduced attempts
                 reconnection_delay=1000,
                 reconnection_delay_max=5000,
-                websocket=True,  # Enable WebSocket transport
-                http_compression=True  # Enable HTTP compression
+                websocket=True,
+                http_compression=True,
+                transports=['websocket'],  # Force WebSocket transport
+                upgrade_timeout=10000,  # 10 second upgrade timeout
+                max_http_buffer_size=100 * 1024 * 1024  # 100MB buffer
             )
             self.socket_handler.socketio.run(
                 self.app,

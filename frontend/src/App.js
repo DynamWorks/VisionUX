@@ -65,11 +65,14 @@ function App() {
                 const websocket = new WebSocket(wsUrl);
                 let connectionTimeout;
 
-                // Set connection timeout
-                // Set connection timeout with improved exponential backoff
-                const baseDelay = 1000; // 1 second base delay
-                const maxDelay = 30000; // 30 seconds max delay
-                const timeoutDuration = Math.min(baseDelay * Math.pow(1.5, reconnectAttempts), maxDelay);
+                // Set connection timeout with jitter
+                const baseDelay = 1000;
+                const maxDelay = 10000; // Reduced max delay to 10 seconds
+                const jitter = Math.random() * 1000; // Add random jitter
+                const timeoutDuration = Math.min(
+                    baseDelay * Math.pow(1.5, reconnectAttempts) + jitter,
+                    maxDelay
+                );
                 
                 connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
@@ -120,15 +123,23 @@ function App() {
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
                     setWs(null);
 
-                    // Try reconnecting with exponential backoff
+                    // Try reconnecting with improved backoff strategy
                     if (reconnectAttempts < maxReconnectAttempts) {
                         reconnectAttempts++;
-                        const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
+                        const jitter = Math.random() * 1000;
+                        const delay = Math.min(
+                            1000 * Math.pow(1.5, reconnectAttempts) + jitter,
+                            10000 // Cap at 10 seconds
+                        );
                         console.log(`Reconnecting... Attempt ${reconnectAttempts} in ${delay}ms`);
                         reconnectTimeout = setTimeout(connectWebSocket, delay);
                     } else {
                         console.error('Max reconnection attempts reached');
-                        alert('Unable to connect to WebSocket server. Please refresh the page or try again later.');
+                        // Reset attempts after a longer delay
+                        setTimeout(() => {
+                            reconnectAttempts = 0;
+                            connectWebSocket();
+                        }, 30000); // Wait 30 seconds before resetting
                     }
                 };
 
