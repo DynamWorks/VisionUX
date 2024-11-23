@@ -4,7 +4,7 @@ import cv2
 import logging
 import asyncio
 from pathlib import Path
-from flask import Blueprint, request, jsonify, Response, send_file
+from flask import Blueprint, request, jsonify, Response, send_file, current_app
 import shutil
 
 from backend.services.scene_service import SceneAnalysisService
@@ -53,8 +53,8 @@ def health_check():
         # Check WebSocket server status
         ws_status = {'status': 'healthy'}
         try:
-            if hasattr(app, 'socket_handler') and app.socket_handler.socketio:
-                ws_status['connections'] = len(app.socket_handler.clients)
+            if hasattr(current_app, 'socket_handler') and current_app.socket_handler.socketio:
+                ws_status['connections'] = len(current_app.socket_handler.clients)
             else:
                 ws_status['status'] = 'not_initialized'
         except Exception as e:
