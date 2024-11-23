@@ -403,6 +403,7 @@ function App() {
                                 />
                             ) : (
                                 <VideoUpload
+                                    setUploadedFiles={setUploadedFiles}
                                     onUpload={(file) => {
                                         if (isStreaming) {
                                             stopCamera();
@@ -461,6 +462,19 @@ function App() {
 
                                                 const result = await response.json();
                                                 console.log('Upload successful:', result);
+                                            
+                                                // Fetch updated file list after successful upload
+                                                try {
+                                                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
+                                                    if (!response.ok) {
+                                                        throw new Error(`HTTP error! status: ${response.status}`);
+                                                    }
+                                                    const data = await response.json();
+                                                    console.log('Received updated file list:', data.files);
+                                                    setUploadedFiles(data.files || []);
+                                                } catch (error) {
+                                                    console.error('Error fetching updated files:', error);
+                                                }
                                             } catch (error) {
                                                 console.error('Upload failed:', error);
                                                 alert(`Upload failed: ${error.message}`);

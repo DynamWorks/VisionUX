@@ -3,7 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
-const VideoUpload = ({ onUpload }) => {
+const VideoUpload = ({ onUpload, setUploadedFiles }) => {
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         accept: {
             'video/*': ['.mp4', '.webm', '.ogg']
