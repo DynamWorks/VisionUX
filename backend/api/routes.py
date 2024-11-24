@@ -165,10 +165,18 @@ def start_stream():
         if not file_path.exists():
             return jsonify({'error': f"Video file not found: {filename}"}), 400
             
-        # Initialize RerunManager
+        # Initialize video stream
+        from backend.utils.video_stream import VideoStream
+        video_stream = VideoStream(str(file_path))
+        video_stream.start()
+        
+        # Initialize RerunManager and reset viewer
         from backend.utils.rerun_manager import RerunManager
         rerun_manager = RerunManager()
         rerun_manager.reset()
+        
+        # Store video stream in app context
+        current_app.video_stream = video_stream
         
         return jsonify({
             'status': 'success',
@@ -183,6 +191,11 @@ def start_stream():
 def stop_stream():
     """Stop video streaming"""
     try:
+        # Stop video stream if exists
+        if hasattr(current_app, 'video_stream'):
+            current_app.video_stream.stop()
+            delattr(current_app, 'video_stream')
+            
         # Reset Rerun viewer
         from backend.utils.rerun_manager import RerunManager
         rerun_manager = RerunManager()
@@ -200,6 +213,10 @@ def stop_stream():
 def pause_stream():
     """Pause video streaming"""
     try:
+        if not hasattr(current_app, 'video_stream'):
+            return jsonify({'error': 'No active stream'}), 400
+            
+        current_app.video_stream.pause()
         return jsonify({
             'status': 'success',
             'message': 'Stream paused'
@@ -212,6 +229,10 @@ def pause_stream():
 def resume_stream():
     """Resume video streaming"""
     try:
+        if not hasattr(current_app, 'video_stream'):
+            return jsonify({'error': 'No active stream'}), 400
+            
+        current_app.video_stream.resume()
         return jsonify({
             'status': 'success',
             'message': 'Stream resumed'
