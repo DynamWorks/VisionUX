@@ -47,7 +47,7 @@ class VideoStream:
                         break
                         
                 # Verify video file is valid
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                total_frames = int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
                 if total_frames <= 0:
                     self.logger.error(f"Invalid video file - no frames detected: {self.source}")
                     break
@@ -56,10 +56,10 @@ class VideoStream:
                 
                 # Process frames
                 while not self.stop_event.is_set():
-                    ret, frame = cap.read()
+                    ret, frame = self._cap.read()
                     if not ret:
                         if self.loop:
-                            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                            self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                             continue
                         else:
                             break
@@ -109,7 +109,7 @@ class VideoStream:
                         time.sleep(1/30)  # Normal 30 FPS
                 
                 # Release capture when done with this loop iteration
-                cap.release()
+                self._cap.release()
                 if not self.loop:
                     break
 
