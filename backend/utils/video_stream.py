@@ -19,8 +19,10 @@ class VideoStream:
         self.pause_event = Event()
         self.frame_count = 0
         self.current_frame = None
+        self.paused_position = 0  # Store frame position when paused
         self.logger = logging.getLogger(__name__)
         self._stream_thread = None
+        self._cap = None  # Store VideoCapture object
         
     def start(self):
         """Start video streaming in a separate thread"""
@@ -35,12 +37,12 @@ class VideoStream:
                 continue
             try:
                 # Handle both string paths and VideoCapture objects
-                cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
-                if not cap.isOpened():
+                self._cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
+                if not self._cap.isOpened():
                     self.logger.error(f"Failed to open video source: {self.source}")
                     # Try with different backend
-                    cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
-                    if not cap.isOpened():
+                    self._cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
+                    if not self._cap.isOpened():
                         self.logger.error("Failed to open video with FFMPEG backend")
                         break
                         
@@ -158,10 +160,11 @@ class VideoStream:
             yield frame
         
     def stop(self):
-        """Stop video streaming and clean up resources"""
+        """Stop video streaming and reset to beginning"""
         self.logger.info("Stopping video stream...")
         self.stop_event.set()
         self.pause_event.clear()
+        self.paused_position = 0
         
         # Wait for thread to finish with timeout
         if self._stream_thread and self._stream_thread.is_alive():
@@ -176,28 +179,49 @@ class VideoStream:
             except:
                 pass
                 
-        self.logger.info("Video stream stopped successfully")
+        # Get RerunManager instance
+        from .rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.initialize(clear_existing=True)
+        
+        # Reset video capture to beginning
+        if self._cap and self._cap.isOpened():
+            self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            
+        self.logger.info("Video stream stopped and reset to beginning")
             
     def pause(self):
         """Pause video streaming"""
+        if self._cap and self._cap.isOpened():
+            self.paused_position = self._cap.get(cv2.CAP_PROP_POS_FRAMES)
+            self.logger.info(f"Video stream paused at frame {self.paused_position}")
+            
         self.pause_event.set()
-        self.logger.info("Video stream paused")
         try:
             # Log pause event to Rerun
             rr.log("world/events", 
-                  rr.TextLog("Video stream paused"),
+                  rr.TextLog(f"Video stream paused at frame {self.paused_position}"),
                   timeless=False)
         except Exception as e:
             self.logger.error(f"Error logging pause event: {e}")
         
     def resume(self):
-        """Resume video streaming"""
+        """Resume video streaming from paused position"""
+        if self._cap and self._cap.isOpened() and self.paused_position > 0:
+            self._cap.set(cv2.CAP_PROP_POS_FRAMES, self.paused_position)
+            self.logger.info(f"Resuming video from frame {self.paused_position}")
+            
         self.pause_event.clear()
-        self.logger.info("Video stream resumed")
+        
+        # Get RerunManager instance
+        from .rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        rerun_manager.initialize(clear_existing=True)
+        
         try:
             # Log resume event to Rerun
             rr.log("world/events", 
-                  rr.TextLog("Video stream resumed"),
+                  rr.TextLog(f"Video stream resumed from frame {self.paused_position}"),
                   timeless=False)
         except Exception as e:
             self.logger.error(f"Error logging resume event: {e}")
