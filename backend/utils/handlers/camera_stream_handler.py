@@ -45,11 +45,17 @@ class CameraStreamHandler(BaseMessageHandler):
                     self.logger.info("Stopping video stream")
                     self.video_stream.stop()
                     delattr(self, 'video_stream')
+                    
+                    # Get RerunManager instance and reinitialize
+                    from ..rerun_manager import RerunManager
+                    rerun_manager = RerunManager()
+                    rerun_manager.initialize(clear_existing=True)
+                    
                     await websocket.send(json.dumps({
                         'type': 'video_stream_stopped',
                         'status': 'success'
                     }))
-                    self.logger.info("Video stream stopped successfully")
+                    self.logger.info("Video stream stopped and Rerun reinitialized")
                 return
                 
             elif message_type == 'start_video_stream':

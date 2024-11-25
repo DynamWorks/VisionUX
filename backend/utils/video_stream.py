@@ -182,7 +182,10 @@ class VideoStream:
         # Get RerunManager instance
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
-        rerun_manager.initialize(clear_existing=True)
+        
+        # Clear video stream topic specifically
+        rr.log("world/video/stream", rr.Clear(recursive=True))
+        rr.log("world/events", rr.TextLog("Video stream stopped and cleared"), timeless=False)
         
         # Reset video capture to beginning
         if self._cap and self._cap.isOpened():
