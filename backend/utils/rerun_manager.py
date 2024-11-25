@@ -183,7 +183,6 @@ class RerunManager:
                 rr.init("video_analytics")
                 rr.set_time_sequence("frame_sequence", sequence=0)  # Initialize sequence at 0
                 rr.set_time_seconds("frame_sequence", seconds=time.time())  # Set current time with timeline
-                rr.set_time_playback_mode("live")  # Start in live mode
                 self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
@@ -228,7 +227,6 @@ class RerunManager:
                 ws_port=self._ws_port,
                 web_port=self._web_port,
                 default_blueprint=blueprint,
-                default_playback_mode="live",  # Always start in live mode
                 time_sequence_id="frame_sequence"  # Use our frame sequence
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
