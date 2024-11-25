@@ -239,12 +239,12 @@ class VideoStream:
     def resume(self):
         """Resume video streaming from paused position"""
         if self._cap and self._cap.isOpened() and self.paused_position > 0:
-            # Clear buffer before resuming
-            while not self.buffer.empty():
-                try:
-                    self.buffer.get_nowait()
-                except:
-                    pass
+            # # Clear buffer before resuming
+            # while not self.buffer.empty():
+            #     try:
+            #         self.buffer.get_nowait()
+            #     except:
+            #         pass
                     
             self._cap.set(cv2.CAP_PROP_POS_FRAMES, self.paused_position)
             self.logger.info(f"Resuming video from frame {self.paused_position}")
