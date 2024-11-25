@@ -16,6 +16,7 @@ class VideoStream:
         self.subscribers = set()  # For frame processors
         
         self.stop_event = Event()
+        self.pause_event = Event()  # Initialize pause event
         self.frame_count = 0
         self.current_frame = None
         self.logger = logging.getLogger(__name__)
