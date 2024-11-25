@@ -357,27 +357,14 @@ function App() {
                     console.log('Upload complete, fetching updated file list');
                     fetchUploadedFiles();
                 } else if (data.type === 'video_stream_stopped' && data.refresh_connection) {
-                    console.log('Video stream stopped, refreshing connection');
+                    console.log('Video stream stopped, refreshing connection and page');
                     // Close existing connection
                     if (ws) {
                         ws.close();
                     }
-                    // Reset WebSocket after a short delay
+                    // Reset WebSocket and reload page after a short delay
                     setTimeout(() => {
-                        const wsPort = process.env.REACT_APP_WS_PORT || '8001';
-                        const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
-                        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
-                                
-                        const newWs = new WebSocket(wsUrl);
-                        newWs.onopen = () => {
-                            console.log('WebSocket reconnected after stream stop');
-                            setWs(newWs);
-                            // Request fresh file list
-                            newWs.send(JSON.stringify({
-                                type: 'get_uploaded_files'
-                            }));
-                        };
+                        window.location.reload();
                     }, 1000);
                 }
             } catch (error) {
