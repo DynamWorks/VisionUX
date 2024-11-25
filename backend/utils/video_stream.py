@@ -32,9 +32,6 @@ class VideoStream:
     def _stream_frames(self):
         """Stream frames from video source"""
         while not self.stop_event.is_set():
-            if self.pause_event.is_set():
-                time.sleep(0.1)  # Reduce CPU usage while paused
-                continue
             try:
                 # Handle both string paths and VideoCapture objects
                 self._cap = cv2.VideoCapture(self.source) if isinstance(self.source, str) else self.source
