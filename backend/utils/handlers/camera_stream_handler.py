@@ -210,19 +210,22 @@ class CameraStreamHandler(BaseMessageHandler):
             )
             self.frame_metrics.append(metrics)
 
-            # Get RerunManager instance
-            from ..rerun_manager import RerunManager
-            rerun_manager = RerunManager()
+            # Initialize VideoStream if needed
+            if not hasattr(self, 'video_stream'):
+                from ..video_stream import VideoStream
+                self.video_stream = VideoStream("camera")
+                # Add RerunProcessor
+                from ..rerun_processor import RerunProcessor
+                self.video_stream.add_subscriber(RerunProcessor())
+                self.video_stream.start()
 
-            # Convert BGR to RGB for visualization
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Log frame to Rerun
-            rerun_manager.log_frame(
-                frame=frame_rgb,
-                frame_number=self.frame_count,
-                source="camera_stream"
-            )
+            # Add frame to stream
+            self.video_stream.add_frame({
+                'frame': frame,
+                'timestamp': current_time,
+                'frame_number': self.frame_count,
+                'source': 'camera_stream'
+            })
 
             self.frame_count += 1
 

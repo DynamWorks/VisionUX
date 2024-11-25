@@ -11,7 +11,7 @@ class VideoStream:
     
     def __init__(self, source, loop: bool = True, buffer_size: int = 10):
         self.source = source
-        self.loop = loop and isinstance(source, str)  # Only loop for file sources
+        self.loop = loop and isinstance(source, str) and source != "camera"  # Only loop for file sources
         self.buffer = Queue(maxsize=buffer_size)
         self.subscribers = set()  # For frame processors
         
