@@ -46,9 +46,14 @@ class CameraStreamHandler(BaseMessageHandler):
                     self.video_stream.stop()
                     delattr(self, 'video_stream')
                     
-                    # Get RerunManager instance and reinitialize
+                    # Get RerunManager instance and terminate/restart
                     from ..rerun_manager import RerunManager
                     rerun_manager = RerunManager()
+                    
+                    # Cleanup existing Rerun instance
+                    await rerun_manager.cleanup()
+                    
+                    # Start fresh Rerun instance
                     rerun_manager.initialize(clear_existing=True)
                     
                     await websocket.send(json.dumps({
