@@ -203,16 +203,31 @@ class VideoStream:
         rerun_manager = RerunManager()
         
         try:
-            # Log pause event to Rerun
-            rr.log("world/events", 
-                  rr.TextLog(f"Video stream paused at frame {self.paused_position}"),
-                  timeless=False)
-            
-            # Pause Rerun viewer by sending a pause command
-            rr.log("world/control", 
-                  rr.TextLog("pause"),
-                  timeless=False)
-                  
+            # Store current frame for resuming
+            if self._cap and self._cap.isOpened():
+                ret, frame = self._cap.read()
+                if ret:
+                    # Convert and store frame
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    self._paused_frame = frame_rgb
+                    
+                    # Log pause state
+                    rr.log("world/events", 
+                          rr.TextLog(f"Video stream paused at frame {self.paused_position}"),
+                          timeless=False)
+                    
+                    # Send pause command to Rerun viewer
+                    rr.log("world/control", 
+                          rr.TextLog("pause"),
+                          timeless=False)
+                    
+                    # Display paused frame
+                    rerun_manager.log_frame(
+                        frame=frame_rgb,
+                        frame_number=self.frame_count,
+                        source=f"Paused at frame {self.paused_position}"
+                    )
+                    
         except Exception as e:
             self.logger.error(f"Error during pause: {e}")
         
@@ -234,18 +249,29 @@ class VideoStream:
         # Get RerunManager instance
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
-        rerun_manager.initialize(clear_existing=True)
         
         try:
-            # Log resume event to Rerun
+            # Clear any stale frames
+            rerun_manager.reset()
+            
+            # Log resume state
             rr.log("world/events", 
                   rr.TextLog(f"Video stream resumed from frame {self.paused_position}"),
                   timeless=False)
-                  
-            # Resume Rerun viewer by sending a resume command
+            
+            # Send resume command to Rerun viewer
             rr.log("world/control", 
                   rr.TextLog("resume"),
                   timeless=False)
+            
+            # If we have a paused frame, display it first
+            if hasattr(self, '_paused_frame'):
+                rerun_manager.log_frame(
+                    frame=self._paused_frame,
+                    frame_number=self.frame_count,
+                    source=f"Resuming from frame {self.paused_position}"
+                )
+                delattr(self, '_paused_frame')
                   
         except Exception as e:
             self.logger.error(f"Error during resume: {e}")
