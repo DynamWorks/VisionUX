@@ -52,21 +52,18 @@ const FileList = ({ files, onFileSelect, activeFile, onPlayPause, onStop, isPlay
                                 />
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                                <Button
-                                    size="small"
-                                    variant={isActive ? "contained" : "outlined"}
-                                    onClick={() => {
-                                        onFileSelect(file);
-                                        if (!isActive) {
+                                {!isPlaying ? (
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        onClick={() => {
+                                            onFileSelect(file);
                                             onPlayPause(file, true);
-                                        } else {
-                                            onPlayPause(file, !isPlaying);
-                                        }
-                                    }}
-                                >
-                                    {isActive ? (isPlaying ? "Pause" : "Resume") : "Start"}
-                                </Button>
-                                {isActive && (
+                                        }}
+                                    >
+                                        Start
+                                    </Button>
+                                ) : (
                                     <Button
                                         size="small"
                                         variant="outlined"
