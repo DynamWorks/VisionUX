@@ -180,7 +180,10 @@ class RerunManager:
             
             # Initialize recording if not already done
             if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")#, spawn=True)
+                rr.init("video_analytics")
+                rr.set_time_sequence("frame_sequence")
+                rr.set_time_seconds(time.time())  # Set current time
+                rr.set_time_playback_mode("live")  # Start in live mode
                 self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
@@ -219,12 +222,14 @@ class RerunManager:
             self._web_host = web_parsed.hostname or self._web_host
             
             # Start Rerun server with SDK
-            rr.init("video_analytics")#, spawn=True)
+            rr.init("video_analytics")
             rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint
+                default_blueprint=blueprint,
+                default_playback_mode="live",  # Always start in live mode
+                time_sequence_id="frame_sequence"  # Use our frame sequence
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
