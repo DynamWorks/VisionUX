@@ -181,8 +181,8 @@ class RerunManager:
             # Initialize recording if not already done
             if not hasattr(rr, '_recording'):
                 rr.init("video_analytics")
-                rr.set_time_sequence("frame_sequence", sequence=0)  # Initialize sequence at 0
-                rr.set_time_seconds("frame_sequence", seconds=time.time())  # Set current time with timeline
+                # rr.set_time_sequence("frame_sequence", sequence=0)  # Initialize sequence at 0
+                # rr.set_time_seconds("frame_sequence", seconds=time.time())  # Set current time with timeline
                 self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
@@ -226,8 +226,7 @@ class RerunManager:
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
-                default_blueprint=blueprint,
-                time_sequence_id="frame_sequence"  # Use our frame sequence
+                default_blueprint=blueprint
             )
             self.logger.info(f"Started Rerun server - WS: {self._ws_port}, Web: {self._web_port}")
             
@@ -354,7 +353,7 @@ class RerunManager:
                 delattr(self, '_server_started')
             
             # Reinitialize
-            #self.initialize()
+            self.initialize()
             self.logger.info("Successfully reinitialized Rerun connection")
         except Exception as e:
             self.logger.error(f"Failed to reinitialize Rerun: {e}")
