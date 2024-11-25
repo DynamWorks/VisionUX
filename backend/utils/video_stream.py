@@ -183,15 +183,14 @@ class VideoStream:
         from .rerun_manager import RerunManager
         rerun_manager = RerunManager()
         
-        # Clear video stream topic specifically
-        rr.log("world/video/stream", rr.Clear(recursive=True))
-        rr.log("world/events", rr.TextLog("Video stream stopped and cleared"), timeless=False)
+        # Clear Rerun recording and reinitialize
+        rerun_manager.initialize(clear_existing=True)
         
         # Reset video capture to beginning
         if self._cap and self._cap.isOpened():
             self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             
-        self.logger.info("Video stream stopped and reset to beginning")
+        self.logger.info("Video stream stopped and Rerun buffer cleared")
             
     def pause(self):
         """Pause video streaming"""
