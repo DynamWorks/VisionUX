@@ -181,7 +181,7 @@ class RerunManager:
             # Initialize recording if not already done
             if not hasattr(rr, '_recording'):
                 rr.init("video_analytics")
-                rr.set_time_sequence("frame_sequence")
+                rr.set_time_sequence("frame_sequence", sequence=0)  # Initialize sequence at 0
                 rr.set_time_seconds(time.time())  # Set current time
                 rr.set_time_playback_mode("live")  # Start in live mode
                 self.logger.info("Created new Rerun recording")
