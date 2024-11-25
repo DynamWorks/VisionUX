@@ -58,9 +58,10 @@ class CameraStreamHandler(BaseMessageHandler):
                     
                     await websocket.send(json.dumps({
                         'type': 'video_stream_stopped',
-                        'status': 'success'
+                        'status': 'success',
+                        'refresh_connection': True
                     }))
-                    self.logger.info("Video stream stopped and Rerun reinitialized")
+                    self.logger.info("Video stream stopped and Rerun reinitialized, requesting frontend refresh")
                 return
                 
             elif message_type == 'start_video_stream':
