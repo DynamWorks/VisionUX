@@ -98,23 +98,32 @@ class CameraStreamHandler(BaseMessageHandler):
                     rerun_manager = RerunManager()
                     
                     # Clear previous Rerun data and initialize
-                    rerun_manager.reset()
+                    rerun_manager.initialize(clear_existing=True)
                     
                     # Initialize and start video stream
                     self.video_stream = VideoStream(str(file_path))
                     self.video_stream.start()
                     self.logger.info("Video stream started successfully")
                     
-                    # Log initial frame
+                    # Ensure video is loaded from the beginning
                     cap = cv2.VideoCapture(str(file_path))
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = cap.read()
                     if ret:
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        # Log initial frame
                         rerun_manager.log_frame(
                             frame=frame_rgb,
                             frame_number=0,
                             source=f"Started streaming: {filename}"
                         )
+                        # Start streaming from beginning
+                        self.video_stream.frame_count = 0
+                        self.video_stream.add_frame({
+                            'frame': frame,
+                            'timestamp': time.time(),
+                            'frame_number': 0
+                        })
                     cap.release()
                     
                     # Log stream start event using RerunManager instance
