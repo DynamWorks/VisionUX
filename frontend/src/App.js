@@ -356,16 +356,16 @@ function App() {
                 } else if (data.type === 'upload_complete_ack') {
                     console.log('Upload complete, fetching updated file list');
                     fetchUploadedFiles();
-                } else if (data.type === 'video_stream_stopped' && data.refresh_connection) {
-                    console.log('Video stream stopped, refreshing connection and page');
-                    // Close existing connection
+                } else if (data.type === 'video_stream_stopped') {
+                    console.log('Video stream stopped');
+                } else if (data.type === 'force_refresh') {
+                    console.log('Received force refresh command');
+                    // Close WebSocket first
                     if (ws) {
                         ws.close();
                     }
-                    // Reset WebSocket and reload page after a short delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    // Force a hard reload of the page
+                    window.location.href = window.location.href;
                 }
             } catch (error) {
                 console.error('Error processing WebSocket message:', error);

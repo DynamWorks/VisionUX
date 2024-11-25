@@ -56,12 +56,20 @@ class CameraStreamHandler(BaseMessageHandler):
                     # Start fresh Rerun instance
                     rerun_manager.initialize(clear_existing=True)
                     
+                    # Send stop confirmation first
                     await websocket.send(json.dumps({
                         'type': 'video_stream_stopped',
-                        'status': 'success',
-                        'refresh_connection': True
+                        'status': 'success'
                     }))
-                    self.logger.info("Video stream stopped and Rerun reinitialized, requesting frontend refresh")
+                    self.logger.info("Video stream stopped and Rerun reinitialized")
+                    
+                    # Wait briefly then send refresh command
+                    await asyncio.sleep(1)
+                    await websocket.send(json.dumps({
+                        'type': 'force_refresh',
+                        'timestamp': time.time()
+                    }))
+                    self.logger.info("Sent force refresh command")
                 return
                 
             elif message_type == 'start_video_stream':
