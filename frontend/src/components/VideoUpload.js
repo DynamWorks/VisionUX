@@ -3,8 +3,9 @@ import { Box, Typography } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
-const VideoUpload = ({ onUpload, setUploadedFiles }) => {
+const VideoUpload = ({ onUpload, setUploadedFiles, disabled }) => {
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        disabled,
         accept: {
             'video/*': ['.mp4', '.webm', '.ogg']
         },
@@ -32,7 +33,9 @@ const VideoUpload = ({ onUpload, setUploadedFiles }) => {
                     p: 2,
                     textAlign: 'center',
                     cursor: 'pointer',
-                    bgcolor: isDragActive ? 'rgba(189, 149, 68, 0.1)' : 'transparent',
+                    bgcolor: disabled ? 'rgba(0, 0, 0, 0.1)' : (isDragActive ? 'rgba(189, 149, 68, 0.1)' : 'transparent'),
+                    opacity: disabled ? 0.5 : 1,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
                     '&:hover': {
                         bgcolor: 'rgba(189, 149, 68, 0.1)'
                     }
@@ -41,9 +44,11 @@ const VideoUpload = ({ onUpload, setUploadedFiles }) => {
                 <input {...getInputProps()} />
                 <CloudUploadIcon sx={{ fontSize: 40, color: '#bd9544', mb: 1 }} />
                 <Typography>
-                    {isDragActive
-                        ? "Drop the video here"
-                        : "Drag & drop a video file here, or click to select"}
+                    {disabled 
+                        ? "Stop video stream to enable upload"
+                        : (isDragActive
+                            ? "Drop the video here"
+                            : "Drag & drop a video file here, or click to select")}
                 </Typography>
             </Box>
         </Box>

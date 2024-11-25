@@ -150,21 +150,6 @@ class CameraStreamHandler(BaseMessageHandler):
                     await self.send_error(websocket, f"Failed to start video stream: {str(e)}")
                 return
                 
-            elif message_type == 'pause_video_stream':
-                if hasattr(self, 'video_stream') and self.video_stream:
-                    self.video_stream.pause()
-                    await self.send_response(websocket, {
-                        'type': 'video_stream_paused'
-                    })
-                return
-                
-            elif message_type == 'resume_video_stream':
-                if hasattr(self, 'video_stream') and self.video_stream:
-                    self.video_stream.resume()
-                    await self.send_response(websocket, {
-                        'type': 'video_stream_resumed'
-                    })
-                return
                 
             elif message_type == 'stop_camera_stream':
                 self.logger.info("Stopping camera stream")

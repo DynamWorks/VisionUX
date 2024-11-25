@@ -404,6 +404,7 @@ function App() {
                             ) : (
                                 <VideoUpload
                                     setUploadedFiles={setUploadedFiles}
+                                    disabled={isStreaming}
                                     onUpload={(file) => {
                                         if (isStreaming) {
                                             stopCamera();
