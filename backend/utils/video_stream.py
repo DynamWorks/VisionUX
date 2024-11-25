@@ -197,13 +197,24 @@ class VideoStream:
             self.logger.info(f"Video stream paused at frame {self.paused_position}")
             
         self.pause_event.set()
+        
+        # Get RerunManager instance
+        from .rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        
         try:
             # Log pause event to Rerun
             rr.log("world/events", 
                   rr.TextLog(f"Video stream paused at frame {self.paused_position}"),
                   timeless=False)
+            
+            # Pause Rerun viewer by sending a pause command
+            rr.log("world/control", 
+                  rr.TextLog("pause"),
+                  timeless=False)
+                  
         except Exception as e:
-            self.logger.error(f"Error logging pause event: {e}")
+            self.logger.error(f"Error during pause: {e}")
         
     def resume(self):
         """Resume video streaming from paused position"""
@@ -230,5 +241,11 @@ class VideoStream:
             rr.log("world/events", 
                   rr.TextLog(f"Video stream resumed from frame {self.paused_position}"),
                   timeless=False)
+                  
+            # Resume Rerun viewer by sending a resume command
+            rr.log("world/control", 
+                  rr.TextLog("resume"),
+                  timeless=False)
+                  
         except Exception as e:
-            self.logger.error(f"Error logging resume event: {e}")
+            self.logger.error(f"Error during resume: {e}")
