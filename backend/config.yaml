@@ -96,6 +96,6 @@ storage:
 
 # Logging Configuration
 logging:
-  level: INFO
+  level: DEBUG
   file: video_analytics.log
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

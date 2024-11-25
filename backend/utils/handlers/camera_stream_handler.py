@@ -178,11 +178,13 @@ class CameraStreamHandler(BaseMessageHandler):
                 return
                 
             elif message_type == 'camera_frame':
+                self.logger.info("Received camera frame message")
                 try:
                     frame_data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
                     if not frame_data:
                         self.logger.error("Empty frame data received")
                         return
+                    self.logger.debug(f"Received frame data of size: {len(frame_data)} bytes")
                 except asyncio.TimeoutError:
                     self.logger.error("Timeout waiting for frame data")
                     await self.send_error(websocket, "Frame data timeout")

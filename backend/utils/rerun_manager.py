@@ -362,6 +362,8 @@ class RerunManager:
     def log_frame(self, frame, frame_number=None, source=None):
         """Log a frame to Rerun with metadata"""
         try:
+            self.logger.info(f"Logging frame {frame_number} from source: {source}")
+            
             if frame is None:
                 self.logger.warning("Received None frame")
                 return
@@ -369,6 +371,8 @@ class RerunManager:
             if not hasattr(rr, '_recording'):
                 self.logger.warning("Rerun not initialized, initializing now")
                 self.initialize(clear_existing=False)
+                
+            self.logger.debug(f"Frame shape: {frame.shape}, dtype: {frame.dtype}")
 
             # Input validation
             if not isinstance(frame_number, (type(None), int)):
