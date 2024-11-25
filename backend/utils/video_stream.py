@@ -185,7 +185,9 @@ class VideoStream:
         rerun_manager = RerunManager()
         
         # Clear Rerun recording and reinitialize
+        rerun_manager._initialize=False
         rerun_manager.initialize(clear_existing=True)
+        #rerun_manager.log("world",rr.Clear(recursive=True))
         
         # Reset video capture to beginning
         if self._cap and self._cap.isOpened():
