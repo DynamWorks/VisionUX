@@ -75,8 +75,8 @@ class VideoStream:
                         except:
                             pass
                     
-                    # Log frame to Rerun if not paused
-                    if not self.pause_event.is_set():
+                    # Only log frames when actively streaming (not paused or stopped)
+                    if not self.pause_event.is_set() and not self.stop_event.is_set():
                         try:
                             # Convert BGR to RGB for visualization
                             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -91,6 +91,11 @@ class VideoStream:
                                 frame_number=self.frame_count,
                                 source=str(self.source)
                             )
+                            
+                            # Log streaming event
+                            rr.log("world/events", 
+                                  rr.TextLog(f"Streaming frame {self.frame_count}"),
+                                  timeless=False)
                             
                         except Exception as e:
                             self.logger.warning(f"Failed to log frame: {e}")
@@ -213,22 +218,20 @@ class VideoStream:
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     self._paused_frame = frame_rgb
                     
-                    # Log pause state
+                    # Log pause state and final frame
                     rr.log("world/events", 
                           rr.TextLog(f"Video stream paused at frame {self.paused_position}"),
                           timeless=False)
                     
-                    # Send pause command to Rerun viewer
-                    rr.log("world/control", 
-                          rr.TextLog("pause"),
-                          timeless=False)
-                    
-                    # Display paused frame
+                    # Display final frame before pausing
                     rerun_manager.log_frame(
                         frame=frame_rgb,
                         frame_number=self.frame_count,
                         source=f"Paused at frame {self.paused_position}"
                     )
+                    
+                    # Stop logging after pause
+                    rr.log("world/video/stream", rr.Clear(recursive=True))
                     
         except Exception as e:
             self.logger.error(f"Error during pause: {e}")
