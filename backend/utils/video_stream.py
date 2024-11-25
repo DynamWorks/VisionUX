@@ -16,10 +16,8 @@ class VideoStream:
         self.subscribers = set()  # For frame processors
         
         self.stop_event = Event()
-        self.pause_event = Event()
         self.frame_count = 0
         self.current_frame = None
-        self.paused_position = 0  # Store frame position when paused
         self.logger = logging.getLogger(__name__)
         self._stream_thread = None
         self._cap = None  # Store VideoCapture object

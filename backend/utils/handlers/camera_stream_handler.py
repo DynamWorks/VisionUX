@@ -159,12 +159,6 @@ class CameraStreamHandler(BaseMessageHandler):
                 return
                 
             elif message_type == 'camera_frame':
-                if not isinstance(message_data, dict):
-                    self.logger.warning(f"Invalid message type: {type(message_data)}")
-                    return
-
-            # For camera frames, the binary data comes in the next message
-            if message_type == 'camera_frame':
                 try:
                     frame_data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
                     if not frame_data:
