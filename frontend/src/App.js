@@ -228,6 +228,12 @@ function App() {
                 setVideoFile(null);
                 setIsStreaming(false);
             }
+
+            // Stop existing stream if any
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
             const constraints = {
                 video: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
@@ -235,9 +241,19 @@ function App() {
                     height: { ideal: 720 }
                 }
             };
+
+            // Request camera access
             const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
             setStream(mediaStream);
             setIsStreaming(true);
+
+            // Notify WebSocket about camera start
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'start_camera_stream',
+                    deviceId: deviceId
+                }));
+            }
 
             // Set up video frame capture and sending
             const video = document.createElement('video');
@@ -310,8 +326,21 @@ function App() {
             });
             setStream(null);
             setIsStreaming(false);
+
+            // Reset Rerun viewer
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'reset_rerun'
+                }));
+            }
+
+            // Clear any frame sending intervals
+            if (window.frameSendInterval) {
+                clearInterval(window.frameSendInterval);
+                delete window.frameSendInterval;
+            }
         }
-    }, [stream]);
+    }, [stream, ws]);
 
 
     const refreshDevices = useCallback(async () => {
