@@ -145,15 +145,6 @@ class SocketHandler:
                 self.logger.error(f"Frame processing error: {e}", exc_info=True)
                 emit('error', {'message': str(e)})
 
-        @self.socketio.on('reset_rerun')
-        def handle_rerun_reset():
-            try:
-                rr.log("world", rr.Clear(recursive=True))
-                self.logger.info("Rerun reset complete")
-                emit('rerun_reset_complete')
-            except Exception as e:
-                self.logger.error(f"Rerun reset error: {e}")
-                emit('error', {'message': str(e)})
 
     def _send_file_list(self):
         """Send list of uploaded files to client"""

@@ -109,17 +109,10 @@ class CameraStreamHandler(BaseMessageHandler):
                     # Initialize video stream
                     self.logger.info(f"Initializing video stream for {file_path}")
                     
-                    # Get RerunManager instance and reset it completely
-                    from ..rerun_manager import RerunManager
-                    rerun_manager = RerunManager()
-                    
-                    # Stop any existing recording and clear memory
-                    if hasattr(rerun_manager, '_recording'):
-                        delattr(rerun_manager, '_recording')
-                    
-                    # Reinitialize Rerun with clean state
-                    rerun_manager.initialize(clear_existing=True)
-                    rerun_manager.reset()
+                    # Get viewer instance
+                    from ..viewer_factory import ViewerFactory
+                    viewer = ViewerFactory.get_viewer()
+                    viewer.reset()
                     
                     # Initialize and start video stream
                     self.video_stream = VideoStream(str(file_path))
@@ -147,8 +140,8 @@ class CameraStreamHandler(BaseMessageHandler):
                         })
                     cap.release()
                     
-                    # Log stream start event using RerunManager instance
-                    rerun_manager.log_frame(
+                    # Log stream start event using viewer
+                    viewer.log_frame(
                         frame=None,
                         frame_number=0,
                         source=f"Started streaming: {filename}"
