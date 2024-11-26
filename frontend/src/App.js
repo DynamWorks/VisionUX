@@ -468,7 +468,10 @@ function App() {
     return (
         <Router>
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                <Header />
+                <Header 
+                    onRestartWebSockets={restartWebSockets}
+                    onRestartRerun={restartRerun}
+                />
                 <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <Box sx={{ width: '30%' }}>
