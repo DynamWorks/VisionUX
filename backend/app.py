@@ -37,7 +37,6 @@ class BackendApp:
         self.content_manager = None
         self.models_loaded = False
         self.socket_handler = SocketHandler(self.app)
-        self.rerun_manager = RerunManager()
         
         # Register blueprints and routes
         self.app.register_blueprint(api, url_prefix='/api/v1')
@@ -106,10 +105,6 @@ class BackendApp:
     def run(self, host='localhost', port=8000, debug=False):
         """Run the Flask application with Socket.IO"""
         try:
-            # Initialize Rerun manager only if not already initialized
-            #if not hasattr(self.rerun_manager, '_initialized') or not self.rerun_manager._initialized:
-            self.rerun_manager.initialize(clear_existing=True)
-            self.logger.info("Rerun manager initialized")
 
             # # Start Rerun server in a separate thread
             # rerun_thread = threading.Thread(
