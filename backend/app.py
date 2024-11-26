@@ -167,26 +167,36 @@ class BackendApp:
                 }
             })
 
-            # Run Flask-SocketIO app with proper configuration
-            self.socket_handler.socketio.init_app(
-                self.app,
-                cors_allowed_origins="*",
-                ping_timeout=60,
-                ping_interval=25,
-                async_mode='eventlet',  # Use eventlet for better WebSocket support
-                engineio_logger=True,
-                logger=True,
-                reconnection=True,
-                reconnection_attempts=10,
-                reconnection_delay=1000,
-                reconnection_delay_max=5000,
-                http_compression=True,
-                transports=['websocket'],  # WebSocket only, no polling
-                upgrade_timeout=20000,
-                max_http_buffer_size=100 * 1024 * 1024,
-                manage_session=False,  # Disable session management
-                allow_upgrades=True
-            )
+            try:
+                # Initialize eventlet
+                import eventlet
+                eventlet.monkey_patch()
+            
+                # Run Flask-SocketIO app with proper configuration
+                self.socket_handler.socketio.init_app(
+                    self.app,
+                    cors_allowed_origins="*",
+                    ping_timeout=60,
+                    ping_interval=25,
+                    async_mode='eventlet',  # Use eventlet for better WebSocket support
+                    engineio_logger=True,
+                    logger=True,
+                    reconnection=True,
+                    reconnection_attempts=10,
+                    reconnection_delay=1000,
+                    reconnection_delay_max=5000,
+                    http_compression=True,
+                    transports=['websocket'],  # WebSocket only, no polling
+                    upgrade_timeout=20000,
+                    max_http_buffer_size=100 * 1024 * 1024,
+                    manage_session=False,  # Disable session management
+                    allow_upgrades=True
+                )
+            
+                self.logger.info("WebSocket server initialized successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize WebSocket server: {e}")
+                raise RuntimeError(f"WebSocket initialization failed: {e}")
             # Initialize without SSL for development
             self.socket_handler.socketio.run(
                 self.app,

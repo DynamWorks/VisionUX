@@ -39,5 +39,25 @@ if __name__ == "__main__":
     debug = api_config.get("debug", False)
     
     
-    # Run server
-    app.run(host=host, port=port, debug=debug)
+    try:
+        # Initialize eventlet
+        import eventlet
+        eventlet.monkey_patch()
+        
+        # Start WebSocket server
+        from backend.utils.socket_handler import SocketHandler
+        socket_handler = SocketHandler(app)
+        app.socket_handler = socket_handler
+        
+        # Run server with WebSocket support
+        socket_handler.socketio.run(
+            app,
+            host=host,
+            port=port,
+            debug=debug,
+            use_reloader=False,
+            log_output=True
+        )
+    except Exception as e:
+        print(f"Failed to start server: {e}")
+        sys.exit(1)
