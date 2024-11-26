@@ -6,6 +6,7 @@ from aiohttp import web
 import time
 import cv2
 import os
+import sys
 import json
 from pathlib import Path
 from .config import Config
@@ -31,7 +32,7 @@ class RerunManager:
             # Initialize state
             self._server_started = False
             self._active_connections = 0
-            self._shutdown_event = None
+            self._shutdown_event = asyncio.Event() if 'asyncio' in sys.modules else None
             self._initialized = True
             self._runner = None
             self._site = None
