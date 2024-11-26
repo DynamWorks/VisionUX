@@ -3,7 +3,6 @@ import time
 import cv2
 import logging
 import asyncio
-import rerun as rr
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response, send_file, current_app
 import shutil
@@ -130,20 +129,13 @@ def analyze_scene():
         data = request.get_json()
         stream_type = data.get('stream_type', 'unknown')
 
-        # Get RerunManager instance
-        from backend.utils.rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-
-        # Get last 8 frames from Rerun
+        # Get frames from video stream
         frames = []
         try:
-            # Get frames from Rerun recording
-            recording = rr.get_recording()
-            if recording:
-                frame_data = recording.get_frames("world/video/stream", max_frames=8)
-                frames = [frame.data for frame in frame_data if frame.data is not None]
+            if hasattr(current_app, 'video_stream'):
+                frames = list(current_app.video_stream.get_frames(max_frames=8))
         except Exception as e:
-            current_app.logger.error(f"Error getting frames from Rerun: {e}")
+            current_app.logger.error(f"Error getting frames from stream: {e}")
 
         # Analyze scene with available frames
         if not frames:
