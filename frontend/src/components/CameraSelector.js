@@ -58,22 +58,21 @@ const CameraSelector = ({
                             canvas.toBlob(resolve, 'image/jpeg', 0.8);
                         });
 
+                        // Convert blob to ArrayBuffer
+                        const arrayBuffer = await blob.arrayBuffer();
+
                         // Send frame type indicator first
                         const frameMetadata = {
                             type: 'camera_frame',
                             timestamp: Date.now(),
                             width: canvas.width,
-                            height: canvas.height
+                            height: canvas.height,
+                            size: arrayBuffer.byteLength
                         };
-                        console.log('Sending frame metadata:', frameMetadata);
                         ws.send(JSON.stringify(frameMetadata));
                         
-                        // Wait a bit to ensure metadata is processed
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                        
-                        // Then send the actual frame data
-                        console.log('Sending binary frame data, size:', blob.size);
-                        ws.send(blob);
+                        // Send the frame data as binary
+                        ws.send(arrayBuffer);
                         
                         // Wait for frame processed confirmation
                         const confirmation = await new Promise((resolve, reject) => {

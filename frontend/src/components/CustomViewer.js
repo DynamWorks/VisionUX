@@ -134,16 +134,18 @@ const CustomViewer = ({ websocket }) => {
         
         const handleMessage = async (event) => {
             try {
-                if (event instanceof Blob) {
+                if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
                     // Store frame data and wait for metadata
-                    frameBuffer = event;
+                    frameBuffer = event.data;
                 } else {
                     try {
-                        const data = JSON.parse(event);
-                        if (data.type === 'frame_metadata' && frameBuffer) {
-                            // Process frame with metadata
-                            await processFrame(frameBuffer, data.metadata);
-                            frameBuffer = null;
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'camera_frame') {
+                            // Process frame immediately since metadata came first
+                            if (frameBuffer) {
+                                await processFrame(frameBuffer, data);
+                                frameBuffer = null;
+                            }
                         }
                     } catch (e) {
                         // If not valid JSON, process frame without metadata
