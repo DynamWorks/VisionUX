@@ -3,7 +3,7 @@ import { AppBar, Toolbar, Box } from '@mui/material';
 import RestartControls from './RestartControls';
 import logo from '../assets/logo.png';
 
-const Header = ({ onRestartWebSockets, onRestartRerun }) => {
+const Header = ({ onRestartWebSockets }) => {
     return (
         <AppBar position="static" sx={{ bgcolor: '#333333' }}>
             <Toolbar>
@@ -20,7 +20,6 @@ const Header = ({ onRestartWebSockets, onRestartRerun }) => {
                     </Box>
                     <RestartControls 
                         onRestartWebSockets={onRestartWebSockets}
-                        onRestartRerun={onRestartRerun}
                     />
                 </Box>
             </Toolbar>

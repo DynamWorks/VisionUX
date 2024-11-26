@@ -74,43 +74,11 @@ def restart_websockets():
             'message': str(e)
         }), 500
 
-@api.route('/rerun/restart', methods=['POST'])
-def restart_rerun():
-    """Restart Rerun server"""
-    try:
-        # Get RerunManager instance
-        from backend.utils.rerun_manager import RerunManager
-        import asyncio
-        
-        rerun_manager = RerunManager()
-        
-        # Run cleanup in event loop
-        asyncio.run(rerun_manager.cleanup())
-        
-        # Reinitialize with fresh state
-        rerun_manager.initialize()#clear_existing=True)
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Rerun server restarted'
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to restart Rerun server: {e}")
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
 
 @api.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint with detailed service status"""
     try:
-        # Get RerunManager instance for its health check
-        from backend.utils.rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-        rerun_status = asyncio.run(rerun_manager.check_health())
-        
         # Check content manager
         content_status = {
             'status': 'healthy',
@@ -136,7 +104,6 @@ def health_check():
             'timestamp': time.time(),
             'components': {
                 'api': {'status': 'healthy'},
-                'rerun': rerun_status,
                 'content': content_status,
                 'websocket': ws_status
             }

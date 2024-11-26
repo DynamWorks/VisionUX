@@ -5,7 +5,6 @@ import CustomViewer from './components/CustomViewer';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CameraSelector from './components/CameraSelector';
-import RerunViewer from './components/RerunViewer';
 import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
 import FileList from './components/FileList';
@@ -949,11 +948,7 @@ function App() {
                                 borderRadius: '8px',
                                 overflow: 'hidden'
                             }}>
-                                {process.env.REACT_APP_VIEWER_TYPE === 'custom' ? (
-                                    <CustomViewer websocket={ws} />
-                                ) : (
-                                    <RerunViewer />
-                                )}
+                                <CustomViewer websocket={ws} />
                             </Box>
                             <Chat />
                         </Box>
