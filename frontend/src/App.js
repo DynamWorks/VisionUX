@@ -808,6 +808,27 @@ function App() {
                                 isPlaying={isStreaming}
                                 onFileSelect={(file) => {
                                     setVideoFile(file);
+                                    // Start streaming the selected file
+                                    fetch(`${process.env.REACT_APP_API_URL}/api/v1/stream/start`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            filename: file.name
+                                        })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.error) {
+                                            throw new Error(data.error);
+                                        }
+                                        setIsStreaming(true);
+                                    })
+                                    .catch(error => {
+                                        console.error('Error starting stream:', error);
+                                        alert(`Failed to start stream: ${error.message}`);
+                                    });
                                 }}
                             />
                             <AnalysisControls

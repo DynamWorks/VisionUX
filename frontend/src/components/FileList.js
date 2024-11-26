@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, List, ListItem, ListItemIcon, ListItemText, Typography, Button } from '@mui/material';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 
-const FileList = ({ files, onFileSelect, activeFile, onPlayPause, onStop, isPlaying }) => {
+const FileList = ({ files, onFileSelect, activeFile, isPlaying }) => {
     if (!files) {
         return (
             <Box sx={{ p: 2, textAlign: 'center' }}>
@@ -52,27 +52,14 @@ const FileList = ({ files, onFileSelect, activeFile, onPlayPause, onStop, isPlay
                                 />
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                                {!isPlaying ? (
-                                    <Button
-                                        size="small"
-                                        variant="contained"
-                                        onClick={() => {
-                                            onFileSelect(file);
-                                            onPlayPause(file, true);
-                                        }}
-                                    >
-                                        Start
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => onStop(file)}
-                                    >
-                                        Stop
-                                    </Button>
-                                )}
+                                <Button
+                                    size="small"
+                                    variant={isPlaying ? "outlined" : "contained"}
+                                    color={isPlaying ? "error" : "primary"}
+                                    onClick={() => onFileSelect(file)}
+                                >
+                                    {isPlaying ? "Stop" : "Start"}
+                                </Button>
                             </Box>
                         </ListItem>
                     );
