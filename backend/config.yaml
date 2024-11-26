@@ -5,6 +5,14 @@ api:
   debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}    # Enable debug mode
   cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-"*"}  # CORS allowed origins
   viewer: ${VIDEO_ANALYTICS_VIEWER:-custom}      # Viewer type: 'custom'
+  rate_limits:
+    default: "100 per minute"
+    uploads: "10 per minute"
+    analysis: "20 per minute"
+  security:
+    max_upload_size: 500000000  # 500MB in bytes
+    allowed_extensions: [".mp4", ".avi", ".mov"]
+    scan_uploads: true
 
 websocket:
   host: ${VIDEO_ANALYTICS_WS_HOST:-localhost}    # WebSocket bind address
@@ -14,6 +22,13 @@ websocket:
   ssl_enabled: ${VIDEO_ANALYTICS_WS_SSL:-false}  # Enable SSL
   keyfile: ${VIDEO_ANALYTICS_WS_KEY:-""}        # Path to SSL key file
   certfile: ${VIDEO_ANALYTICS_WS_CERT:-""}      # Path to SSL certificate file
+  ping_interval: 25           # Ping interval in seconds
+  ping_timeout: 60           # Ping timeout in seconds
+  max_connections: 100       # Maximum concurrent connections
+  reconnection:
+    attempts: 10
+    delay: 1000
+    max_delay: 5000
 
 frontend:   
   host: localhost
@@ -37,12 +52,21 @@ models:
   clip:
     name: "openai/clip-vit-base-patch32"
     local_path: "backend/models/clip"
+    batch_size: 32
+    device: "cuda"
+    precision: "fp16"
   yolo:
     name: "yolov8x.pt"
     local_path: "backend/models/yolo"
+    confidence: 0.25
+    iou: 0.45
+    device: "cuda"
   traffic_signs:
     name: "yolov8n.pt"
     local_path: "backend/models/traffic_signs"
+    confidence: 0.3
+    iou: 0.45
+    device: "cuda"
 
 # Service Configuration
 services:
@@ -70,11 +94,16 @@ services:
 storage:
   base_path: "tmp_content"
   max_age_hours: 24
+  cleanup_interval: 3600  # Cleanup check interval in seconds
   subdirs:
     - uploads
     - analysis 
     - chat_history
     - visualizations
+  quotas:
+    max_total_size: 10737418240  # 10GB in bytes
+    max_file_count: 1000
+    per_user_limit: 1073741824  # 1GB per user
 
 # Logging Configuration
 logging:
