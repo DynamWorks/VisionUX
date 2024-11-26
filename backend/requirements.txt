@@ -1,6 +1,7 @@
 # Core dependencies
 flask==3.0.0
 flask-cors==4.0.0
+flask-limiter==3.5.0
 flask-socketio==5.3.6
 python-socketio==5.11.1
 gevent==23.9.1
