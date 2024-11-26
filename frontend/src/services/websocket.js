@@ -20,15 +20,15 @@ class WebSocketService {
         
         // Enhanced connection options
         this.socket = io(wsUrl, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 30000, // Increased timeout
+            timeout: 60000, // Increased timeout further
             autoConnect: true,
             forceNew: true,
-            path: '/socket.io',
+            path: '/socket.io/',
             rejectUnauthorized: false,
             pingTimeout: 30000,
             pingInterval: 10000,
@@ -52,14 +52,14 @@ class WebSocketService {
 
     _constructWebSocketUrl(url) {
         // If full URL provided, use it
-        if (url && (url.startsWith('ws://') || url.startsWith('wss://'))) {
+        if (url) {
             return url;
         }
 
         // Get WebSocket URL with fallbacks
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
         
         // Remove any trailing slashes from host
         const cleanHost = wsHost.replace(/\/$/, '');
