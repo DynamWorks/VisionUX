@@ -8,6 +8,8 @@ import RerunViewer from './components/RerunViewer';
 import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
 import FileList from './components/FileList';
+import AnalysisControls from './components/AnalysisControls';
+import ChatDisplay from './components/ChatDisplay';
 
 function App() {
     const [inputType, setInputType] = useState('camera');
