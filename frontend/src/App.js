@@ -25,6 +25,7 @@ function App() {
     // Initialize fetch function
     const fetchUploadedFiles = useCallback(async () => {
         try {
+            console.log('Fetching file list...');
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -37,9 +38,12 @@ function App() {
         }
     }, []);
 
-    // Fetch files on component mount
+    // Fetch files on component mount and when WebSocket connects
     useEffect(() => {
         fetchUploadedFiles();
+        // Set up interval to periodically fetch files
+        const interval = setInterval(fetchUploadedFiles, 5000);
+        return () => clearInterval(interval);
     }, [fetchUploadedFiles]);
 
     useEffect(() => {
