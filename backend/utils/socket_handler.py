@@ -16,11 +16,9 @@ class SocketHandler:
             logger=True,
             ping_timeout=60,
             ping_interval=25,
-            transports=['websocket'],  # Force WebSocket only
+            transports=['websocket'],
             always_connect=True,
-            engineio_logger=True,
-            ssl_context=None,  # Explicitly disable SSL for development
-            websocket_class=None  # Don't override websocket class
+            engineio_logger=True
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
