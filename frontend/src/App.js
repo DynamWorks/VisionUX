@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
 import { Box, Container } from '@mui/material';
 import CustomViewer from './components/CustomViewer';
 import Header from './components/Header';
@@ -510,8 +509,7 @@ function App() {
     }, [refreshDevices, ws, fetchUploadedFiles]);
 
     return (
-        <Router>
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <Header
                     onRestartWebSockets={restartWebSockets}
                     onRestartRerun={restartRerun}
@@ -966,7 +964,6 @@ function App() {
                 </Container>
                 <Footer />
             </Box>
-        </Router>
     );
 }
 
