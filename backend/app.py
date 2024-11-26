@@ -205,35 +205,16 @@ class BackendApp:
             import socket
             import asyncio
 
-            async def resolve_with_timeout():
-                try:
-                    loop = asyncio.get_event_loop()
-                    # Use getaddrinfo instead of gethostbyname for better error handling
-                    resolved = await loop.getaddrinfo(
-                        host, 
-                        None,
-                        family=socket.AF_INET,
-                        proto=socket.IPPROTO_TCP,
-                    )
-                    if resolved:
-                        resolved_ip = resolved[0][4][0]
-                        self.logger.info(f"Resolved host {host} to {resolved_ip}")
-                        return resolved_ip
-                    raise socket.gaierror("No address resolved")
-                except Exception as e:
-                    self.logger.error(f"Failed to resolve hostname {host}: {e}")
-                    return None
-
-            # Try resolution with 5 second timeout
+            # Simplified host resolution with fallbacks
             try:
-                resolved_ip = asyncio.run(asyncio.wait_for(resolve_with_timeout(), timeout=5.0))
-                if not resolved_ip:
+                import socket
+                resolved_ip = socket.gethostbyname(host)
+                self.logger.info(f"Resolved host {host} to {resolved_ip}")
+            except socket.gaierror as e:
+                self.logger.warning(f"Could not resolve {host}: {e}")
+                if host not in ('localhost', '127.0.0.1', '0.0.0.0'):
+                    self.logger.info("Falling back to localhost")
                     host = 'localhost'
-                    self.logger.info(f"Falling back to {host}")
-            except (asyncio.TimeoutError, socket.gaierror) as e:
-                self.logger.error(f"DNS resolution failed: {e}")
-                host = 'localhost' 
-                self.logger.info(f"Falling back to {host}")
 
             # Get SSL configuration
             ssl_enabled = self.config.get('websocket', 'ssl_enabled', default=False)
@@ -253,23 +234,47 @@ class BackendApp:
                     }
                     self.logger.info("Enabling SSL for WebSocket server")
 
-            # Initialize server with enhanced configuration
-            self.socket_handler.socketio.run(
-                self.wsgi_app,  # Use wsgi_app instead of app
-                host=host,
-                port=port,
-                debug=debug,
-                allow_unsafe_werkzeug=True,
-                use_reloader=False,
-                log_output=True,
-                cors_allowed_origins="*",
-                ping_timeout=60,
-                ping_interval=25,
-                async_mode='eventlet',
-                engineio_logger=True,
-                logger=True,
-                **ssl_args
-            )
+            # Initialize server with enhanced configuration and error handling
+            try:
+                self.socket_handler.socketio.run(
+                    self.wsgi_app,  # Use wsgi_app instead of app
+                    host=host,
+                    port=port,
+                    debug=debug,
+                    allow_unsafe_werkzeug=True,
+                    use_reloader=False,
+                    log_output=True,
+                    cors_allowed_origins="*",
+                    ping_timeout=60,
+                    ping_interval=25,
+                    async_mode='eventlet',
+                    engineio_logger=True,
+                    logger=True,
+                    **ssl_args
+                )
+            except Exception as e:
+                self.logger.error(f"Failed to start server on {host}:{port}")
+                if host not in ('localhost', '127.0.0.1', '0.0.0.0'):
+                    self.logger.info("Retrying with localhost...")
+                    host = 'localhost'
+                    self.socket_handler.socketio.run(
+                        self.wsgi_app,
+                        host=host,
+                        port=port,
+                        debug=debug,
+                        allow_unsafe_werkzeug=True,
+                        use_reloader=False,
+                        log_output=True,
+                        cors_allowed_origins="*",
+                        ping_timeout=60,
+                        ping_interval=25,
+                        async_mode='eventlet',
+                        engineio_logger=True,
+                        logger=True,
+                        **ssl_args
+                    )
+                else:
+                    raise
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
             raise
