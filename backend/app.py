@@ -201,6 +201,19 @@ class BackendApp:
             except Exception as e:
                 self.logger.error(f"Failed to initialize WebSocket server: {e}")
                 raise RuntimeError(f"WebSocket initialization failed: {e}")
+            # Resolve hostname before starting server
+            import socket
+            try:
+                # Set DNS resolution timeout
+                socket.setdefaulttimeout(5.0)  # 5 second timeout
+                resolved_ip = socket.gethostbyname(host)
+                self.logger.info(f"Resolved host {host} to {resolved_ip}")
+            except socket.gaierror as e:
+                self.logger.error(f"Failed to resolve hostname {host}: {e}")
+                # Fallback to localhost if resolution fails
+                host = 'localhost'
+                self.logger.info(f"Falling back to {host}")
+
             # Initialize without SSL for development
             self.socket_handler.socketio.run(
                 self.wsgi_app,  # Use wsgi_app instead of app
