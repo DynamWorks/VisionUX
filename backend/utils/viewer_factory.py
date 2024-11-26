@@ -1,5 +1,5 @@
 from .config import Config
-from .rerun_manager import RerunViewer
+from .rerun_manager import RerunManager
 from .custom_viewer import CustomViewer
 
 class ViewerFactory:
@@ -9,6 +9,6 @@ class ViewerFactory:
         viewer_type = config.get('api', 'viewer', default='rerun')
         
         if viewer_type == 'rerun':
-            return RerunViewer()
+            return RerunManager()
         else:
             return CustomViewer()
