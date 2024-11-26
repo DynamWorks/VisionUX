@@ -389,7 +389,7 @@ class RerunViewer:
                 self.logger.warning("Received None frame")
                 return
 
-            if not hasattr(rr, '_recording'):
+            if not hasattr(self.rr, '_recording'):
                 self.logger.warning("Rerun not initialized, initializing now")
                 self.initialize(clear_existing=False)
                 
