@@ -16,7 +16,9 @@ class SocketHandler:
             logger=True,
             ping_timeout=60,
             ping_interval=25,
-            transports=['websocket']
+            transports=['websocket', 'polling'],  # Allow fallback to polling
+            always_connect=True,
+            engineio_logger=True
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)

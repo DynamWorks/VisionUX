@@ -193,7 +193,9 @@ class BackendApp:
                 debug=debug,
                 allow_unsafe_werkzeug=True,  # Required for production
                 use_reloader=False,  # Disable reloader in production
-                log_output=True
+                log_output=True,
+                websocket=True,
+                ssl_context=None  # Explicitly disable SSL for development
             )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")

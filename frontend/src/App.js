@@ -49,7 +49,7 @@ function App() {
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}/socket.io/?EIO=4&transport=websocket`;
+        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
 
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 10; // Increased max attempts
@@ -130,6 +130,15 @@ function App() {
                     console.log('WebSocket Connected to:', wsUrl);
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket);
+
+                    // Test connection immediately
+                    try {
+                        websocket.send(JSON.stringify({ type: 'ping' }));
+                    } catch (e) {
+                        console.error('Failed to send initial ping:', e);
+                        websocket.close();
+                        return;
+                    }
 
                     // Setup ping/pong
                     setupPing();
