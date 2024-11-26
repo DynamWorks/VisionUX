@@ -853,6 +853,7 @@ function App() {
                                 files={uploadedFiles}
                                 activeFile={videoFile}
                                 isPlaying={isStreaming}
+                                style={{ marginTop: '20px', width: '100%' }}
                                 onFileSelect={(file) => {
                                     setVideoFile(file);
                                     // Start streaming the selected file

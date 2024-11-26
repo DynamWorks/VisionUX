@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, List, ListItem, ListItemIcon, ListItemText, Typography, Button } from '@mui/material';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 
-const FileList = ({ files, onFileSelect, activeFile, isPlaying }) => {
+const FileList = ({ files, onFileSelect, activeFile, isPlaying, style }) => {
     if (!files) {
         return (
             <Box sx={{ p: 2, textAlign: 'center' }}>
@@ -24,7 +24,7 @@ const FileList = ({ files, onFileSelect, activeFile, isPlaying }) => {
     }
 
     return (
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2, ...(style || {}) }}>
             <Typography variant="h6" sx={{ mb: 1 }}>
                 Uploaded Files
             </Typography>
