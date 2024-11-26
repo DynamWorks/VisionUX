@@ -22,7 +22,9 @@ class MessageRouter:
             'start_video_stream': CameraStreamHandler(),
             'stop_video_stream': CameraStreamHandler(),
             'pause_video_stream': CameraStreamHandler(),
-            'resume_video_stream': CameraStreamHandler()
+            'resume_video_stream': CameraStreamHandler(),
+            'trigger_scene_analysis': CameraStreamHandler(),
+            'toggle_edge_detection': CameraStreamHandler()
         }
         
     async def route_message(self, websocket, message):

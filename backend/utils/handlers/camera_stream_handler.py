@@ -33,7 +33,9 @@ class CameraStreamHandler(BaseMessageHandler):
         self.frame_metrics = deque(maxlen=metrics_window)
         self.frame_count = 0
         self.start_time = time.time()
-        self.frame_handler = None  # Will be initialized when needed
+        self.frame_handler = None
+        self.edge_detector = None
+        self.analysis_frames = deque(maxlen=8)
         
     async def handle(self, websocket, message_data: Dict[str, Any]) -> None:
         """Handle incoming camera frame data"""
@@ -177,6 +179,10 @@ class CameraStreamHandler(BaseMessageHandler):
                 })
                 return
                 
+            elif message_type == 'trigger_scene_analysis':
+                await self._handle_scene_analysis(websocket)
+            elif message_type == 'toggle_edge_detection':
+                await self._handle_edge_detection(websocket)
             elif message_type == 'camera_frame':
                 self.logger.info("Received camera frame message")
                 try:
@@ -222,12 +228,18 @@ class CameraStreamHandler(BaseMessageHandler):
                 self.video_stream.start()
 
             # Add frame to stream
-            self.video_stream.add_frame({
+            frame_data = {
                 'frame': frame,
                 'timestamp': current_time,
                 'frame_number': self.frame_count,
                 'source': 'camera_stream'
-            })
+            }
+                
+            # Store frame for analysis
+            self.analysis_frames.append(frame_data)
+                
+            # Add frame to stream
+            self.video_stream.add_frame(frame_data)
 
             self.frame_count += 1
 
@@ -242,6 +254,54 @@ class CameraStreamHandler(BaseMessageHandler):
 
         except Exception as e:
             self.logger.error(f"Error handling camera frame: {e}", exc_info=True)
+            await self.send_error(websocket, str(e))
+            
+    async def _handle_scene_analysis(self, websocket):
+        """Handle scene analysis request"""
+        try:
+            if len(self.analysis_frames) < 5:
+                await self.send_error(websocket, "Not enough frames for analysis")
+                return
+                
+            # Get scene analysis service
+            from ...services.scene_service import SceneAnalysisService
+            scene_service = SceneAnalysisService()
+            
+            # Get last 5-8 frames
+            frames = list(self.analysis_frames)[-8:]
+            
+            # Analyze scene
+            analysis = scene_service.analyze_scene(
+                [f['frame'] for f in frames],
+                context=f"Analyzing {len(frames)} frames from video stream"
+            )
+            
+            # Send analysis results
+            await self.send_response(websocket, {
+                'type': 'scene_analysis',
+                'description': analysis['scene_analysis']['description']
+            })
+            
+        except Exception as e:
+            self.logger.error(f"Scene analysis error: {e}")
+            await self.send_error(websocket, str(e))
+            
+    async def _handle_edge_detection(self, websocket):
+        """Handle edge detection toggle"""
+        try:
+            if not self.edge_detector:
+                from ..edge_detection_subscriber import EdgeDetectionSubscriber
+                self.edge_detector = EdgeDetectionSubscriber()
+                self.video_stream.add_subscriber(self.edge_detector)
+                
+            self.edge_detector.toggle()
+            await self.send_response(websocket, {
+                'type': 'edge_detection_status',
+                'enabled': self.edge_detector.enabled
+            })
+            
+        except Exception as e:
+            self.logger.error(f"Edge detection error: {e}")
             await self.send_error(websocket, str(e))
             
     def _decode_frame(self, frame_data: bytes) -> Optional[np.ndarray]:

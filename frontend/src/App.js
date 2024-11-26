@@ -19,6 +19,7 @@ function App() {
     const [uploadedFiles, setUploadedFiles] = useState([]);
 
     const [ws, setWs] = useState(null);
+    const [messages, setMessages] = useState([]);
 
     // Initialize fetch function
     const fetchUploadedFiles = useCallback(async () => {
@@ -441,6 +442,18 @@ function App() {
                 
                 if (data.type === 'uploaded_files') {
                     console.log('Processing uploaded files:', data.files);
+                } else if (data.type === 'scene_analysis') {
+                    setMessages(prev => [...prev, {
+                        content: data.description,
+                        timestamp: Date.now(),
+                        type: 'analysis'
+                    }]);
+                } else if (data.type === 'analysis_error') {
+                    setMessages(prev => [...prev, {
+                        content: `Error: ${data.error}`,
+                        timestamp: Date.now(),
+                        type: 'error'
+                    }]);
                     if (Array.isArray(data.files)) {
                         const sortedFiles = data.files.sort((a, b) => b.modified - a.modified);
                         setUploadedFiles(sortedFiles);
@@ -794,6 +807,23 @@ function App() {
                                 onFileSelect={(file) => {
                                     setVideoFile(file);
                                 }}
+                            />
+                            <AnalysisControls
+                                disabled={!isStreaming}
+                                onSceneAnalysis={async () => {
+                                    if (ws && ws.readyState === WebSocket.OPEN) {
+                                        ws.send(JSON.stringify({
+                                            type: 'trigger_scene_analysis'
+                                        }));
+                                    }
+                                }}
+                                onEdgeDetection={async () => {
+                                    if (ws && ws.readyState === WebSocket.OPEN) {
+                                        ws.send(JSON.stringify({
+                                            type: 'toggle_edge_detection'
+                                        }));
+                                    }
+                                }}
                                 onPlayPause={(file, shouldPlay) => {
                                     if (shouldPlay && !isStreaming) {
                                         // Start streaming the selected file
@@ -864,6 +894,7 @@ function App() {
                             />
                         </Box>
                         <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <ChatDisplay messages={messages} />
                             <Box sx={{ 
                                 flex: 1,
                                 minHeight: '600px',
