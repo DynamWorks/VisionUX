@@ -79,10 +79,12 @@ def restart_rerun():
     try:
         # Get RerunManager instance
         from backend.utils.rerun_manager import RerunManager
+        import asyncio
+        
         rerun_manager = RerunManager()
         
-        # Cleanup existing instance
-        await rerun_manager.cleanup()
+        # Run cleanup in event loop
+        asyncio.run(rerun_manager.cleanup())
         
         # Reinitialize with fresh state
         rerun_manager.initialize(clear_existing=True)
