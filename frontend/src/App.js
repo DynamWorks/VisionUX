@@ -318,6 +318,53 @@ function App() {
     };
 
 
+    const restartWebSockets = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/ws/restart`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                console.log('WebSocket server restarted');
+                // Force reconnection
+                if (ws) {
+                    ws.close();
+                }
+            } else {
+                console.error('Failed to restart WebSocket server:', data.message);
+            }
+        } catch (error) {
+            console.error('Error restarting WebSocket server:', error);
+        }
+    };
+
+    const restartRerun = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/rerun/restart`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                console.log('Rerun server restarted');
+                // Reload Rerun viewer iframe
+                const rerunViewer = document.querySelector('iframe');
+                if (rerunViewer) {
+                    const currentSrc = rerunViewer.src;
+                    rerunViewer.src = '';
+                    setTimeout(() => {
+                        rerunViewer.src = currentSrc;
+                    }, 1000);
+                }
+            } else {
+                console.error('Failed to restart Rerun server:', data.message);
+            }
+        } catch (error) {
+            console.error('Error restarting Rerun server:', error);
+        }
+    };
+
     const stopCamera = useCallback(() => {
         if (stream) {
             // Stop all tracks

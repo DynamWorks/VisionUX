@@ -33,6 +33,72 @@ chat_service = ChatService()
 frame_memory = MemoryManager(content_manager=None)
 
 
+@api.route('/ws/restart', methods=['POST'])
+def restart_websockets():
+    """Restart WebSocket servers"""
+    try:
+        # Get socket handler instance
+        if hasattr(current_app, 'socket_handler'):
+            # Close all existing connections
+            for client in current_app.socket_handler.clients.copy():
+                try:
+                    client.disconnect()
+                except Exception as e:
+                    logger.warning(f"Error disconnecting client: {e}")
+            
+            # Clear clients set
+            current_app.socket_handler.clients.clear()
+            
+            # Reinitialize SocketIO
+            current_app.socket_handler.socketio.init_app(
+                current_app,
+                cors_allowed_origins="*",
+                async_mode='gevent'
+            )
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'WebSocket server restarted'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'WebSocket handler not initialized'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Failed to restart WebSocket server: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@api.route('/rerun/restart', methods=['POST'])
+def restart_rerun():
+    """Restart Rerun server"""
+    try:
+        # Get RerunManager instance
+        from backend.utils.rerun_manager import RerunManager
+        rerun_manager = RerunManager()
+        
+        # Cleanup existing instance
+        await rerun_manager.cleanup()
+        
+        # Reinitialize with fresh state
+        rerun_manager.initialize(clear_existing=True)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Rerun server restarted'
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to restart Rerun server: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 @api.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint with detailed service status"""
