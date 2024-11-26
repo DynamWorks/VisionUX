@@ -261,18 +261,34 @@ def stop_stream():
     try:
         # Stop video stream if exists
         if hasattr(current_app, 'video_stream'):
+            # Create event loop if needed
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
             current_app.video_stream.stop()
             delattr(current_app, 'video_stream')
             
-        # Reset Rerun viewer
-        from backend.utils.rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-        rerun_manager.reset()
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Stream stopped'
-        })
+            # Reset Rerun viewer
+            from backend.utils.rerun_manager import RerunManager
+            rerun_manager = RerunManager()
+            
+            # Run cleanup in event loop
+            loop.run_until_complete(rerun_manager.cleanup())
+            rerun_manager.reset()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Stream stopped'
+            })
+        else:
+            return jsonify({
+                'status': 'success',
+                'message': 'No active stream to stop'
+            })
     except Exception as e:
         logger.error(f"Failed to stop stream: {e}")
         return jsonify({'error': str(e)}), 500
