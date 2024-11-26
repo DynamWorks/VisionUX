@@ -12,7 +12,7 @@ from .config import Config
 
 from .custom_viewer import CustomViewer
 
-class RerunViewer:
+class RerunManager:
     """Rerun-based viewer implementation"""
     _instance = None
     
