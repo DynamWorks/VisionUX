@@ -18,7 +18,8 @@ class SocketHandler:
             ping_interval=25,
             transports=['websocket', 'polling'],  # Allow fallback to polling
             always_connect=True,
-            engineio_logger=True
+            engineio_logger=True,
+            ssl_context=None  # Explicitly disable SSL for development
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
