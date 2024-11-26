@@ -71,100 +71,155 @@ const CustomViewer = ({ websocket }) => {
     }, []);
 
     const processFrame = useCallback(async (frameData, metadata = null) => {
+        if (!canvasRef.current) return;
+        
         try {
             const canvas = canvasRef.current;
-            if (!canvas) return;
-
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false });
             
-            // Create image from frame data
-            const blob = new Blob([frameData], { type: 'image/jpeg' });
-            const imageUrl = URL.createObjectURL(blob);
-            
-            const img = new Image();
-            img.onload = () => {
-                // Resize canvas if needed
-                if (canvas.width !== img.width || canvas.height !== img.height) {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                }
+            // Handle different frame data types
+            let img;
+            if (frameData instanceof Blob) {
+                img = await createImageFromBlob(frameData);
+            } else if (frameData instanceof ArrayBuffer) {
+                const blob = new Blob([frameData], { type: 'image/jpeg' });
+                img = await createImageFromBlob(blob);
+            } else {
+                throw new Error('Invalid frame data type');
+            }
 
-                // Clear and draw new frame
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Initialize canvas size on first frame
+            if (canvas.width !== img.width || canvas.height !== img.height) {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                // Enable image smoothing for better quality
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+            }
+
+            // Clear previous frame
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw new frame with error handling
+            try {
                 ctx.drawImage(img, 0, 0);
+            } catch (e) {
+                console.error('Error drawing frame:', e);
+                return;
+            }
 
-                // Draw metadata overlays if present
-                if (metadata) {
-                    drawMetadataOverlays(ctx, metadata);
-                }
+            // Process metadata overlays
+            if (metadata) {
+                drawMetadataOverlays(ctx, metadata);
+            }
 
-                // Update FPS counter
-                frameCountRef.current++;
-                const now = Date.now();
-                if (frameCountRef.current % 30 === 0) {
-                    const newFps = Math.round(1000 / (now - lastFrameTimeRef.current));
-                    setFps(newFps);
-                    setStreamMetrics({
-                        fps: newFps,
-                        frameCount: frameCountRef.current,
-                        resolution: `${img.width}x${img.height}`
-                    });
-                }
-                lastFrameTimeRef.current = now;
-
-                URL.revokeObjectURL(imageUrl);
-            };
-            
-            img.src = imageUrl;
+            // Update metrics
+            updateMetrics(img.width, img.height);
             setLoading(false);
-            
+            setError(null);
+
         } catch (error) {
-            console.error('Error processing frame:', error);
-            setError(error.message);
+            console.error('Frame processing error:', error);
+            setError(`Frame processing failed: ${error.message}`);
+            setLoading(false);
         }
     }, [drawMetadataOverlays, setStreamMetrics]);
 
+    // Helper function to create Image from Blob
+    const createImageFromBlob = (blob) => {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Failed to load image'));
+            };
+            
+            img.src = url;
+        });
+    };
+
+    // Update performance metrics
+    const updateMetrics = useCallback((width, height) => {
+        frameCountRef.current++;
+        const now = Date.now();
+        
+        if (frameCountRef.current % 30 === 0) {
+            const timeDiff = now - lastFrameTimeRef.current;
+            if (timeDiff > 0) {
+                const newFps = Math.round(1000 / timeDiff);
+                setFps(newFps);
+                setStreamMetrics({
+                    fps: newFps,
+                    frameCount: frameCountRef.current,
+                    resolution: `${width}x${height}`,
+                    timestamp: now
+                });
+            }
+        }
+        lastFrameTimeRef.current = now;
+    }, [setStreamMetrics]);
+
     useEffect(() => {
         if (!websocket) {
-            setError('No WebSocket connection');
+            setError('WebSocket not connected');
             return;
         }
 
-        let frameBuffer = null;
-        
-        const handleMessage = async (event) => {
+        let frameQueue = [];
+        let processingFrame = false;
+
+        const processNextFrame = async () => {
+            if (processingFrame || frameQueue.length === 0) return;
+            
+            processingFrame = true;
+            const { frameData, metadata } = frameQueue.shift();
+            
+            try {
+                await processFrame(frameData, metadata);
+            } catch (error) {
+                console.error('Error processing frame:', error);
+            } finally {
+                processingFrame = false;
+                // Process next frame if available
+                if (frameQueue.length > 0) {
+                    requestAnimationFrame(processNextFrame);
+                }
+            }
+        };
+
+        const handleMessage = (event) => {
             try {
                 if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-                    // Store frame data and wait for metadata
-                    frameBuffer = event.data;
+                    frameQueue.push({ frameData: event.data, metadata: null });
                 } else {
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'camera_frame') {
-                            // Process frame immediately since metadata came first
-                            if (frameBuffer) {
-                                await processFrame(frameBuffer, data);
-                                frameBuffer = null;
-                            }
-                        }
-                    } catch (e) {
-                        // If not valid JSON, process frame without metadata
-                        if (frameBuffer) {
-                            await processFrame(frameBuffer);
-                            frameBuffer = null;
-                        }
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'camera_frame' && frameQueue.length > 0) {
+                        frameQueue[frameQueue.length - 1].metadata = data;
                     }
                 }
+                
+                if (!processingFrame) {
+                    requestAnimationFrame(processNextFrame);
+                }
             } catch (error) {
-                console.error('Error handling message:', error);
-                setError(error.message);
+                console.error('Message handling error:', error);
+                setError(`Message handling failed: ${error.message}`);
             }
         };
 
         websocket.on('message', handleMessage);
-
+        
         return () => {
             websocket.off('message', handleMessage);
+            frameQueue = [];
         };
     }, [websocket, processFrame]);
 
