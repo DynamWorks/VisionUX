@@ -532,10 +532,10 @@ function App() {
         };
 
         if (ws) {
-            ws.addEventListener('message', handleMessages);
+            ws.on('message', handleMessages);
 
             // Request files when WebSocket first connects
-            ws.addEventListener('open', () => {
+            ws.on('connect', () => {
                 console.log('WebSocket connected, fetching files');
                 fetchUploadedFiles();
             });
@@ -543,7 +543,7 @@ function App() {
 
         return () => {
             if (ws) {
-                ws.removeEventListener('message', handleMessages);
+                ws.off('message', handleMessages);
             }
         };
     }, [refreshDevices, ws, fetchUploadedFiles]);
@@ -826,13 +826,12 @@ function App() {
                                             reader.readAsArrayBuffer(file);
 
                                             // Handle WebSocket messages
-                                            const messageHandler = (event) => {
+                                            const messageHandler = (data) => {
                                                 try {
-                                                    const response = JSON.parse(event.data);
-                                                    console.log('Received WebSocket response:', response);
+                                                    console.log('Received WebSocket response:', data);
 
-                                                    if (response.type === 'upload_error') {
-                                                        throw new Error(response.error);
+                                                    if (data.type === 'upload_error') {
+                                                        throw new Error(data.error);
                                                     }
                                                 } catch (error) {
                                                     console.error('Error processing WebSocket message:', error);
@@ -840,11 +839,11 @@ function App() {
                                                 }
                                             };
 
-                                            ws.addEventListener('message', messageHandler);
+                                            ws.on('message', messageHandler);
 
                                             // Cleanup
                                             return () => {
-                                                ws.removeEventListener('message', messageHandler);
+                                                ws.off('message', messageHandler);
                                             };
                                         }
                                     }}
