@@ -12,13 +12,14 @@ class SocketHandler:
             app,
             cors_allowed_origins="*",
             max_http_buffer_size=50 * 1024 * 1024,  # 50MB
-            async_mode='gevent',
+            async_mode='threading',  # Change from gevent to threading
             logger=True,
             ping_timeout=60,
             ping_interval=25,
-            transports=['websocket'],
+            transports=['websocket', 'polling'],  # Allow polling fallback
             always_connect=True,
-            engineio_logger=True
+            engineio_logger=True,
+            manage_session=False  # Disable session management
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
