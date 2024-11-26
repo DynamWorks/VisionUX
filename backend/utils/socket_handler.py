@@ -11,11 +11,12 @@ class SocketHandler:
         self.socketio = SocketIO(
             app,
             cors_allowed_origins="*",
-            max_http_buffer_size=50 * 1024 * 1024,  # 50MB
+            max_http_buffer_size=100 * 1024 * 1024,  # 100MB for HD frames
             async_mode='eventlet',
             logger=True,
-            ping_timeout=60,
-            ping_interval=25,
+            ping_timeout=30,  # Reduced timeout
+            ping_interval=10, # More frequent pings
+            binary=True,     # Enable binary frame support
             transports=['websocket'],  # WebSocket only for video streaming
             always_connect=True,
             engineio_logger=True,

@@ -20,12 +20,13 @@ class WebSocketService {
         
         // Enhanced connection options
         this.socket = io(wsUrl, {
-            transports: ['websocket'],  // WebSocket only, no polling
+            transports: ['websocket'],  // WebSocket only for video streaming
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 30000,
+            timeout: 10000, // Reduced timeout for faster failure detection
+            binary: true,   // Enable binary frame support
             autoConnect: true,
             forceNew: true,
             path: '/socket.io/',

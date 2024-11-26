@@ -54,12 +54,19 @@ const CameraSelector = ({
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     
                     try {
+                        // Optimize frame before sending
                         const blob = await new Promise(resolve => {
-                            canvas.toBlob(resolve, 'image/jpeg', 0.8);
+                            canvas.toBlob(resolve, 'image/jpeg', 0.85);
                         });
 
-                        // Convert blob to ArrayBuffer
+                        // Convert to ArrayBuffer for efficient transfer
                         const arrayBuffer = await blob.arrayBuffer();
+                        
+                        // Check WebSocket state before sending
+                        if (!ws || ws.readyState !== WebSocket.OPEN) {
+                            console.error('WebSocket not connected');
+                            return;
+                        }
 
                         // Send frame type indicator first
                         const frameMetadata = {
