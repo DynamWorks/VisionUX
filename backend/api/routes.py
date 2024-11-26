@@ -87,7 +87,7 @@ def restart_rerun():
         asyncio.run(rerun_manager.cleanup())
         
         # Reinitialize with fresh state
-        rerun_manager.initialize(clear_existing=True)
+        rerun_manager.initialize()#clear_existing=True)
         
         return jsonify({
             'status': 'success',
