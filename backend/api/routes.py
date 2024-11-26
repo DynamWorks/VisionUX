@@ -242,13 +242,13 @@ def stop_stream():
             current_app.video_stream.stop()
             delattr(current_app, 'video_stream')
             
-            # Reset Rerun viewer
-            from backend.utils.rerun_manager import RerunManager
-            rerun_manager = RerunManager()
+            # Reset viewer
+            from backend.utils.viewer_factory import ViewerFactory
+            viewer = ViewerFactory.get_viewer()
             
             # Run cleanup in event loop
-            loop.run_until_complete(rerun_manager.cleanup())
-            rerun_manager.reset()
+            loop.run_until_complete(viewer.cleanup())
+            viewer.reset()
             
             return jsonify({
                 'status': 'success',
