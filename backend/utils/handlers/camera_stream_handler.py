@@ -125,11 +125,10 @@ class CameraStreamHandler(BaseMessageHandler):
                     ret, frame = cap.read()
                     if ret:
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        # Log initial frame
-                        rerun_manager.log_frame(
+                        # Log initial frame using viewer
+                        viewer.log_frame(
                             frame=frame_rgb,
-                            frame_number=0,
-                            source=f"Started streaming: {filename}"
+                            frame_number=0
                         )
                         # Start streaming from beginning
                         self.video_stream.frame_count = 0
@@ -359,15 +358,14 @@ class CameraStreamHandler(BaseMessageHandler):
             
             timestamp = metadata.get('timestamp', time.time_ns())
             
-            # Get RerunManager instance for frame logging
-            from ..rerun_manager import RerunManager
-            rerun_manager = RerunManager()
+            # Get viewer instance for frame logging
+            from ..viewer_factory import ViewerFactory
+            viewer = ViewerFactory.get_viewer()
             
-            # Log frame using RerunManager instance
-            rerun_manager.log_frame(
-                frame=frame_rgb #,
-                # frame_number=self.frame_count,
-                # source="camera_stream"
+            # Log frame using viewer
+            viewer.log_frame(
+                frame=frame_rgb,
+                frame_number=self.frame_count
             )
             
             self.logger.debug(
