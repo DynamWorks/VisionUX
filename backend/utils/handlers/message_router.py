@@ -1,4 +1,4 @@
-from .base_handler import BaseMessageHandler
+from .handler_interface import MessageHandler
 from .file_list_handler import FileListHandler
 from .video_upload_handler import VideoUploadHandler
 from .camera_stream_handler import CameraStreamHandler
@@ -9,8 +9,9 @@ import logging
 class MessageRouter:
     """Routes WebSocket messages to appropriate handlers"""
     
-    def __init__(self, uploads_path):
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, uploads_path, config=None):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.config = config
         self.handlers = {
             'get_uploaded_files': FileListHandler(uploads_path),
             'video_upload_start': VideoUploadHandler(uploads_path),
