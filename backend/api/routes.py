@@ -160,25 +160,30 @@ def analyze_scene():
     """Analyze scene and suggest computer vision applications"""
     try:
         data = request.get_json()
-        if not data or 'image_path' not in data:
-            return jsonify({'error': 'Missing image_path in request'}), 400
+        stream_type = data.get('stream_type', 'unknown')
 
-        video_path = Path(data['image_path'])
-        if not video_path.exists():
-            return jsonify({'error': f"Video file not found: {data['image_path']}"}), 400
+        # Get RerunManager instance
+        from backend.utils.rerun_manager import RerunManager
+        rerun_manager = RerunManager()
 
-        # Extract first frame
-        cap = cv2.VideoCapture(str(video_path))
-        ret, frame = cap.read()
-        cap.release()
+        # Get last 8 frames from Rerun
+        frames = []
+        try:
+            # Get frames from Rerun recording
+            recording = rr.get_recording()
+            if recording:
+                frame_data = recording.get_frames("world/video/stream", max_frames=8)
+                frames = [frame.data for frame in frame_data if frame.data is not None]
+        except Exception as e:
+            current_app.logger.error(f"Error getting frames from Rerun: {e}")
 
-        if not ret or frame is None:
-            return jsonify({'error': "Failed to read video frame"}), 400
+        # Analyze scene with available frames
+        if not frames:
+            return jsonify({'error': 'No frames available for analysis'}), 400
 
-        # Analyze scene
         analysis = scene_service.analyze_scene(
-            frame,
-            context=f"Stream type: {data.get('stream_type', 'unknown')}. {data.get('context', '')}"
+            frames,
+            context=f"Stream type: {stream_type}. Analyzing last {len(frames)} frames from stream."
         )
 
         # Save analysis results

@@ -5,6 +5,12 @@ import SendIcon from '@mui/icons-material/Send';
 const Chat = () => {
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Function to add messages to chat
+    const addMessage = (text, sender) => {
+        setChatHistory(prev => [...prev, { text, sender }]);
+    };
 
     const handleSend = () => {
         if (message.trim()) {
@@ -12,13 +18,12 @@ const Chat = () => {
             setChatHistory([...chatHistory, { text: message, sender: 'user' }]);
             setMessage('');
 
-            // TODO: Send message to backend and handle response
-            // For now, just echo
+            // Send message to backend
+            setIsLoading(true);
+            // TODO: Implement chat backend integration
             setTimeout(() => {
-                setChatHistory(prev => [...prev, {
-                    text: `Received: ${message}`,
-                    sender: 'assistant'
-                }]);
+                addMessage(message, 'assistant');
+                setIsLoading(false);
             }, 500);
         }
     };

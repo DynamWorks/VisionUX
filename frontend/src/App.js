@@ -834,10 +834,34 @@ function App() {
                             <AnalysisControls
                                 disabled={!isStreaming}
                                 onSceneAnalysis={async () => {
-                                    if (ws && ws.readyState === WebSocket.OPEN) {
-                                        ws.send(JSON.stringify({
-                                            type: 'trigger_scene_analysis'
-                                        }));
+                                    try {
+                                        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({
+                                                stream_type: 'camera'
+                                            })
+                                        });
+
+                                        if (!response.ok) {
+                                            throw new Error(`HTTP error! status: ${response.status}`);
+                                        }
+
+                                        const data = await response.json();
+                                        
+                                        // Add analysis result to chat
+                                        const chatComponent = document.querySelector('.chat-component');
+                                        if (chatComponent) {
+                                            const chatInstance = chatComponent.__reactInternalInstance;
+                                            if (chatInstance && chatInstance.addMessage) {
+                                                chatInstance.addMessage(data.scene_analysis.description, 'system');
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('Error analyzing scene:', error);
+                                        alert('Failed to analyze scene');
                                     }
                                 }}
                                 onEdgeDetection={async () => {
