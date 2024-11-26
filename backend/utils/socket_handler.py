@@ -16,7 +16,7 @@ class SocketHandler:
             logger=True,
             ping_timeout=60,
             ping_interval=25,
-            transports=['websocket'],  // WebSocket only
+            transports=['websocket'],  # WebSocket only for video streaming
             always_connect=True,
             engineio_logger=True,
             manage_session=False,
