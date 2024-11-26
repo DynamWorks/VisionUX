@@ -11,12 +11,12 @@ const Chat = () => {
             // Add user message to chat
             setChatHistory([...chatHistory, { text: message, sender: 'user' }]);
             setMessage('');
-            
+
             // TODO: Send message to backend and handle response
             // For now, just echo
             setTimeout(() => {
-                setChatHistory(prev => [...prev, { 
-                    text: `Received: ${message}`, 
+                setChatHistory(prev => [...prev, {
+                    text: `Received: ${message}`,
                     sender: 'assistant'
                 }]);
             }, 500);
@@ -25,24 +25,24 @@ const Chat = () => {
 
     return (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Paper 
-                sx={{ 
-                    p: 2, 
-                    height: 'calc(100vh - 500px)',
+            <Paper
+                sx={{
+                    p: 2,
+                    height: 'calc(100vh - 900px)',
                     overflowY: 'auto',
                     bgcolor: '#1a1a1a',
                     color: 'white'
                 }}
             >
                 {chatHistory.map((msg, idx) => (
-                    <Box 
-                        key={idx} 
-                        sx={{ 
+                    <Box
+                        key={idx}
+                        sx={{
                             mb: 1,
                             textAlign: msg.sender === 'user' ? 'right' : 'left'
                         }}
                     >
-                        <Typography 
+                        <Typography
                             variant="body2"
                             sx={{
                                 display: 'inline-block',

@@ -45,7 +45,7 @@ function App() {
 
     useEffect(() => {
         if (ws) return; // Prevent recreating if ws exists
-        
+
         // Get WebSocket URL from environment with fallbacks
         // Get WebSocket URL with fallbacks
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
@@ -69,10 +69,10 @@ function App() {
                 let connectionTimeout;
                 let pingInterval;
                 let lastPongTime = Date.now();
-                
+
                 // Set binary type immediately
                 websocket.binaryType = 'arraybuffer';
-                
+
                 // Add connection timeout
                 connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
@@ -97,7 +97,7 @@ function App() {
                         if (websocket.readyState === WebSocket.OPEN) {
                             try {
                                 websocket.send(JSON.stringify({ type: 'ping' }));
-                                
+
                                 // Check if we haven't received a pong in too long
                                 if (Date.now() - lastPongTime > 10000) {
                                     console.warn('No pong received in 10s, closing connection');
@@ -110,7 +110,7 @@ function App() {
                         }
                     }, 5000);
                 };
-                
+
                 connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
                         console.log(`Connection attempt timed out after ${timeoutDuration}ms`);
@@ -137,7 +137,7 @@ function App() {
                     setupPing();
 
                     // Send initial connection message and request file list
-                    websocket.send(JSON.stringify({ 
+                    websocket.send(JSON.stringify({
                         type: 'connection_established',
                         client_info: {
                             userAgent: navigator.userAgent,
@@ -152,7 +152,7 @@ function App() {
                     try {
                         const data = JSON.parse(event.data);
                         console.log('WebSocket message received:', data);
-                        
+
                         if (data.type === 'ping') {
                             websocket.send(JSON.stringify({ type: 'pong' }));
                         } else if (data.type === 'pong') {
@@ -173,7 +173,7 @@ function App() {
                     if (pingInterval) clearInterval(pingInterval);
                     console.log(`WebSocket Closed: ${event.code} - ${event.reason || 'No reason provided'}`);
                     setWs(null);
-                    
+
                     // Log additional connection details
                     console.log('Connection details:', {
                         readyState: websocket.readyState,
@@ -298,18 +298,18 @@ function App() {
                 canvas.toBlob(async (blob) => {
                     try {
                         const arrayBuffer = await blob.arrayBuffer();
-                        
+
                         // Send frame type indicator first
-                        ws.send(JSON.stringify({ 
+                        ws.send(JSON.stringify({
                             type: 'camera_frame',
                             width: canvas.width,
                             height: canvas.height,
                             timestamp: Date.now()
                         }));
-                        
+
                         // Send the frame data as binary
                         ws.send(arrayBuffer);
-                        
+
                         // Schedule next frame only after successful send
                         animationFrameId = requestAnimationFrame(sendFrame);
                     } catch (error) {
@@ -346,7 +346,7 @@ function App() {
                 method: 'POST'
             });
             const data = await response.json();
-            
+
             if (data.status === 'success') {
                 console.log('WebSocket server restarted');
                 // Force reconnection
@@ -367,7 +367,7 @@ function App() {
                 method: 'POST'
             });
             const data = await response.json();
-            
+
             if (data.status === 'success') {
                 console.log('Rerun server restarted');
                 // Reload Rerun viewer iframe
@@ -417,7 +417,7 @@ function App() {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             setDevices(videoDevices);
-            
+
             // Set default device if none selected
             if (!selectedDevice && videoDevices.length > 0) {
                 setSelectedDevice(videoDevices[0].deviceId);
@@ -430,7 +430,7 @@ function App() {
 
     useEffect(() => {
         refreshDevices();
-        
+
         // Only fetch files on initial load
         if (ws && ws.readyState === WebSocket.OPEN) {
             fetchUploadedFiles();
@@ -441,7 +441,7 @@ function App() {
             if (!event.data) return;
             try {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.type === 'uploaded_files') {
                     console.log('Processing uploaded files:', data.files);
                 } else if (data.type === 'scene_analysis') {
@@ -484,7 +484,7 @@ function App() {
 
         if (ws) {
             ws.addEventListener('message', handleMessages);
-            
+
             // Request files when WebSocket first connects
             ws.addEventListener('open', () => {
                 console.log('WebSocket connected, fetching files');
@@ -502,7 +502,7 @@ function App() {
     return (
         <Router>
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                <Header 
+                <Header
                     onRestartWebSockets={restartWebSockets}
                     onRestartRerun={restartRerun}
                 />
@@ -586,7 +586,7 @@ function App() {
 
                                                 const result = await response.json();
                                                 console.log('Upload successful:', result);
-                                            
+
                                                 // Fetch updated file list after successful upload
                                                 try {
                                                     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
@@ -736,7 +736,7 @@ function App() {
                                                             console.error('Error resetting Rerun viewer:', error);
                                                         }
                                                     }
-                                    
+
                                                     // Close existing WebSocket connection
                                                     if (ws) {
                                                         ws.close();
@@ -750,9 +750,9 @@ function App() {
                                                         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
                                                         const wsHost = process.env.REACT_APP_WS_HOST || 'localhost';
                                                         const wsUrl = `ws://${wsHost}:${wsPort}`;
-                                                        
+
                                                         const newWs = new WebSocket(wsUrl);
-                                                        
+
                                                         newWs.onopen = () => {
                                                             console.log('WebSocket reconnected after upload');
                                                             setWs(newWs);
@@ -818,17 +818,17 @@ function App() {
                                             filename: file.name
                                         })
                                     })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.error) {
-                                            throw new Error(data.error);
-                                        }
-                                        setIsStreaming(true);
-                                    })
-                                    .catch(error => {
-                                        console.error('Error starting stream:', error);
-                                        alert(`Failed to start stream: ${error.message}`);
-                                    });
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.error) {
+                                                throw new Error(data.error);
+                                            }
+                                            setIsStreaming(true);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error starting stream:', error);
+                                            alert(`Failed to start stream: ${error.message}`);
+                                        });
                                 }}
                             />
                             <AnalysisControls
@@ -860,17 +860,17 @@ function App() {
                                                 filename: file.name
                                             })
                                         })
-                                        .then(response => response.json())
-                                        .then(data => {
-                                            if (data.error) {
-                                                throw new Error(data.error);
-                                            }
-                                            setIsStreaming(true);
-                                        })
-                                        .catch(error => {
-                                            console.error('Error starting stream:', error);
-                                            alert(`Failed to start stream: ${error.message}`);
-                                        });
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.error) {
+                                                    throw new Error(data.error);
+                                                }
+                                                setIsStreaming(true);
+                                            })
+                                            .catch(error => {
+                                                console.error('Error starting stream:', error);
+                                                alert(`Failed to start stream: ${error.message}`);
+                                            });
                                     } else if (!shouldPlay && isStreaming) {
                                         // Pause streaming
                                         // Pause streaming via API
@@ -880,17 +880,17 @@ function App() {
                                                 'Content-Type': 'application/json'
                                             }
                                         })
-                                        .then(response => response.json())
-                                        .then(data => {
-                                            if (data.error) {
-                                                throw new Error(data.error);
-                                            }
-                                            setIsStreaming(false);
-                                        })
-                                        .catch(error => {
-                                            console.error('Error pausing stream:', error);
-                                            alert(`Failed to pause stream: ${error.message}`);
-                                        });
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.error) {
+                                                    throw new Error(data.error);
+                                                }
+                                                setIsStreaming(false);
+                                            })
+                                            .catch(error => {
+                                                console.error('Error pausing stream:', error);
+                                                alert(`Failed to pause stream: ${error.message}`);
+                                            });
                                     }
                                 }}
                                 onStop={(file) => {
@@ -901,23 +901,23 @@ function App() {
                                             'Content-Type': 'application/json'
                                         }
                                     })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.error) {
-                                            throw new Error(data.error);
-                                        }
-                                        setIsStreaming(false);
-                                        setVideoFile(null);
-                                    })
-                                    .catch(error => {
-                                        console.error('Error stopping stream:', error);
-                                        alert(`Failed to stop stream: ${error.message}`);
-                                    });
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.error) {
+                                                throw new Error(data.error);
+                                            }
+                                            setIsStreaming(false);
+                                            setVideoFile(null);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error stopping stream:', error);
+                                            alert(`Failed to stop stream: ${error.message}`);
+                                        });
                                 }}
                             />
                         </Box>
                         <Box sx={{ width: '80%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <Box sx={{ 
+                            <Box sx={{
                                 flex: 1,
                                 minHeight: '400px',
                                 bgcolor: '#1a1a1a',
