@@ -919,7 +919,7 @@ function App() {
                         <Box sx={{ width: '80%', display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Box sx={{ 
                                 flex: 1,
-                                minHeight: '600px',
+                                minHeight: '400px',
                                 bgcolor: '#1a1a1a',
                                 borderRadius: '8px',
                                 overflow: 'hidden'

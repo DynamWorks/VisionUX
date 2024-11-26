@@ -28,7 +28,7 @@ const Chat = () => {
             <Paper 
                 sx={{ 
                     p: 2, 
-                    height: 'calc(100vh - 300px)',
+                    height: 'calc(100vh - 400px)',
                     overflowY: 'auto',
                     bgcolor: '#1a1a1a',
                     color: 'white'
