@@ -107,9 +107,9 @@ class BackendApp:
         """Run the Flask application with Socket.IO"""
         try:
             # Initialize Rerun manager only if not already initialized
-            if not hasattr(self.rerun_manager, '_initialized') or not self.rerun_manager._initialized:
-                self.rerun_manager.initialize(clear_existing=False)
-                self.logger.info("Rerun manager initialized")
+            #if not hasattr(self.rerun_manager, '_initialized') or not self.rerun_manager._initialized:
+            self.rerun_manager.initialize(clear_existing=True)
+            self.logger.info("Rerun manager initialized")
 
             # # Start Rerun server in a separate thread
             # rerun_thread = threading.Thread(
