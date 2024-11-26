@@ -10,19 +10,7 @@ import json
 from pathlib import Path
 from .config import Config
 
-class ViewerFactory:
-    @staticmethod
-    def get_viewer():
-        config = Config()
-        viewer_type = config.get('api', 'viewer', default='rerun')
-        
-        if viewer_type == 'rerun':
-            import rerun as rr
-            from .rerun_manager import RerunViewer
-            return RerunViewer()
-        else:
-            from .custom_viewer import CustomViewer
-            return CustomViewer()
+from .custom_viewer import CustomViewer
 
 class RerunViewer:
     """Rerun-based viewer implementation"""

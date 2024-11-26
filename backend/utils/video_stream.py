@@ -78,7 +78,7 @@ class VideoStream:
                             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                             
                             # Get viewer instance
-                            from .rerun_manager import ViewerFactory
+                            from .viewer_factory import ViewerFactory
                             viewer = ViewerFactory.get_viewer()
             
                             # Log frame using viewer
