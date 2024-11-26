@@ -29,6 +29,7 @@ class BackendApp:
         # Get frontend path from config
         frontend_path = self.config.get('frontend', 'build_path', default='../frontend/build')
         self.app = Flask(__name__, static_folder=frontend_path)
+        self.wsgi_app = self.app.wsgi_app  # Expose WSGI app
         
         # Initialize rate limiter
         self.limiter = Limiter(
