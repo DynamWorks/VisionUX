@@ -3,6 +3,7 @@ import time
 import cv2
 import logging
 import asyncio
+import rerun as rr
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response, send_file, current_app
 import shutil
