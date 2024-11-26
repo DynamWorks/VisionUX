@@ -78,7 +78,7 @@ class Config:
                 raise ValueError("Config file must contain a YAML dictionary")
                 
             # Validate required sections
-            required_sections = ['api', 'websocket', 'rerun']
+            required_sections = ['api', 'websocket']
             missing_sections = [s for s in required_sections if s not in yaml_config]
             if missing_sections:
                 raise ValueError(f"Missing required config sections: {', '.join(missing_sections)}")
