@@ -73,16 +73,13 @@ class VideoStream:
                     # Only log frames when actively streaming (not paused or stopped)
                     if not self.pause_event.is_set() and not self.stop_event.is_set():
                         try:
-                            # Convert BGR to RGB for visualization
-                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            
-                            # Get viewer instance
-                            from .viewer_factory import ViewerFactory
-                            viewer = ViewerFactory.get_viewer()
-            
-                            # Add frame to stream with metadata
+                            # Convert frame to JPEG for streaming
+                            _, buffer = cv2.imencode('.jpg', frame)
+                            frame_bytes = buffer.tobytes()
+
+                            # Add frame to buffer
                             frame_data = {
-                                'frame': frame_rgb,
+                                'frame': frame_bytes,
                                 'frame_number': self.frame_count,
                                 'timestamp': time.time(),
                                 'source': str(self.source)

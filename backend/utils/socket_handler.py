@@ -225,15 +225,8 @@ class SocketHandler:
                 _, buffer = cv2.imencode('.jpg', frame_rgb)
                 frame_bytes = buffer.tobytes()
                 
-                # Send frame metadata first
-                self.socketio.emit('frame_data', {
-                    'type': 'frame_data',
-                    'timestamp': time.time(),
-                    'size': len(frame_bytes)
-                })
-                
-                # Then send binary frame data
-                self.socketio.emit('binary_frame', frame_bytes)
+                # Send binary frame data directly
+                self.socketio.emit('binary_frame', frame_bytes, binary=True)
             
             self._frame_count = frame_number + 1
             

@@ -18,19 +18,10 @@ const CustomViewer = ({ websocket }) => {
 
         const handleFrame = async (event) => {
             try {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === 'frame') {
+                // Check if the message is binary data
+                if (event.data instanceof Blob) {
                     setLoading(false);
-                    
-                    // Wait for binary frame data
-                    const binaryData = await new Promise((resolve) => {
-                        const handler = (e) => {
-                            websocket.removeEventListener('message', handler);
-                            resolve(e.data);
-                        };
-                        websocket.addEventListener('message', handler);
-                    });
+                    const binaryData = event.data;
 
                     if (!binaryData) return;
 
