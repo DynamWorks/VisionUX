@@ -29,6 +29,7 @@ class VideoStream:
         
     def _stream_frames(self):
         """Stream frames from video source"""
+        frame_interval = 1.0 / 30.0  # Target 30 FPS
         while not self.stop_event.is_set():
             try:
                 # Handle both string paths and VideoCapture objects
@@ -96,11 +97,24 @@ class VideoStream:
                         'frame_number': self.frame_count
                     })
                     
-                    # Control frame rate and add delay if buffer is getting full
-                    if self.buffer.qsize() > self.buffer.maxsize * 0.8:  # Buffer over 80% full
-                        time.sleep(1/15)  # Reduce to 15 FPS when buffer filling up
-                    else:
-                        time.sleep(1/30)  # Normal 30 FPS
+                    # Maintain consistent frame rate
+                    next_frame_time = time.time() + frame_interval
+                    
+                    # Process frame with subscribers
+                    for subscriber in self.subscribers:
+                        try:
+                            subscriber.process_frame({
+                                'frame': frame,
+                                'timestamp': time.time(),
+                                'frame_number': self.frame_count
+                            })
+                        except Exception as e:
+                            self.logger.error(f"Subscriber error: {e}")
+                    
+                    # Sleep remaining time to maintain frame rate
+                    sleep_time = next_frame_time - time.time()
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
                 
                 # Release capture when done with this loop iteration
                 self._cap.release()
