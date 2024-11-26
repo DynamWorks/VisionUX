@@ -38,7 +38,7 @@ class RerunViewer:
         if not self._initialized:
             self.logger = logging.getLogger(__name__)
             import rerun as rr
-            self._rr = rr
+            self.rr = rr  # Store rerun module as instance variable
             self._initialized = False
 
     def __init__(self):
@@ -130,9 +130,9 @@ class RerunViewer:
         while True:
             try:
                 await asyncio.sleep(5)
-                if hasattr(rr, '_recording'):
+                if hasattr(self.rr, '_recording'):
                     # Send periodic heartbeat only if already initialized
-                    rr.log("world/heartbeat", rr.Timestamp(time.time_ns()))
+                    self.rr.log("world/heartbeat", self.rr.Timestamp(time.time_ns()))
                     retry_count = 0  # Reset retry count on successful heartbeat
             except ConnectionResetError:
                 retry_count += 1
@@ -200,8 +200,8 @@ class RerunViewer:
                 raise RuntimeError("Environment verification failed")
             
             # Initialize recording if not already done
-            if not hasattr(rr, '_recording'):
-                rr.init("video_analytics")
+            if not hasattr(self.rr, '_recording'):
+                self.rr.init("video_analytics")
                 # rr.set_time_sequence("frame_sequence", sequence=0)  # Initialize sequence at 0
                 # rr.set_time_seconds("frame_sequence", seconds=time.time())  # Set current time with timeline
                 self.logger.info("Created new Rerun recording")
@@ -212,20 +212,20 @@ class RerunViewer:
             
             for view_config in blueprint_config['views']:
                 if view_config['type'] == 'spatial2d':
-                    views.append(rr.blueprint.Spatial2DView(
+                    views.append(self.rr.blueprint.Spatial2DView(
                         origin=view_config['origin'],
                         name=view_config['name']
                     ))
                 elif view_config['type'] == 'text_log':
-                    views.append(rr.blueprint.TextLogView(
+                    views.append(self.rr.blueprint.TextLogView(
                         origin=view_config['origin'],
                         name=view_config['name']
                     ))
                     
             if blueprint_config['layout'] == 'vertical':
-                blueprint = rr.blueprint.Vertical(*views)
+                blueprint = self.rr.blueprint.Vertical(*views)
             else:
-                blueprint = rr.blueprint.Horizontal(*views)
+                blueprint = self.rr.blueprint.Horizontal(*views)
             
             # Get URLs from config
             from backend.config.urls import get_urls
@@ -242,8 +242,8 @@ class RerunViewer:
             self._web_host = web_parsed.hostname or self._web_host
             
             # Start Rerun server with SDK
-            rr.init("video_analytics")
-            rr.serve(
+            self.rr.init("video_analytics")
+            self.rr.serve(
                 open_browser=False,
                 ws_port=self._ws_port,
                 web_port=self._web_port,
@@ -253,7 +253,7 @@ class RerunViewer:
             
             self._initialized = True
             self._server_started = True
-            rr.log("world", rr.Clear(recursive=True))
+            self.rr.log("world", self.rr.Clear(recursive=True))
             
             # Start keep-alive task
             loop = asyncio.get_event_loop()
@@ -336,7 +336,7 @@ class RerunViewer:
             
             # Clear Rerun recording
             try:
-                rr.log("world", rr.Clear(recursive=True))
+                self.rr.log("world", self.rr.Clear(recursive=True))
             except Exception as e:
                 self.logger.warning(f"Failed to clear Rerun recording: {e}")
                 
@@ -354,7 +354,7 @@ class RerunViewer:
         self.logger.info(f"Registered new connection. Active connections: {self._active_connections}")
         
         # Ensure Rerun is initialized with the connection
-        if not hasattr(rr, '_recording'):
+        if not hasattr(self.rr, '_recording'):
             self.initialize(clear_existing=True)
         
     def unregister_connection(self):
@@ -366,8 +366,8 @@ class RerunViewer:
         """Reinitialize Rerun connection after failure"""
         try:
             # Clear existing state
-            if hasattr(rr, '_recording'):
-                delattr(rr, '_recording')
+            if hasattr(self.rr, '_recording'):
+                delattr(self.rr, '_recording')
             
             # Stop existing server if running
             if hasattr(self, '_server_started'):
@@ -411,8 +411,8 @@ class RerunViewer:
 
             # Set frame sequence and log frame
             try:
-                rr.set_time_sequence("frame_sequence", frame_number if frame_number is not None else 0)
-                rr.log("world/video/stream", rr.Image(frame_rgb))
+                self.rr.set_time_sequence("frame_sequence", frame_number if frame_number is not None else 0)
+                self.rr.log("world/video/stream", self.rr.Image(frame_rgb))
             except Exception as e:
                 self.logger.error(f"Failed to log frame to Rerun: {e}")
                 return
@@ -420,8 +420,8 @@ class RerunViewer:
             # Log source change event if provided
             if source:
                 try:
-                    rr.log("world/events", 
-                          rr.TextLog(f"Stream source changed to: {source}"),
+                    self.rr.log("world/events", 
+                          self.rr.TextLog(f"Stream source changed to: {source}"),
                           timeless=False)
                 except Exception as e:
                     self.logger.warning(f"Failed to log source change event: {e}")
@@ -433,9 +433,9 @@ class RerunViewer:
     def reset(self):
         """Clear Rerun data"""
         try:
-            rr.log("world", rr.Clear(recursive=True))
-            rr.log("world/events", 
-                  rr.TextLog("Stream reset"),
+            self.rr.log("world", self.rr.Clear(recursive=True))
+            self.rr.log("world/events", 
+                  self.rr.TextLog("Stream reset"),
                   timeless=False)
             self.logger.info("Rerun data cleared successfully")
         except Exception as e:
