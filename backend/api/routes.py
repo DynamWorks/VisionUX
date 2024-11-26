@@ -203,10 +203,10 @@ def start_stream():
         video_stream = VideoStream(str(file_path))
         video_stream.start()
         
-        # Initialize RerunManager and reset viewer
-        from backend.utils.rerun_manager import RerunManager
-        rerun_manager = RerunManager()
-        rerun_manager.reset()
+        # Initialize viewer
+        from backend.utils.viewer_factory import ViewerFactory
+        viewer = ViewerFactory.get_viewer()
+        viewer.reset()
         
         # Store video stream in app context
         current_app.video_stream = video_stream
