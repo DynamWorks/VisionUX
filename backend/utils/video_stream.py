@@ -185,13 +185,18 @@ class VideoStream:
         rerun_manager = RerunManager()
         
         # Clear Rerun recording and reinitialize
-        rerun_manager._initialize=False
+        rerun_manager._initialize = False
         rerun_manager.initialize(clear_existing=True)
-        #rerun_manager.log("world",rr.Clear(recursive=True))
         
-        # Reset video capture to beginning
+        # Release video capture
         if self._cap and self._cap.isOpened():
-            self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            self._cap.release()
+            self._cap = None
             
-        self.logger.info("Video stream stopped and Rerun buffer cleared")
+        # Reset state
+        self.frame_count = 0
+        self.current_frame = None
+        self._stream_thread = None
+        
+        self.logger.info("Video stream stopped and resources cleaned up")
             
