@@ -23,6 +23,9 @@ class BackendApp:
         config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
         self.config = Config(config_path)
         
+        # Set debug mode from config
+        self.debug = self.config.get('api', 'debug', default=False)
+        
         # Setup logging
         self.setup_logging()
         self.logger = logging.getLogger(__name__)
