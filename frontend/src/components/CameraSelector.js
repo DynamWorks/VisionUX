@@ -45,14 +45,19 @@ const CameraSelector = ({
                 const ctx = canvas.getContext('2d');
 
                 // Start frame capture loop
-                const captureFrame = () => {
+                const captureFrame = async () => {
                     if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) {
                         stream.getTracks().forEach(track => track.stop());
                         return;
                     }
 
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob(blob => {
+                    
+                    try {
+                        const blob = await new Promise(resolve => {
+                            canvas.toBlob(resolve, 'image/jpeg', 0.8);
+                        });
+
                         // Send frame type indicator first
                         const frameMetadata = {
                             type: 'camera_frame',
@@ -62,12 +67,44 @@ const CameraSelector = ({
                         };
                         console.log('Sending frame metadata:', frameMetadata);
                         ws.send(JSON.stringify(frameMetadata));
-                    
+                        
+                        // Wait a bit to ensure metadata is processed
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        
                         // Then send the actual frame data
                         console.log('Sending binary frame data, size:', blob.size);
                         ws.send(blob);
+                        
+                        // Wait for frame processed confirmation
+                        const confirmation = await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('Frame confirmation timeout'));
+                            }, 5000);
+                            
+                            const handler = (event) => {
+                                try {
+                                    const data = JSON.parse(event.data);
+                                    if (data.type === 'frame_processed') {
+                                        ws.removeEventListener('message', handler);
+                                        clearTimeout(timeout);
+                                        resolve(data);
+                                    }
+                                } catch (e) {
+                                    console.warn('Non-JSON message received:', event.data);
+                                }
+                            };
+                            
+                            ws.addEventListener('message', handler);
+                        });
+                        
+                        console.log('Frame processed:', confirmation);
                         requestAnimationFrame(captureFrame);
-                    }, 'image/jpeg', 0.8);
+                    } catch (error) {
+                        console.error('Error sending frame:', error);
+                        if (error.message !== 'Frame confirmation timeout') {
+                            requestAnimationFrame(captureFrame);
+                        }
+                    }
                 };
 
                 video.onloadedmetadata = () => {

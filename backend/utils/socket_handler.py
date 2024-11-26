@@ -107,7 +107,9 @@ class SocketHandler:
                 
                 # Set timeout for binary data receipt
                 self.logger.debug("Waiting for binary frame data...")
-                binary_data = self.socketio.receive(binary=True, timeout=1.0)
+                try:
+                    binary_data = self.socketio.receive(binary=True, timeout=5.0)
+                    self.logger.info(f"Received binary frame data of size: {len(binary_data)} bytes")
                 
                 if not binary_data:
                     self.logger.error("No binary frame data received within timeout")
