@@ -16,7 +16,7 @@ class SocketHandler:
             logger=True,
             ping_timeout=60,
             ping_interval=25,
-            transports=['websocket', 'polling'],
+            transports=['websocket'],  // WebSocket only
             always_connect=True,
             engineio_logger=True,
             manage_session=False,

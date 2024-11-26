@@ -20,12 +20,12 @@ class WebSocketService {
         
         // Enhanced connection options
         this.socket = io(wsUrl, {
-            transports: ['websocket', 'polling'],
+            transports: ['websocket'],  // WebSocket only, no polling
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 60000, // Increased timeout further
+            timeout: 30000,
             autoConnect: true,
             forceNew: true,
             path: '/socket.io/',
