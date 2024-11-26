@@ -1,36 +1,27 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { AppBar, Toolbar, Box } from '@mui/material';
+import RestartControls from './RestartControls';
+import logo from '../assets/logo.png';
 
-const Header = () => {
+const Header = ({ onRestartWebSockets, onRestartRerun }) => {
     return (
         <AppBar position="static" sx={{ bgcolor: '#333333' }}>
             <Toolbar>
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', py: 2 }}>
-                    <Box sx={{ flexGrow: 1 }}>
-                        <Typography 
-                            variant="h4" 
-                            component="h1" 
-                            sx={{ 
-                                color: '#bd9544',
-                                fontWeight: 'bold'
+                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <img 
+                            src={logo} 
+                            alt="Video Analytics Logo" 
+                            style={{ 
+                                height: '40px',
+                                width: 'auto'
                             }}
-                        >
-                            Video Analytics
-                        </Typography>
+                        />
                     </Box>
-                    <Button 
-                        href="/contact"
-                        variant="contained"
-                        sx={{
-                            bgcolor: '#bd9544',
-                            '&:hover': {
-                                bgcolor: '#a17e3a'
-                            },
-                            borderRadius: '30px'
-                        }}
-                    >
-                        Contact
-                    </Button>
+                    <RestartControls 
+                        onRestartWebSockets={onRestartWebSockets}
+                        onRestartRerun={onRestartRerun}
+                    />
                 </Box>
             </Toolbar>
         </AppBar>
