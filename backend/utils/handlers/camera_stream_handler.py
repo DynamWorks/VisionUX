@@ -312,9 +312,9 @@ class CameraStreamHandler(BaseMessageHandler):
             
             # Log frame using RerunManager instance
             rerun_manager.log_frame(
-                frame=frame_rgb,
-                frame_number=self.frame_count,
-                source="camera_stream"
+                frame=frame_rgb #,
+                # frame_number=self.frame_count,
+                # source="camera_stream"
             )
             
             self.logger.debug(
