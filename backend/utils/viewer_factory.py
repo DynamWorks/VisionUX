@@ -16,7 +16,17 @@ class ViewerFactory:
             viewer = RerunManager()
             viewer.initialize()
             return viewer
-        else:
+        elif viewer_type == 'custom':
             viewer = CustomViewer()
+            viewer.initialize()
+            # Register WebSocket handler for custom viewer
+            from .socket_handler import SocketHandler
+            if hasattr(config, 'app') and config.app:
+                socket_handler = SocketHandler(config.app)
+                socket_handler.register_custom_viewer(viewer)
+            return viewer
+        else:
+            logger.warning(f"Unknown viewer type: {viewer_type}, defaulting to RerunManager")
+            viewer = RerunManager()
             viewer.initialize()
             return viewer

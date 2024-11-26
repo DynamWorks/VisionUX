@@ -948,7 +948,11 @@ function App() {
                                 borderRadius: '8px',
                                 overflow: 'hidden'
                             }}>
-                                <RerunViewer />
+                                {process.env.REACT_APP_VIEWER_TYPE === 'custom' ? (
+                                    <CustomViewer websocket={ws} />
+                                ) : (
+                                    <RerunViewer />
+                                )}
                             </Box>
                             <Chat />
                         </Box>

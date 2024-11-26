@@ -181,7 +181,7 @@ class SocketHandler:
             self.logger.error(f"Error sending file list: {e}")
 
     def _process_frame(self, frame_data):
-        """Process frame with Rerun visualization and metrics tracking"""
+        """Process frame with appropriate viewer"""
         try:
             import numpy as np
             import cv2
@@ -208,25 +208,46 @@ class SocketHandler:
             # Convert BGR to RGB for visualization
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # Get RerunManager instance
-            from .rerun_manager import RerunManager
-            rerun_manager = RerunManager()
-            
-            # Track frame metrics
-            frame_number = getattr(self, '_frame_count', 0)
-            process_time = time.time() - process_start
-            
-            # Log frame with metrics
-            rerun_manager.log_frame(
-                frame=frame_rgb,
-                frame_number=frame_number,
-                source="socket_stream",
-                metadata={
-                    'process_time_ms': round(process_time * 1000, 2),
-                    'frame_size': frame_size,
-                    'shape': frame.shape
-                }
-            )
+            # Get viewer type from config
+            from .config import Config
+            config = Config()
+            viewer_type = config.get('api', 'viewer', default='rerun')
+
+            if viewer_type == 'rerun':
+                # Use RerunManager for visualization
+                from .rerun_manager import RerunManager
+                rerun_manager = RerunManager()
+                
+                # Track frame metrics
+                frame_number = getattr(self, '_frame_count', 0)
+                process_time = time.time() - process_start
+                
+                # Log frame with metrics
+                rerun_manager.log_frame(
+                    frame=frame_rgb,
+                    frame_number=frame_number,
+                    source="socket_stream",
+                    metadata={
+                        'process_time_ms': round(process_time * 1000, 2),
+                        'frame_size': frame_size,
+                        'shape': frame.shape
+                    }
+                )
+            else:
+                # Stream directly to frontend for custom viewer
+                # Convert frame to JPEG for efficient streaming
+                _, buffer = cv2.imencode('.jpg', frame_rgb)
+                frame_bytes = buffer.tobytes()
+                
+                # Send frame metadata first
+                self.socketio.emit('frame_data', {
+                    'type': 'frame_data',
+                    'timestamp': time.time(),
+                    'size': len(frame_bytes)
+                })
+                
+                # Then send binary frame data
+                self.socketio.emit('binary_frame', frame_bytes)
             
             self._frame_count = frame_number + 1
             
