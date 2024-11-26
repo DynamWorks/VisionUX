@@ -173,18 +173,19 @@ class BackendApp:
                 cors_allowed_origins="*",
                 ping_timeout=60,
                 ping_interval=25,
-                async_mode='threading',  # Use threading instead of gevent
+                async_mode='eventlet',  # Use eventlet for better WebSocket support
                 engineio_logger=True,
                 logger=True,
                 reconnection=True,
-                reconnection_attempts=5,
+                reconnection_attempts=10,
                 reconnection_delay=1000,
                 reconnection_delay_max=5000,
                 http_compression=True,
-                transports=['websocket', 'polling'],  # Allow polling fallback
-                upgrade_timeout=10000,
+                transports=['websocket'],  # WebSocket only, no polling
+                upgrade_timeout=20000,
                 max_http_buffer_size=100 * 1024 * 1024,
-                manage_session=False  # Disable session management
+                manage_session=False,  # Disable session management
+                allow_upgrades=True
             )
             # Initialize without SSL for development
             self.socket_handler.socketio.run(

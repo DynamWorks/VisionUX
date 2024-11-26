@@ -22,8 +22,11 @@ class WebSocketService {
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 10000,
+            timeout: 20000,
             autoConnect: true,
+            forceNew: true,
+            path: '/socket.io',
+            rejectUnauthorized: false,
             query: {
                 clientInfo: JSON.stringify({
                     userAgent: navigator.userAgent,
