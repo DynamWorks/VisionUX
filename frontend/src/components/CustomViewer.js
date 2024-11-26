@@ -47,8 +47,18 @@ const CustomViewer = ({ websocket }) => {
                         ctx.drawImage(img, 0, 0);
 
                         // Draw any metadata overlays
-                        if (frame_data && frame_data.metadata) {
-                            drawMetadataOverlays(ctx, frame_data.metadata);
+                        if (event.data instanceof Blob) {
+                            // Wait for next message which should contain metadata
+                            websocket.addEventListener('message', (metadataEvent) => {
+                                try {
+                                    const metadata = JSON.parse(metadataEvent.data);
+                                    if (metadata && metadata.metadata) {
+                                        drawMetadataOverlays(ctx, metadata.metadata);
+                                    }
+                                } catch (error) {
+                                    console.warn('Non-JSON metadata message received');
+                                }
+                            }, { once: true }); // Only listen once for metadata
                         }
 
                         // Calculate and log FPS every 30 frames
