@@ -27,11 +27,6 @@ class RerunManager:
             self.logger = logging.getLogger(__name__)
             import rerun as rr
             self.rr = rr  # Store rerun module as instance variable
-            self._initialized = False
-
-    def __init__(self):
-        if not self._initialized:
-            self.logger = logging.getLogger(__name__)
             
             # Load config
             self.config = Config()
@@ -46,6 +41,17 @@ class RerunManager:
             self._site = None
             self._app = None
             self._keep_alive_task = None
+            
+            # Load config
+            self.config = Config()
+            self._config = self.config._config  # Store config dict directly
+            
+            # Initialize web server attributes
+            rerun_config = self._config.get('rerun', {})
+            self._web_host = rerun_config.get('web_host', 'localhost')
+            self._web_port = int(rerun_config.get('web_port', 9090))
+            self._ws_host = rerun_config.get('ws_host', 'localhost')
+            self._ws_port = int(rerun_config.get('ws_port', 4321))
             
             # Initialize web server attributes
             rerun_config = self._config.get('rerun', {})
