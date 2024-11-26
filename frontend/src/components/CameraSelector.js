@@ -84,13 +84,16 @@ const CameraSelector = ({
                             type: 'camera_frame',
                             timestamp: Date.now(),
                             width: canvas.width,
-                            height: canvas.height,
-                            size: arrayBuffer.byteLength
+                            height: canvas.height
                         };
                         ws.send(JSON.stringify(frameMetadata));
                         
-                        // Send the frame data as binary
-                        ws.send(arrayBuffer);
+                        // Convert frame to blob and send
+                        const blob = await new Promise(resolve => {
+                            canvas.toBlob(resolve, 'image/jpeg', 0.85);
+                        });
+                        const frameBuffer = await blob.arrayBuffer();
+                        ws.send(frameBuffer);
                         
                         // Wait for frame processed confirmation
                         const confirmation = await new Promise((resolve, reject) => {
