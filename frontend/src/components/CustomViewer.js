@@ -19,9 +19,9 @@ const CustomViewer = ({ websocket }) => {
         const handleFrame = async (event) => {
             try {
                 // Check if the message is binary data
-                if (event.data instanceof Blob) {
+                if (event instanceof Blob) {
                     setLoading(false);
-                    const binaryData = event.data;
+                    const binaryData = event;
 
                     if (!binaryData) return;
 
@@ -47,11 +47,11 @@ const CustomViewer = ({ websocket }) => {
                         ctx.drawImage(img, 0, 0);
 
                         // Draw any metadata overlays
-                        if (event.data instanceof Blob) {
+                        if (event instanceof Blob) {
                             // Wait for next message which should contain metadata
-                            websocket.addEventListener('message', (metadataEvent) => {
+                            websocket.once('message', (metadataEvent) => {
                                 try {
-                                    const metadata = JSON.parse(metadataEvent.data);
+                                    const metadata = JSON.parse(metadataEvent);
                                     if (metadata && metadata.metadata) {
                                         drawMetadataOverlays(ctx, metadata.metadata);
                                     }
@@ -113,10 +113,10 @@ const CustomViewer = ({ websocket }) => {
             }
         };
 
-        websocket.addEventListener('message', handleFrame);
+        websocket.on('message', handleFrame);
 
         return () => {
-            websocket.removeEventListener('message', handleFrame);
+            websocket.off('message', handleFrame);
         };
     }, [websocket]);
 
