@@ -193,11 +193,9 @@ class RerunManager:
             if not self._verify_environment():
                 raise RuntimeError("Environment verification failed")
             
-            # Initialize recording if not already done
-            if not hasattr(self.rr, '_recording'):
+            # Only initialize if explicitly requested
+            if not hasattr(self.rr, '_recording') and clear_existing:
                 self.rr.init("video_analytics")
-                # rr.set_time_sequence("frame_sequence", sequence=0)  # Initialize sequence at 0
-                # rr.set_time_seconds("frame_sequence", seconds=time.time())  # Set current time with timeline
                 self.logger.info("Created new Rerun recording")
                 
             # Load blueprint configuration from config
