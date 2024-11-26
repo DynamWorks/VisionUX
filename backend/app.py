@@ -200,7 +200,7 @@ class BackendApp:
                 raise RuntimeError(f"WebSocket initialization failed: {e}")
             # Initialize without SSL for development
             self.socket_handler.socketio.run(
-                self.app,
+                self.wsgi_app,  # Use wsgi_app instead of app
                 host=host,
                 port=port,
                 debug=debug,
