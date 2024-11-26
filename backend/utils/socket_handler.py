@@ -110,12 +110,19 @@ class SocketHandler:
                 try:
                     binary_data = self.socketio.receive(binary=True, timeout=5.0)
                     self.logger.info(f"Received binary frame data of size: {len(binary_data)} bytes")
-                
-                if not binary_data:
-                    self.logger.error("No binary frame data received within timeout")
+                    
+                    if not binary_data:
+                        self.logger.error("No binary frame data received within timeout")
+                        emit('frame_error', {
+                            'timestamp': frame_timestamp,
+                            'error': 'Frame data timeout'
+                        })
+                        return
+                except Exception as e:
+                    self.logger.error(f"Error receiving binary data: {e}")
                     emit('frame_error', {
                         'timestamp': frame_timestamp,
-                        'error': 'Frame data timeout'
+                        'error': f'Binary data receive error: {str(e)}'
                     })
                     return
                 
