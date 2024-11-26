@@ -1,6 +1,8 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from api.routes import api
 import threading
 import logging
@@ -27,6 +29,14 @@ class BackendApp:
         # Get frontend path from config
         frontend_path = self.config.get('frontend', 'build_path', default='../frontend/build')
         self.app = Flask(__name__, static_folder=frontend_path)
+        
+        # Initialize rate limiter
+        self.limiter = Limiter(
+            app=self.app,
+            key_func=get_remote_address,
+            default_limits=["200 per day", "50 per hour"],
+            storage_uri="memory://"
+        )
         
         # Get CORS settings from config
         cors_origins = self.config.get('api', 'cors_origins', default="*")

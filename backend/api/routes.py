@@ -376,18 +376,7 @@ def resume_stream():
         logger.error(f"Failed to resume stream: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Add rate limiting decorator
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-limiter = Limiter(
-    app=api,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
-
 @api.route('/upload', methods=['POST'])
-@limiter.limit("10 per minute")
 def upload_file():
     """
     Upload a video file
