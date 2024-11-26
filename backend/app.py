@@ -253,15 +253,21 @@ class BackendApp:
                     }
                     self.logger.info("Enabling SSL for WebSocket server")
 
-            # Initialize server with optional SSL
+            # Initialize server with enhanced configuration
             self.socket_handler.socketio.run(
                 self.wsgi_app,  # Use wsgi_app instead of app
                 host=host,
                 port=port,
                 debug=debug,
-                allow_unsafe_werkzeug=True,  # Required for production
-                use_reloader=False,  # Disable reloader in production
+                allow_unsafe_werkzeug=True,
+                use_reloader=False,
                 log_output=True,
+                cors_allowed_origins="*",
+                ping_timeout=60,
+                ping_interval=25,
+                async_mode='eventlet',
+                engineio_logger=True,
+                logger=True,
                 **ssl_args
             )
         except Exception as e:

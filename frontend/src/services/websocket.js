@@ -65,8 +65,8 @@ class WebSocketService {
         // Remove any trailing slashes from host
         const cleanHost = wsHost.replace(/\/$/, '');
         
-        // Construct full URL
-        return `${wsProtocol}//${cleanHost}:${wsPort}`;
+        // Construct Socket.IO URL
+        return `${window.location.protocol}//${cleanHost}:${wsPort}`;
     }
 
     setupEventHandlers() {

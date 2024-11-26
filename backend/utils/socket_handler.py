@@ -11,17 +11,22 @@ class SocketHandler:
         self.socketio = SocketIO(
             app,
             cors_allowed_origins="*",
-            max_http_buffer_size=100 * 1024 * 1024,  # 100MB for HD frames
+            max_http_buffer_size=100 * 1024 * 1024,
             async_mode='eventlet',
             logger=True,
-            ping_timeout=30,  # Reduced timeout
-            ping_interval=10, # More frequent pings
-            binary=True,     # Enable binary frame support
-            transports=['websocket'],  # WebSocket only for video streaming
+            ping_timeout=60,
+            ping_interval=25,
+            binary=True,
+            transports=['websocket', 'polling'],  # Allow both WebSocket and polling
             always_connect=True,
             engineio_logger=True,
             manage_session=False,
-            path='socket.io'
+            path='socket.io',
+            async_handlers=True,
+            reconnection=True,
+            reconnection_attempts=10,
+            reconnection_delay=1000,
+            reconnection_delay_max=5000
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
