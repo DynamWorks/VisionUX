@@ -43,6 +43,19 @@ function App() {
     }, [fetchUploadedFiles]);
 
     useEffect(() => {
+        let wsUrl;
+        let reconnectAttempts = 0;
+        let reconnectTimeout;
+        const maxReconnectAttempts = 5;
+        
+        const connectWebSocket = () => {
+            // Get WebSocket URL with fallbacks
+            const wsPort = process.env.REACT_APP_WS_PORT || '8001';
+            const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
+        };
+
         // Import and use WebSocket service
         import('./services/websocket').then(({ websocketService }) => {
             if (websocketService.socket?.connected) return;
