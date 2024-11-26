@@ -10,13 +10,20 @@ class SocketHandler:
     """Handles Socket.IO events"""
     
     def __init__(self, app):
+        # Initialize SocketIO with enhanced settings
         self.socketio = SocketIO(
             app,
             cors_allowed_origins="*",
             max_http_buffer_size=100 * 1024 * 1024,  # 100MB
-            async_mode=None,  # Let SocketIO choose best available mode
+            async_mode='gevent',  # Explicitly use gevent
             logger=True,
-            engineio_logger=True
+            engineio_logger=True,
+            ping_timeout=60,
+            ping_interval=25,
+            reconnection=True,
+            reconnection_attempts=5,
+            reconnection_delay=1000,
+            reconnection_delay_max=5000
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
@@ -88,22 +95,35 @@ class SocketHandler:
         @self.socketio.on('camera_frame')
         def handle_camera_frame(data):
             try:
-                self.logger.debug("Received camera frame metadata")
+                frame_timestamp = data.get('timestamp')
+                self.logger.debug(f"Received camera frame metadata at {frame_timestamp}")
                 
-                # Wait for the binary frame data
-                binary_data = self.socketio.receive(binary=True)
+                # Set timeout for binary data receipt
+                binary_data = self.socketio.receive(binary=True, timeout=1.0)
                 if not binary_data:
-                    self.logger.warning("No binary frame data received")
+                    self.logger.warning("No binary frame data received within timeout")
+                    emit('frame_error', {
+                        'timestamp': frame_timestamp,
+                        'error': 'Frame data timeout'
+                    })
                     return
                 
-                self.logger.debug(f"Received binary frame data: {len(binary_data)} bytes")
+                frame_size = len(binary_data)
+                self.logger.debug(f"Received binary frame data: {frame_size} bytes")
+                
+                # Validate frame size
+                if frame_size < 1024:  # Minimum 1KB for valid frame
+                    raise ValueError(f"Frame too small: {frame_size} bytes")
                 
                 # Process frame with Rerun
                 self._process_frame(binary_data)
                 
-                # Acknowledge frame receipt
+                # Send detailed acknowledgment
+                process_time = time.time() - frame_timestamp
                 emit('frame_processed', {
-                    'timestamp': data.get('timestamp'),
+                    'timestamp': frame_timestamp,
+                    'process_time_ms': round(process_time * 1000, 2),
+                    'frame_size': frame_size,
                     'status': 'success'
                 })
             except Exception as e:
@@ -141,19 +161,29 @@ class SocketHandler:
             self.logger.error(f"Error sending file list: {e}")
 
     def _process_frame(self, frame_data):
-        """Process frame with Rerun visualization"""
+        """Process frame with Rerun visualization and metrics tracking"""
         try:
             import numpy as np
             import cv2
+            import time
             
-            self.logger.debug(f"Processing frame data of size: {len(frame_data)} bytes")
+            process_start = time.time()
+            frame_size = len(frame_data)
+            self.logger.debug(f"Processing frame data of size: {frame_size} bytes")
 
-            # Decode frame
+            # Decode frame with validation
             nparr = np.frombuffer(frame_data, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
             if frame is None:
                 raise ValueError("Failed to decode frame")
+                
+            # Validate frame properties
+            if frame.size == 0 or len(frame.shape) != 3:
+                raise ValueError(f"Invalid frame shape: {frame.shape}")
+                
+            if not np.isfinite(frame).all():
+                raise ValueError("Frame contains invalid values")
 
             # Convert BGR to RGB for visualization
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -162,15 +192,32 @@ class SocketHandler:
             from .rerun_manager import RerunManager
             rerun_manager = RerunManager()
             
-            # Log frame using RerunManager
+            # Track frame metrics
             frame_number = getattr(self, '_frame_count', 0)
+            process_time = time.time() - process_start
+            
+            # Log frame with metrics
             rerun_manager.log_frame(
                 frame=frame_rgb,
                 frame_number=frame_number,
-                source="socket_stream"  # Identifies frames coming through WebSocket (uploaded videos)
+                source="socket_stream",
+                metadata={
+                    'process_time_ms': round(process_time * 1000, 2),
+                    'frame_size': frame_size,
+                    'shape': frame.shape
+                }
             )
             
             self._frame_count = frame_number + 1
+            
+            # Log performance metrics periodically
+            if frame_number % 100 == 0:
+                self.logger.info(
+                    f"Frame processing metrics - "
+                    f"Count: {frame_number}, "
+                    f"Time: {process_time*1000:.1f}ms, "
+                    f"Size: {frame_size/1024:.1f}KB"
+                )
 
         except Exception as e:
             self.logger.error(f"Frame processing error: {e}")
