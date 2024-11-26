@@ -1,6 +1,7 @@
 from flask_socketio import SocketIO, emit
 import logging
 import json
+import time
 from pathlib import Path
 import rerun as rr
 from .rerun_manager import RerunManager
