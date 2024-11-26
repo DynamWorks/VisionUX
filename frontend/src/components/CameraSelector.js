@@ -26,7 +26,52 @@ const CameraSelector = ({
                 alert('Please select a camera device first');
                 return;
             }
-            startCamera(selectedDevice);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 1280;
+                canvas.height = 720;
+                const ctx = canvas.getContext('2d');
+
+                // Start frame capture loop
+                const captureFrame = () => {
+                    if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) {
+                        stream.getTracks().forEach(track => track.stop());
+                        return;
+                    }
+
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(blob => {
+                        // Send frame type indicator first
+                        ws.send(JSON.stringify({
+                            type: 'camera_frame',
+                            timestamp: Date.now()
+                        }));
+                        // Then send the actual frame data
+                        ws.send(blob);
+                        requestAnimationFrame(captureFrame);
+                    }, 'image/jpeg', 0.8);
+                };
+
+                video.onloadedmetadata = () => {
+                    startCamera(selectedDevice);
+                    requestAnimationFrame(captureFrame);
+                };
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('Failed to access camera: ' + error.message);
+            }
         }
     };
 

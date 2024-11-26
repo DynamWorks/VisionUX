@@ -88,18 +88,26 @@ class SocketHandler:
         @self.socketio.on('camera_frame')
         def handle_camera_frame(data):
             try:
-                # Process camera frame
-                if isinstance(data, dict):
-                    self.logger.debug("Received camera frame data")
-                    # Get next binary frame
-                    frame_data = self.socketio.receive(binary=True)
-                    if frame_data:
-                        # Process frame with Rerun
-                        self._process_frame(frame_data)
-                    else:
-                        self.logger.warning("No binary frame data received")
+                self.logger.debug("Received camera frame metadata")
+                
+                # Wait for the binary frame data
+                binary_data = self.socketio.receive(binary=True)
+                if not binary_data:
+                    self.logger.warning("No binary frame data received")
+                    return
+                
+                self.logger.debug(f"Received binary frame data: {len(binary_data)} bytes")
+                
+                # Process frame with Rerun
+                self._process_frame(binary_data)
+                
+                # Acknowledge frame receipt
+                emit('frame_processed', {
+                    'timestamp': data.get('timestamp'),
+                    'status': 'success'
+                })
             except Exception as e:
-                self.logger.error(f"Frame processing error: {e}")
+                self.logger.error(f"Frame processing error: {e}", exc_info=True)
                 emit('error', {'message': str(e)})
 
         @self.socketio.on('reset_rerun')
