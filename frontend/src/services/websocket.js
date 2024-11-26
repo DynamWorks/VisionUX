@@ -16,21 +16,31 @@ class WebSocketService {
 
         console.log('Connecting to WebSocket:', url);
         
+        // Enhanced connection options
         this.socket = io(url, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 20000,
+            timeout: 30000, // Increased timeout
             autoConnect: true,
             forceNew: true,
             path: '/socket.io',
             rejectUnauthorized: false,
+            pingTimeout: 30000,
+            pingInterval: 10000,
+            upgrade: true,
+            rememberUpgrade: true,
+            perMessageDeflate: true,
+            extraHeaders: {
+                'User-Agent': navigator.userAgent
+            },
             query: {
                 clientInfo: JSON.stringify({
                     userAgent: navigator.userAgent,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    screenResolution: `${window.screen.width}x${window.screen.height}`
                 })
             }
         });
@@ -43,6 +53,14 @@ class WebSocketService {
             console.log('WebSocket Connected');
             this.reconnectAttempts = 0;
             this.socket.emit('get_uploaded_files');
+            
+            // Send initial connection data
+            this.socket.emit('client_info', {
+                timestamp: Date.now(),
+                userAgent: navigator.userAgent,
+                screenResolution: `${window.screen.width}x${window.screen.height}`,
+                connectionType: navigator.connection?.type || 'unknown'
+            });
         });
 
         this.socket.on('connect_error', (error) => {
@@ -52,21 +70,49 @@ class WebSocketService {
 
         this.socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
-            if (reason === 'io server disconnect') {
-                this.socket.connect();
+            if (reason === 'io server disconnect' || reason === 'transport close') {
+                setTimeout(() => {
+                    console.log('Attempting reconnection...');
+                    this.socket.connect();
+                }, 1000);
             }
         });
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
+            // Attempt recovery on error
+            if (!this.socket.connected) {
+                this.handleReconnect();
+            }
         });
 
-        // Setup ping/pong
+        this.socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log(`Reconnection attempt ${attemptNumber}`);
+        });
+
+        this.socket.on('reconnect_failed', () => {
+            console.error('Failed to reconnect after all attempts');
+        });
+
+        // Enhanced ping/pong with timeout detection
+        let lastPongTime = Date.now();
+        
+        this.socket.on('pong', () => {
+            lastPongTime = Date.now();
+        });
+
         setInterval(() => {
             if (this.socket?.connected) {
                 this.socket.emit('ping');
+                
+                // Check if we haven't received a pong in too long
+                if (Date.now() - lastPongTime > 30000) {
+                    console.warn('No pong received in 30s, reconnecting...');
+                    this.socket.disconnect();
+                    this.socket.connect();
+                }
             }
-        }, 5000);
+        }, 10000);
     }
 
     handleReconnect() {
