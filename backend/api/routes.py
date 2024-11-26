@@ -198,10 +198,15 @@ def start_stream():
         if not file_path.exists():
             return jsonify({'error': f"Video file not found: {filename}"}), 400
             
-        # Initialize video stream
-        from backend.utils.video_stream import VideoStream
-        video_stream = VideoStream(str(file_path))
-        video_stream.start()
+        # Initialize video stream with error handling
+        try:
+            from backend.utils.video_stream import VideoStream
+            video_stream = VideoStream(str(file_path))
+            video_stream.start()
+            current_app.logger.info(f"Video stream started for: {filename}")
+        except Exception as e:
+            current_app.logger.error(f"Failed to initialize video stream: {e}")
+            return jsonify({'error': f"Failed to start video stream: {str(e)}"}), 500
         
         # Initialize viewer
         from backend.utils.viewer_factory import ViewerFactory
