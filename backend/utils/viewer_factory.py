@@ -1,22 +1,14 @@
-from .config import Config
 from .custom_viewer import CustomViewer
 import logging
 
 class ViewerFactory:
-    @staticmethod
-    def get_viewer():
-        config = Config()
-        viewer_type = config.get('api', 'viewer', default='rerun')
-        logger = logging.getLogger(__name__)
-        
-        logger.info(f"Creating viewer of type: {viewer_type}")
-        
-        # Always use CustomViewer
-        viewer = CustomViewer()
-        viewer.initialize()
-        # Register WebSocket handler for custom viewer
-        from .socket_handler import SocketHandler
-        if hasattr(config, 'app') and config.app:
-            socket_handler = SocketHandler(config.app)
-            socket_handler.register_custom_viewer(viewer)
-        return viewer
+    """Factory for creating frame viewers"""
+    
+    _instance = None
+    
+    @classmethod
+    def get_viewer(cls):
+        if cls._instance is None:
+            cls._instance = CustomViewer()
+            cls._instance.initialize()
+        return cls._instance

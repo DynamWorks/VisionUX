@@ -1,45 +1,27 @@
 import cv2
 import numpy as np
 from .frame_processor import FrameProcessor
-class EdgeDetectionSubscriber(FrameProcessor):
-    """Processes frames for edge detection visualization"""
+
+class EdgeDetector(FrameProcessor):
+    """Real-time edge detection processor"""
     
-    def __init__(self, low_threshold=100, high_threshold=200):
+    def __init__(self):
         super().__init__()
-        self.low_threshold = low_threshold
-        self.high_threshold = high_threshold
-        self.enabled = False
+        self.low_threshold = 100
+        self.high_threshold = 200
         
-    def process_frame(self, frame_data):
-        """Process frame for edge detection"""
-        if not self.enabled:
+    def process_frame(self, frame_data: dict) -> None:
+        if not self.enabled or 'frame' not in frame_data:
             return
             
         try:
             frame = frame_data['frame']
-            
-            # Convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            # Apply Gaussian blur
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            edges = cv2.Canny(blurred, self.low_threshold, self.high_threshold)
             
-            # Apply Canny edge detection
-            edges = cv2.Canny(blurred, 
-                            self.low_threshold, 
-                            self.high_threshold)
-                            
-            # Convert back to RGB for visualization
-            edges_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
-            
-            # Add edges to frame metadata
             frame_data['metadata'] = frame_data.get('metadata', {})
-            frame_data['metadata']['edges'] = edges_rgb
-                   
-        except Exception as e:
-            self.logger.error(f"Edge detection error: {e}")
+            frame_data['metadata']['edges'] = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
             
-    def toggle(self):
-        """Toggle edge detection on/off"""
-        self.enabled = not self.enabled
-        self.logger.info(f"Edge detection {'enabled' if self.enabled else 'disabled'}")
+        except Exception as e:
+            self.logger.error(f"Edge detection failed: {e}")

@@ -1,31 +1,21 @@
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import logging
 import json
-import time
 from pathlib import Path
-from .video_stream import VideoStream
 
 class SocketHandler:
-    """Handles Socket.IO events"""
+    """Handles WebSocket events"""
     
     def __init__(self, app):
-        # Initialize SocketIO with enhanced settings
         self.socketio = SocketIO(
             app,
             cors_allowed_origins="*",
-            max_http_buffer_size=100 * 1024 * 1024,  # 100MB
+            max_http_buffer_size=50 * 1024 * 1024,  # 50MB
             async_mode='gevent',
             logger=True,
-            engineio_logger=True,
-            ping_timeout=120,
-            ping_interval=30,
-            reconnection=True,
-            reconnection_attempts=10,
-            reconnection_delay=1000,
-            reconnection_delay_max=5000,
-            transports=['websocket', 'polling'],  # Allow fallback to polling
-            always_connect=True,
-            manage_session=True
+            ping_timeout=60,
+            ping_interval=25,
+            transports=['websocket']
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)

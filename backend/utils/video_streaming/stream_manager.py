@@ -6,8 +6,6 @@ import cv2
 import numpy as np
 import time
 from dataclasses import dataclass
-from .stream_subscriber import StreamSubscriber
-from .stream_publisher import StreamPublisher
 
 @dataclass
 class Frame:
@@ -17,8 +15,6 @@ class Frame:
     metadata: Dict = None
 
 class StreamManager:
-    _instance = None
-    _lock = threading.Lock()
     
     def __new__(cls):
         if cls._instance is None:
