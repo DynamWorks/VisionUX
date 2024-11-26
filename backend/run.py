@@ -39,9 +39,6 @@ if __name__ == "__main__":
         
     debug = api_config.get("debug", False)
     
-    # Initialize Rerun
-    #rerun_manager = RerunManager()
-    #rerun_manager.initialize()
     
     # Run server
     app.run(host=host, port=port, debug=debug)

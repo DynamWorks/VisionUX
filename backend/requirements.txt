@@ -38,7 +38,6 @@ sentence-transformers==3.3.0
 streamlit==1.27.2
 matplotlib==3.8.2
 plotly==5.18.0
-rerun-sdk==0.20.0
 
 # Development
 pytest==8.0.0

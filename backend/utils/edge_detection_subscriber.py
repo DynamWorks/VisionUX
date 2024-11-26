@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 from .frame_processor import FrameProcessor
-import rerun as rr
-
 class EdgeDetectionSubscriber(FrameProcessor):
     """Processes frames for edge detection visualization"""
     
@@ -34,10 +32,9 @@ class EdgeDetectionSubscriber(FrameProcessor):
             # Convert back to RGB for visualization
             edges_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
             
-            # Log to Rerun
-            rr.log("world/video/edges", 
-                   rr.Image(edges_rgb),
-                   timeless=False)
+            # Add edges to frame metadata
+            frame_data['metadata'] = frame_data.get('metadata', {})
+            frame_data['metadata']['edges'] = edges_rgb
                    
         except Exception as e:
             self.logger.error(f"Edge detection error: {e}")

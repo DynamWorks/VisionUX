@@ -4,7 +4,6 @@ from threading import Thread, Event
 from queue import Queue
 import logging
 from typing import Optional, Generator
-import rerun as rr
 
 class VideoStream:
     """Handles video streaming, either from file or camera"""
@@ -81,17 +80,14 @@ class VideoStream:
                             from .viewer_factory import ViewerFactory
                             viewer = ViewerFactory.get_viewer()
             
-                            # Log frame using viewer
-                            viewer.log_frame(
-                                frame=frame_rgb,
-                                frame_number=self.frame_count,
-                                source=str(self.source)
-                            )
-                            
-                            # Log streaming event
-                            rr.log("world/events", 
-                                  rr.TextLog(f"Streaming frame {self.frame_count}"),
-                                  timeless=False)
+                            # Add frame to stream with metadata
+                            frame_data = {
+                                'frame': frame_rgb,
+                                'frame_number': self.frame_count,
+                                'timestamp': time.time(),
+                                'source': str(self.source)
+                            }
+                            self.buffer.put(frame_data)
                             
                         except Exception as e:
                             self.logger.warning(f"Failed to log frame: {e}")

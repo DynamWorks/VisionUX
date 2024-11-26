@@ -12,28 +12,6 @@ websocket:
   debug: ${VIDEO_ANALYTICS_WS_DEBUG:-true}      # Enable WebSocket debug mode
   max_buffer_size: 104857600  # 100MB in bytes
 
-rerun:
-  host: ${VIDEO_ANALYTICS_HOST_IP:-localhost}    # Rerun server host
-  web_port: ${VIDEO_ANALYTICS_RERUN_WEB_PORT:-9090}  # Web viewer port
-  ws_port: ${VIDEO_ANALYTICS_RERUN_WS_PORT:-4321}    # WebSocket port
-  web_host: ${VIDEO_ANALYTICS_RERUN_WEB_HOST:-localhost}  # Web viewer host
-  ws_host: ${VIDEO_ANALYTICS_RERUN_WS_HOST:-localhost}    # WebSocket host
-  blueprint:
-    layout: "vertical"  # Main layout orientation
-    views:
-      - type: "spatial2d"
-        name: "Video Feed"
-        origin: "world/video/stream"
-        settings:
-          fit_to_content: true
-          background_color: [26, 26, 26]  # Dark background (RGB)
-      - type: "text_log"
-        name: "Events"
-        origin: "world/events"
-        settings:
-          max_lines: 1000
-          show_timestamps: true
-                                                                                   
 frontend:   
   host: localhost
   port: 8501

@@ -3,8 +3,6 @@ import logging
 import json
 import time
 from pathlib import Path
-import rerun as rr
-from .rerun_manager import RerunManager
 from .video_stream import VideoStream
 
 class SocketHandler:
@@ -31,7 +29,6 @@ class SocketHandler:
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
-        self.rerun_manager = RerunManager()
         self.clients = set()
         self.uploads_path.mkdir(parents=True, exist_ok=True)
         self.setup_handlers()
@@ -41,7 +38,6 @@ class SocketHandler:
         def handle_connect():
             self.logger.info("Client connected")
             self.clients.add(self.socketio)
-            self.rerun_manager.register_connection()
             self._send_file_list()
 
         @self.socketio.on('disconnect')
@@ -49,7 +45,6 @@ class SocketHandler:
             self.logger.info("Client disconnected")
             if self.socketio in self.clients:
                 self.clients.remove(self.socketio)
-            self.rerun_manager.unregister_connection()
 
         @self.socketio.on('video_upload_start')
         def handle_upload_start(data):
