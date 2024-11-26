@@ -43,19 +43,40 @@ function App() {
     }, [fetchUploadedFiles]);
 
     useEffect(() => {
-        if (ws) return; // Prevent recreating if ws exists
+        // Import and use WebSocket service
+        import('./services/websocket').then(({ websocketService }) => {
+            if (websocketService.socket?.connected) return;
 
-        // Get WebSocket URL with fallbacks
-        const wsPort = process.env.REACT_APP_WS_PORT || '8001';
-        const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
+            // Get WebSocket URL with fallbacks
+            const wsPort = process.env.REACT_APP_WS_PORT || '8001';
+            const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
 
-        let reconnectAttempts = 0;
-        const maxReconnectAttempts = 10; // Increased max attempts
-        let reconnectTimeout;
+            // Connect using service
+            websocketService.connect(wsUrl);
 
-        const connectWebSocket = () => {
+            // Set up event listeners
+            websocketService.on('uploaded_files', (data) => {
+                console.log('Received file list:', data.files);
+                setUploadedFiles(data.files || []);
+            });
+
+            websocketService.on('upload_complete_ack', () => {
+                console.log('Upload complete, fetching updated file list');
+                fetchUploadedFiles();
+            });
+
+            // Store socket reference
+            setWs(websocketService);
+        });
+
+        return () => {
+            // Cleanup on unmount
+            if (ws) {
+                ws.disconnect();
+            }
+        };
             if (ws?.readyState === WebSocket.OPEN) {
                 console.log('WebSocket already connected');
                 return;
