@@ -11,6 +11,9 @@ websocket:
   port: ${VIDEO_ANALYTICS_WS_PORT:-8001}        # WebSocket server port
   debug: ${VIDEO_ANALYTICS_WS_DEBUG:-true}      # Enable WebSocket debug mode
   max_buffer_size: 104857600  # 100MB in bytes
+  ssl_enabled: ${VIDEO_ANALYTICS_WS_SSL:-false}  # Enable SSL
+  keyfile: ${VIDEO_ANALYTICS_WS_KEY:-""}        # Path to SSL key file
+  certfile: ${VIDEO_ANALYTICS_WS_CERT:-""}      # Path to SSL certificate file
 
 frontend:   
   host: localhost

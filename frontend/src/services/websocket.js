@@ -60,7 +60,7 @@ class WebSocketService {
         // Get WebSocket URL with fallbacks
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
-        const wsProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         
         // Remove any trailing slashes from host
         const cleanHost = wsHost.replace(/\/$/, '');

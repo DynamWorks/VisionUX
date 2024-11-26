@@ -235,7 +235,25 @@ class BackendApp:
                 host = 'localhost' 
                 self.logger.info(f"Falling back to {host}")
 
-            # Initialize without SSL for development
+            # Get SSL configuration
+            ssl_enabled = self.config.get('websocket', 'ssl_enabled', default=False)
+            ssl_args = {}
+            
+            if ssl_enabled:
+                keyfile = self.config.get('websocket', 'keyfile')
+                certfile = self.config.get('websocket', 'certfile')
+                
+                if not keyfile or not certfile:
+                    self.logger.warning("SSL enabled but key/cert files not configured. Falling back to non-SSL")
+                else:
+                    ssl_args = {
+                        'keyfile': keyfile,
+                        'certfile': certfile,
+                        'ssl_protocol': 'TLSv1_2'
+                    }
+                    self.logger.info("Enabling SSL for WebSocket server")
+
+            # Initialize server with optional SSL
             self.socket_handler.socketio.run(
                 self.wsgi_app,  # Use wsgi_app instead of app
                 host=host,
@@ -243,7 +261,8 @@ class BackendApp:
                 debug=debug,
                 allow_unsafe_werkzeug=True,  # Required for production
                 use_reloader=False,  # Disable reloader in production
-                log_output=True
+                log_output=True,
+                **ssl_args
             )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
