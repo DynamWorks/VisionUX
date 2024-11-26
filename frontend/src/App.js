@@ -46,12 +46,11 @@ function App() {
     useEffect(() => {
         if (ws) return; // Prevent recreating if ws exists
 
-        // Get WebSocket URL from environment with fallbacks
         // Get WebSocket URL with fallbacks
         const wsPort = process.env.REACT_APP_WS_PORT || '8001';
         const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
+        const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}/socket.io/?EIO=4&transport=websocket`;
 
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 10; // Increased max attempts
@@ -129,23 +128,34 @@ function App() {
 
                 websocket.onopen = () => {
                     clearTimeout(connectionTimeout);
-                    console.log('WebSocket Connected');
+                    console.log('WebSocket Connected to:', wsUrl);
                     reconnectAttempts = 0; // Reset attempts on successful connection
                     setWs(websocket);
 
                     // Setup ping/pong
                     setupPing();
 
-                    // Send initial connection message and request file list
-                    websocket.send(JSON.stringify({
-                        type: 'connection_established',
-                        client_info: {
-                            userAgent: navigator.userAgent,
-                            timestamp: Date.now()
-                        }
-                    }));
-                    websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
-                    console.log('Requested initial file list');
+                    // Send initial connection message
+                    try {
+                        websocket.send(JSON.stringify({
+                            type: 'connection_established',
+                            client_info: {
+                                userAgent: navigator.userAgent,
+                                timestamp: Date.now()
+                            }
+                        }));
+                        console.log('Sent connection message');
+                        
+                        // Request file list after brief delay
+                        setTimeout(() => {
+                            if (websocket.readyState === WebSocket.OPEN) {
+                                websocket.send(JSON.stringify({ type: 'get_uploaded_files' }));
+                                console.log('Requested initial file list');
+                            }
+                        }, 1000);
+                    } catch (error) {
+                        console.error('Error during connection setup:', error);
+                    }
                 };
 
                 websocket.onmessage = (event) => {
