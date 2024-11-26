@@ -47,8 +47,9 @@ const CustomViewer = ({ websocket }) => {
                         ctx.drawImage(img, 0, 0);
 
                         // Draw any metadata overlays
-                        if (data.metadata) {
-                            drawMetadataOverlays(ctx, data.metadata);
+                        const imageData = await response.json();
+                        if (imageData && imageData.metadata) {
+                            drawMetadataOverlays(ctx, imageData.metadata);
                         }
 
                         // Calculate and log FPS every 30 frames
