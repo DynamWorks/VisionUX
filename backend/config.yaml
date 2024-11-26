@@ -65,7 +65,7 @@ models:
 # Service Configuration
 services:
   openai:
-    model: gpt-4-vision-preview-v2
+    model: gpt-4o-mini
     max_tokens: 500
     temperature: 0.7
   

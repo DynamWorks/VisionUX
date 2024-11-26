@@ -186,7 +186,7 @@ class VideoStream:
         
         # Clear Rerun recording and reinitialize
         rerun_manager._initialize = False
-        rerun_manager.initialize(clear_existing=True)
+        rerun_manager.initialize()#clear_existing=True)
         
         # Release video capture
         if self._cap and self._cap.isOpened():
