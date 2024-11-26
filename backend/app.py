@@ -186,18 +186,7 @@ class BackendApp:
                 upgrade_timeout=10000,  # 10 second upgrade timeout
                 max_http_buffer_size=100 * 1024 * 1024  # 100MB buffer
             )
-            # Create SSL context for development
-            ssl_context = None
-            if debug:
-                try:
-                    import ssl
-                    ssl_context = ssl.create_default_context()
-                    ssl_context.check_hostname = False
-                    ssl_context.verify_mode = ssl.CERT_NONE
-                except ImportError:
-                    self.logger.warning("SSL module not available")
-                    ssl_context = None
-
+            # Initialize without SSL for development
             self.socket_handler.socketio.run(
                 self.app,
                 host=host,
@@ -206,8 +195,7 @@ class BackendApp:
                 allow_unsafe_werkzeug=True,  # Required for production
                 use_reloader=False,  # Disable reloader in production
                 log_output=True,
-                websocket=True,
-                ssl_context=ssl_context
+                websocket=True
             )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
