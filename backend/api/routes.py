@@ -35,7 +35,17 @@ frame_memory = MemoryManager(content_manager=None)
 
 @api.route('/ws/restart', methods=['POST'])
 def restart_websockets():
-    """Restart WebSocket servers"""
+    """
+    Restart WebSocket servers
+    ---
+    tags:
+      - websocket
+    responses:
+      200:
+        description: WebSocket server restarted successfully
+      500:
+        description: Server error
+    """
     try:
         # Get socket handler instance
         if hasattr(current_app, 'socket_handler'):
@@ -76,7 +86,27 @@ def restart_websockets():
 
 @api.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint with detailed service status"""
+    """
+    Health check endpoint with detailed service status
+    ---
+    tags:
+      - system
+    responses:
+      200:
+        description: System health status
+        schema:
+          properties:
+            status:
+              type: string
+            service:
+              type: string
+            timestamp:
+              type: number
+            components:
+              type: object
+      500:
+        description: Server error
+    """
     try:
         # Check content manager
         content_status = {
@@ -124,7 +154,30 @@ def health_check():
 
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():
-    """Analyze scene and suggest computer vision applications"""
+    """
+    Analyze scene and suggest computer vision applications
+    ---
+    tags:
+      - analysis
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - stream_type
+          properties:
+            stream_type:
+              type: string
+              description: Type of video stream
+    responses:
+      200:
+        description: Scene analysis results
+      400:
+        description: Invalid request or no frames available
+      500:
+        description: Server error
+    """
     try:
         data = request.get_json()
         stream_type = data.get('stream_type', 'unknown')
@@ -160,7 +213,35 @@ def analyze_scene():
 
 @api.route('/chat', methods=['POST'])
 def chat_analysis():
-    """Endpoint for chat-based video analysis with RAG"""
+    """
+    Endpoint for chat-based video analysis with RAG
+    ---
+    tags:
+      - chat
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - video_path
+            - prompt
+          properties:
+            video_path:
+              type: string
+            prompt:
+              type: string
+            use_swarm:
+              type: boolean
+              default: false
+    responses:
+      200:
+        description: Chat analysis response
+      400:
+        description: Missing required parameters
+      500:
+        description: Server error
+    """
     try:
         data = request.get_json()
         if not data or 'video_path' not in data or 'prompt' not in data:
@@ -295,9 +376,42 @@ def resume_stream():
         logger.error(f"Failed to resume stream: {e}")
         return jsonify({'error': str(e)}), 500
 
+# Add rate limiting decorator
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    app=api,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
 @api.route('/upload', methods=['POST'])
+@limiter.limit("10 per minute")
 def upload_file():
-    """Upload a video file"""
+    """
+    Upload a video file
+    ---
+    tags:
+      - files
+    parameters:
+      - in: formData
+        name: file
+        type: file
+        required: true
+        description: Video file to upload
+    responses:
+      200:
+        description: File uploaded successfully
+      400:
+        description: No file or invalid file
+      413:
+        description: File too large
+      429:
+        description: Too many upload attempts
+      500:
+        description: Server error
+    """
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
