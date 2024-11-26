@@ -1,11 +1,17 @@
 import logging
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, Protocol
 import threading
 import queue
 import cv2
 import numpy as np
 import time
 from dataclasses import dataclass
+
+class StreamSubscriber(Protocol):
+    def process_frame(self, frame_data: Dict) -> None: ...
+    
+class StreamPublisher(Protocol):
+    def publish_frame(self, frame_data: Dict) -> None: ...
 
 @dataclass
 class Frame:
