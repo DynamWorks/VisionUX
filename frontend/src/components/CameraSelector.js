@@ -54,11 +54,17 @@ const CameraSelector = ({
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     canvas.toBlob(blob => {
                         // Send frame type indicator first
-                        ws.send(JSON.stringify({
+                        const frameMetadata = {
                             type: 'camera_frame',
-                            timestamp: Date.now()
-                        }));
+                            timestamp: Date.now(),
+                            width: canvas.width,
+                            height: canvas.height
+                        };
+                        console.log('Sending frame metadata:', frameMetadata);
+                        ws.send(JSON.stringify(frameMetadata));
+                    
                         // Then send the actual frame data
+                        console.log('Sending binary frame data, size:', blob.size);
                         ws.send(blob);
                         requestAnimationFrame(captureFrame);
                     }, 'image/jpeg', 0.8);

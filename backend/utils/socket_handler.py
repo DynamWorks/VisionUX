@@ -97,20 +97,27 @@ class SocketHandler:
         def handle_camera_frame(data):
             try:
                 frame_timestamp = data.get('timestamp')
-                self.logger.debug(f"Received camera frame metadata at {frame_timestamp}")
+                self.logger.info(f"Received camera frame metadata at {frame_timestamp}")
+                
+                # Log incoming data structure
+                self.logger.debug(f"Frame metadata: {data}")
                 
                 # Set timeout for binary data receipt
+                self.logger.debug("Waiting for binary frame data...")
                 binary_data = self.socketio.receive(binary=True, timeout=1.0)
+                
                 if not binary_data:
-                    self.logger.warning("No binary frame data received within timeout")
+                    self.logger.error("No binary frame data received within timeout")
                     emit('frame_error', {
                         'timestamp': frame_timestamp,
                         'error': 'Frame data timeout'
                     })
                     return
                 
+                self.logger.info(f"Successfully received binary frame data")
+                
                 frame_size = len(binary_data)
-                self.logger.debug(f"Received binary frame data: {frame_size} bytes")
+                self.logger.info(f"Processing binary frame data: {frame_size} bytes")
                 
                 # Validate frame size
                 if frame_size < 1024:  # Minimum 1KB for valid frame
