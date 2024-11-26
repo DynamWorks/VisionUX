@@ -1,4 +1,3 @@
-import rerun as rr
 import logging
 from typing import Optional
 import asyncio
@@ -11,15 +10,36 @@ import json
 from pathlib import Path
 from .config import Config
 
-class RerunManager:
-    """Singleton class to manage Rerun initialization and state"""
-    _instance = None
+class ViewerFactory:
+    @staticmethod
+    def get_viewer():
+        config = Config()
+        viewer_type = config.get('api', 'viewer', default='rerun')
+        
+        if viewer_type == 'rerun':
+            import rerun as rr
+            from .rerun_manager import RerunViewer
+            return RerunViewer()
+        else:
+            from .custom_viewer import CustomViewer
+            return CustomViewer()
 
+class RerunViewer:
+    """Rerun-based viewer implementation"""
+    _instance = None
+    
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
+        
+    def __init__(self):
+        if not self._initialized:
+            self.logger = logging.getLogger(__name__)
+            import rerun as rr
+            self._rr = rr
+            self._initialized = False
 
     def __init__(self):
         if not self._initialized:

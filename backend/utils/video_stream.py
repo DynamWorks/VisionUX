@@ -77,12 +77,12 @@ class VideoStream:
                             # Convert BGR to RGB for visualization
                             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                             
-                            # Get RerunManager instance
-                            from .rerun_manager import RerunManager
-                            rerun_manager = RerunManager()
-                            
-                            # Log frame using RerunManager
-                            rerun_manager.log_frame(
+                            # Get viewer instance
+                            from .rerun_manager import ViewerFactory
+                            viewer = ViewerFactory.get_viewer()
+            
+                            # Log frame using viewer
+                            viewer.log_frame(
                                 frame=frame_rgb,
                                 frame_number=self.frame_count,
                                 source=str(self.source)

@@ -4,6 +4,7 @@ api:
   port: ${VIDEO_ANALYTICS_API_PORT:-8000}      # API server port
   debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}    # Enable debug mode
   cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-"*"}  # CORS allowed origins
+  viewer: ${VIDEO_ANALYTICS_VIEWER:-rerun}      # Viewer type: 'rerun' or 'custom'
 
 websocket:
   host: ${VIDEO_ANALYTICS_WS_HOST:-localhost}    # WebSocket bind address
