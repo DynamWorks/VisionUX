@@ -508,7 +508,7 @@ function App() {
                 />
                 <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Box sx={{ width: '30%' }}>
+                        <Box sx={{ width: '20%' }}>
                             <InputSelector
                                 inputType={inputType}
                                 setInputType={setInputType}
@@ -916,7 +916,7 @@ function App() {
                                 }}
                             />
                         </Box>
-                        <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Box sx={{ width: '80%', display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Box sx={{ 
                                 flex: 1,
                                 minHeight: '600px',
