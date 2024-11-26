@@ -14,10 +14,12 @@ class WebSocketService {
             return;
         }
 
-        console.log('Connecting to WebSocket:', url);
+        // Construct WebSocket URL with fallbacks
+        const wsUrl = this._constructWebSocketUrl(url);
+        console.log('Connecting to WebSocket:', wsUrl);
         
         // Enhanced connection options
-        this.socket = io(url, {
+        this.socket = io(wsUrl, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
@@ -46,6 +48,24 @@ class WebSocketService {
         });
 
         this.setupEventHandlers();
+    }
+
+    _constructWebSocketUrl(url) {
+        // If full URL provided, use it
+        if (url && (url.startsWith('ws://') || url.startsWith('wss://'))) {
+            return url;
+        }
+
+        // Get WebSocket URL with fallbacks
+        const wsPort = process.env.REACT_APP_WS_PORT || '8001';
+        const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        
+        // Remove any trailing slashes from host
+        const cleanHost = wsHost.replace(/\/$/, '');
+        
+        // Construct full URL
+        return `${wsProtocol}//${cleanHost}:${wsPort}`;
     }
 
     setupEventHandlers() {

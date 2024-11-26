@@ -64,11 +64,8 @@ function App() {
         import('./services/websocket').then(({ websocketService }) => {
             if (websocketService.socket?.connected) return;
 
-            // Get WebSocket URL with fallbacks
-            const wsPort = process.env.REACT_APP_WS_PORT || '8001';
-            const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${wsHost}:${wsPort}`;
+            // Get WebSocket URL from environment or construct it
+            const wsUrl = process.env.REACT_APP_WS_URL;
 
             // Connect using service
             websocketService.connect(wsUrl);
