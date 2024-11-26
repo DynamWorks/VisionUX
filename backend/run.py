@@ -8,7 +8,6 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from backend.app import app
-from backend.utils.rerun_manager import RerunManager
 
 if __name__ == "__main__":
     # Parse command line arguments
