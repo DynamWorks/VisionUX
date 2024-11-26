@@ -187,7 +187,10 @@ class BackendApp:
                 host=host,
                 port=port,
                 debug=debug,
-                allow_unsafe_werkzeug=True  # Required for production
+                allow_unsafe_werkzeug=True,  # Required for production
+                use_reloader=False,  # Disable reloader in production
+                log_output=True,
+                websocket=True
             )
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")

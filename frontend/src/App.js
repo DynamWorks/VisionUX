@@ -66,6 +66,17 @@ function App() {
                 let connectionTimeout;
                 let pingInterval;
                 let lastPongTime = Date.now();
+                
+                // Set binary type immediately
+                websocket.binaryType = 'arraybuffer';
+                
+                // Add connection timeout
+                connectionTimeout = setTimeout(() => {
+                    if (websocket.readyState !== WebSocket.OPEN) {
+                        console.log('Connection attempt timed out');
+                        websocket.close();
+                    }
+                }, 5000);  // 5 second connection timeout
 
                 // Set connection timeout with jitter and backoff
                 const baseDelay = 1000;
@@ -157,8 +168,16 @@ function App() {
                 websocket.onclose = (event) => {
                     clearTimeout(connectionTimeout);
                     if (pingInterval) clearInterval(pingInterval);
-                    console.log(`WebSocket Closed: ${event.code} - ${event.reason}`);
+                    console.log(`WebSocket Closed: ${event.code} - ${event.reason || 'No reason provided'}`);
                     setWs(null);
+                    
+                    // Log additional connection details
+                    console.log('Connection details:', {
+                        readyState: websocket.readyState,
+                        bufferedAmount: websocket.bufferedAmount,
+                        protocol: websocket.protocol,
+                        url: websocket.url
+                    });
 
                     // Don't reconnect if this was an intentional close
                     if (websocket.intentionalClose) {

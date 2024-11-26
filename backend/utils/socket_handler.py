@@ -16,15 +16,18 @@ class SocketHandler:
             app,
             cors_allowed_origins="*",
             max_http_buffer_size=100 * 1024 * 1024,  # 100MB
-            async_mode='gevent',  # Explicitly use gevent
+            async_mode='gevent',
             logger=True,
             engineio_logger=True,
-            ping_timeout=60,
-            ping_interval=25,
+            ping_timeout=120,
+            ping_interval=30,
             reconnection=True,
-            reconnection_attempts=5,
+            reconnection_attempts=10,
             reconnection_delay=1000,
-            reconnection_delay_max=5000
+            reconnection_delay_max=5000,
+            transports=['websocket', 'polling'],  # Allow fallback to polling
+            always_connect=True,
+            manage_session=True
         )
         self.uploads_path = Path("tmp_content/uploads")
         self.logger = logging.getLogger(__name__)
