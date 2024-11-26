@@ -9,7 +9,7 @@ import VideoUpload from './components/VideoUpload';
 import InputSelector from './components/InputSelector';
 import FileList from './components/FileList';
 import AnalysisControls from './components/AnalysisControls';
-import ChatDisplay from './components/ChatDisplay';
+import Chat from './components/Chat';
 
 function App() {
     const [inputType, setInputType] = useState('camera');
@@ -917,7 +917,6 @@ function App() {
                             />
                         </Box>
                         <Box sx={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <ChatDisplay messages={messages} />
                             <Box sx={{ 
                                 flex: 1,
                                 minHeight: '600px',
@@ -927,6 +926,7 @@ function App() {
                             }}>
                                 <RerunViewer />
                             </Box>
+                            <Chat />
                         </Box>
                     </Box>
                 </Container>
