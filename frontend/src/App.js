@@ -265,9 +265,6 @@ function App() {
                     reconnectTimeout = setTimeout(connectWebSocket, delay);
                 }
             }
-        };
-
-        connectWebSocket();
 
         return () => {
             if (ws) {
