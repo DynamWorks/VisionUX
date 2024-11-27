@@ -6,123 +6,134 @@ import useStore from '../store';
 const StreamRenderer = ({ source, isStreaming }) => {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
-    const videoRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const { setIsStreaming } = useStore();
+    const { setIsStreaming, setStreamMetrics } = useStore();
+    const lastFrameTimeRef = useRef(Date.now());
+    const fpsCounterRef = useRef({ frames: 0, lastUpdate: Date.now() });
 
-    const handleFrame = useCallback(async (data) => {
-        if (!canvasRef.current) return;
-        
+    const updateMetrics = useCallback(() => {
+        const now = Date.now();
+        const elapsed = now - fpsCounterRef.current.lastUpdate;
+
+        if (elapsed >= 1000) {
+            const fps = Math.round((fpsCounterRef.current.frames * 1000) / elapsed);
+            setStreamMetrics(prev => ({
+                ...prev,
+                fps,
+                timestamp: now
+            }));
+
+            fpsCounterRef.current = { frames: 0, lastUpdate: now };
+        }
+
+        fpsCounterRef.current.frames++;
+    }, [setStreamMetrics]);
+
+    const drawFrame = useCallback(async (frameData) => {
+        if (!canvasRef.current || !containerRef.current) return;
+
         try {
-            const ctx = canvasRef.current.getContext('2d');
             const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            let imageBitmap;
 
-            let imageData;
-            if (data instanceof Blob) {
-                imageData = await createImageBitmap(data);
-            } else if (data instanceof ArrayBuffer) {
-                const blob = new Blob([data], { type: 'image/jpeg' });
-                imageData = await createImageBitmap(blob);
-            } else if (typeof data === 'string' && data.startsWith('data:')) {
-                const response = await fetch(data);
+            // Convert frame data to ImageBitmap
+            if (frameData instanceof Blob) {
+                imageBitmap = await createImageBitmap(frameData);
+            } else if (frameData instanceof ArrayBuffer || frameData instanceof Uint8Array) {
+                const blob = new Blob([frameData], { type: 'image/jpeg' });
+                imageBitmap = await createImageBitmap(blob);
+            } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
+                const response = await fetch(frameData);
                 const blob = await response.blob();
-                imageData = await createImageBitmap(blob);
-            } else if (data instanceof HTMLVideoElement) {
-                imageData = data;
+                imageBitmap = await createImageBitmap(blob);
             } else {
-                throw new Error('Invalid frame data');
+                throw new Error('Invalid frame data format');
             }
 
             // Calculate dimensions preserving aspect ratio
-            const containerWidth = containerRef.current?.offsetWidth || canvas.width;
-            const containerHeight = containerRef.current?.offsetHeight || canvas.height;
+            const containerWidth = containerRef.current.offsetWidth;
+            const containerHeight = containerRef.current.offsetHeight;
+
             const scale = Math.min(
-                containerWidth / imageData.width,
-                containerHeight / imageData.height
+                containerWidth / imageBitmap.width,
+                containerHeight / imageBitmap.height
             );
 
-            canvas.width = imageData.width * scale;
-            canvas.height = imageData.height * scale;
+            const width = imageBitmap.width * scale;
+            const height = imageBitmap.height * scale;
 
-            // Clear and draw
+            // Update canvas size if needed
+            if (canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            // Clear canvas and draw frame
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(imageData, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(imageBitmap, 0, 0, width, height);
 
-            if (imageData instanceof ImageBitmap) {
-                imageData.close();
-            }
-            } catch (err) {
-                console.error('Error processing frame:', err);
-                setError('Error displaying stream');
-            }
-    }, []);
+            // Cleanup
+            imageBitmap.close();
 
-    // Handle frame rendering
-    useEffect(() => {
-        if (!isStreaming) return;
+            // Update metrics
+            updateMetrics();
+            lastFrameTimeRef.current = Date.now();
 
-        let animationFrameId;
-        const frameHandler = source === 'camera' ? 
-            (data) => handleFrame(data) :
-            () => {
-                if (videoRef.current && !videoRef.current.paused && !videoRef.current.ended) {
-                    handleFrame(videoRef.current);
-                }
-                animationFrameId = requestAnimationFrame(frameHandler);
-            };
-
-        if (source === 'camera') {
-            websocketService.on('frame', frameHandler);
-            setIsStreaming(true);
-        } else if (source === 'video' && videoRef.current) {
-            frameHandler();
+        } catch (err) {
+            console.error('Error drawing frame:', err);
+            setError('Error displaying frame');
         }
+    }, [updateMetrics]);
+
+    // Handle WebSocket frames
+    useEffect(() => {
+        if (!isStreaming || source !== 'camera') return;
+
+        const handleFrame = async (frameData) => {
+            setLoading(false);
+            await drawFrame(frameData);
+        };
+
+        websocketService.on('frame', handleFrame);
+        setLoading(true);
+        setIsStreaming(true);
 
         return () => {
-            if (source === 'camera') {
-                websocketService.off('frame', frameHandler);
-            }
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
+            websocketService.off('frame', handleFrame);
             setIsStreaming(false);
         };
-    }, [isStreaming, source, handleFrame, setIsStreaming]);
+    }, [isStreaming, source, drawFrame, setIsStreaming]);
 
     // Handle container resizing
     useEffect(() => {
-        const updateDimensions = () => {
-            if (containerRef.current && canvasRef.current) {
-                const container = containerRef.current;
+        if (!containerRef.current || !canvasRef.current) return;
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (canvasRef.current) {
                 const canvas = canvasRef.current;
-                
+                const container = containerRef.current;
+
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
                 canvas.width = container.offsetWidth;
                 canvas.height = container.offsetHeight;
-                
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
-        };
+        });
 
-        const resizeObserver = new ResizeObserver(updateDimensions);
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
-        return () => {
-            resizeObserver.disconnect();
-        };
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
     }, []);
 
     return (
-        <Box 
+        <Box
             ref={containerRef}
             sx={{
                 width: '100%',
                 height: '100%',
+                minHeight: '400px',
                 bgcolor: '#1a1a1a',
                 borderRadius: '8px',
                 overflow: 'hidden',
@@ -131,75 +142,56 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 position: 'relative'
             }}
         >
-            <Box sx={{
-                flex: 1,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'relative'
-            }}>
-                {loading && (
-                    <CircularProgress 
-                        sx={{ 
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            zIndex: 2
-                        }}
-                    />
-                )}
-                
-                {error && (
-                    <Typography 
-                        variant="body1" 
-                        sx={{ 
-                            color: 'error.main',
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            zIndex: 2,
-                            textAlign: 'center',
-                            width: '80%'
-                        }}
-                    >
-                        {error}
-                    </Typography>
-                )}
+            <canvas
+                ref={canvasRef}
+                style={{
+                    display: isStreaming ? 'block' : 'none',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                }}
+            />
 
-                {!isStreaming && !error && (
-                    <Typography 
-                        variant="body1" 
-                        sx={{ 
-                            color: 'text.secondary',
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            zIndex: 2,
-                            textAlign: 'center',
-                            width: '80%'
-                        }}
-                    >
-                        Stream not started
-                    </Typography>
-                )}
-
-                <canvas
-                    ref={canvasRef}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        display: isStreaming ? 'block' : 'none',
-                        backgroundColor: '#000',
-                        objectFit: 'contain',
+            {loading && (
+                <CircularProgress
+                    sx={{
                         position: 'absolute',
-                        top: 0,
-                        left: 0
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)'
                     }}
                 />
-            </Box>
+            )}
+
+            {error && (
+                <Typography
+                    color="error"
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center'
+                    }}
+                >
+                    {error}
+                </Typography>
+            )}
+
+            {!isStreaming && !loading && (
+                <Typography
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: 'text.secondary',
+                        textAlign: 'center'
+                    }}
+                >
+                    {source === 'camera' ? 'Camera not started' : 'No video selected'}
+                </Typography>
+            )}
         </Box>
     );
 };
