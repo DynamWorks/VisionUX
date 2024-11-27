@@ -53,8 +53,9 @@ class BackendApp:
             storage_uri="memory://"
         )
         
-        # Initialize limiter with app
+        # Initialize limiter with app and store it
         self.limiter.init_app(self.flask_app)
+        self.flask_app.limiter = self.limiter
         
         # Setup CORS
         CORS(self.flask_app, 

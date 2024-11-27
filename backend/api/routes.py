@@ -161,8 +161,9 @@ def rate_limit(limit_string):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             from flask import current_app
-            limiter = current_app.limiter
-            limit = limiter.shared_limit(limit_string, scope=get_remote_address)
+            if not hasattr(current_app, 'limiter'):
+                return f(*args, **kwargs)  # Fallback if limiter not configured
+            limit = current_app.limiter.limit(limit_string)
             return limit(f)(*args, **kwargs)
         return decorated_function
     return decorator
