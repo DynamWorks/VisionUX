@@ -181,7 +181,8 @@ class WebSocketService {
             const frameObject = {
                 data: frame,
                 timestamp: Date.now(),
-                frameNumber: this.frameCount
+                frameNumber: this.frameCount,
+                objectUrl: frame instanceof Blob ? URL.createObjectURL(frame) : null
             };
 
             this.frameBuffer.push(frameObject);
@@ -343,7 +344,10 @@ class WebSocketService {
         // Clean up frame buffer
         this.frameBuffer.forEach(frame => {
             if (frame.data instanceof Blob) {
-                URL.revokeObjectURL(URL.createObjectURL(frame.data));
+                // Only revoke if we have an existing object URL
+                if (frame.objectUrl) {
+                    URL.revokeObjectURL(frame.objectUrl);
+                }
             }
         });
         this.frameBuffer = [];
