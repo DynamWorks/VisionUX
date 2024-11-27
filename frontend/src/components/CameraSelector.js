@@ -18,22 +18,48 @@ const CameraSelector = () => {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
 
-    // Get available cameras on mount
+    // Get available cameras on mount and after permissions granted
     useEffect(() => {
         const getDevices = async () => {
             try {
+                // Request initial camera permission in Safari
+                if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+                    await navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(stream => {
+                            // Stop the stream immediately after getting permission
+                            stream.getTracks().forEach(track => track.stop());
+                        });
+                }
+                
+                // Now enumerate devices
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                setDevices(videoDevices);
-                if (videoDevices.length > 0 && !selectedDevice) {
-                    setSelectedDevice(videoDevices[0].deviceId);
+                
+                // Filter out devices with empty labels (not permitted)
+                const availableDevices = videoDevices.filter(device => device.label);
+                
+                setDevices(availableDevices);
+                if (availableDevices.length > 0 && !selectedDevice) {
+                    setSelectedDevice(availableDevices[0].deviceId);
                 }
             } catch (error) {
                 console.error('Error getting camera devices:', error);
+                // Show user-friendly error for permission denial
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    alert('Camera permission is required to list available devices. Please allow camera access and try again.');
+                }
             }
         };
+        
         getDevices();
-    }, []);
+
+        // Add device change listener
+        navigator.mediaDevices.addEventListener('devicechange', getDevices);
+        
+        return () => {
+            navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+        };
+    }, [selectedDevice]);
 
     // Handle WebSocket connection
     useEffect(() => {
