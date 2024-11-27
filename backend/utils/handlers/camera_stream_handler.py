@@ -16,6 +16,7 @@ class CameraStreamHandler(BaseHandler):
         self.progress_handler = progress_handler
         self.stream_manager = StreamManager()
         self.camera_index = camera_index
+        self.available_cameras = self._get_available_cameras()
         self.capture = None
         self.frame_count = 0
         self.start_time = None
@@ -82,6 +83,51 @@ class CameraStreamHandler(BaseHandler):
         """Validate frame data"""
         return data is not None
 
+    def _get_available_cameras(self) -> Dict[int, str]:
+        """Get list of available camera devices"""
+        available_cameras = {}
+        for i in range(10):  # Check first 10 indexes
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                ret, _ = cap.read()
+                if ret:
+                    # Try to get the camera name/description
+                    name = f"Camera {i}"
+                    try:
+                        name = cap.getBackendName()
+                    except:
+                        pass
+                    available_cameras[i] = name
+                cap.release()
+        return available_cameras
+
+    def get_available_cameras(self) -> Dict[int, str]:
+        """Return list of available cameras"""
+        return self.available_cameras
+
+    def set_camera_device(self, device_index: int) -> Dict:
+        """Set the camera device to use"""
+        if device_index not in self.available_cameras:
+            return {
+                'status': 'error',
+                'message': f'Camera device {device_index} not available',
+                'available_devices': self.available_cameras
+            }
+        
+        was_streaming = self.stream_manager.is_streaming
+        if was_streaming:
+            self.stop_stream()
+            
+        self.camera_index = device_index
+        
+        if was_streaming:
+            return self.start_stream()
+        return {
+            'status': 'success',
+            'message': f'Camera device set to {device_index}',
+            'device_name': self.available_cameras[device_index]
+        }
+
     def start_stream(self) -> Dict:
         """Start camera stream"""
         try:
@@ -89,11 +135,17 @@ class CameraStreamHandler(BaseHandler):
                 # Initialize video capture
                 self.capture = cv2.VideoCapture(self.camera_index)
                 if not self.capture.isOpened():
-                    raise RuntimeError("Failed to open camera")
+                    available = self._get_available_cameras()
+                    raise RuntimeError(
+                        f"Failed to open camera {self.camera_index}. "
+                        f"Available cameras: {available}"
+                    )
                 
                 # Set camera properties
-                self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+                self.capture.set(cv2.CAP_PROP_FPS, 30)
+                self.capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
                 
                 self.stream_manager.start_streaming()
                 self.start_time = time.time()
