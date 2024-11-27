@@ -41,19 +41,20 @@ class BackendApp:
         self.flask_app = Flask(__name__, static_folder=frontend_path)
         
         # Initialize rate limiter with proper format
-        default_limits = ["1000 per day"]
-        rate_limits = self.config.get('api', 'rate_limits', default={})
-        if isinstance(rate_limits, dict):
-            if 'default' in rate_limits:
-                default_limits = [rate_limits['default']]
-            # Don't add upload limit to default_limits
-                
-        self.limiter = Limiter(
-            app=self.flask_app,
-            key_func=get_remote_address,
-            default_limits=default_limits,
-            storage_uri="memory://"
-        )
+        with self.flask_app.app_context():
+            default_limits = ["1000 per day"]
+            rate_limits = self.config.get('api', 'rate_limits', default={})
+            if isinstance(rate_limits, dict):
+                if 'default' in rate_limits:
+                    default_limits = [rate_limits['default']]
+                # Don't add upload limit to default_limits
+                    
+            self.limiter = Limiter(
+                app=self.flask_app,
+                key_func=get_remote_address,
+                default_limits=default_limits,
+                storage_uri="memory://"
+            )
         
         # Setup CORS
         CORS(self.flask_app, 
