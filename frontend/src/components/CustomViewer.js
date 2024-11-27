@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import useStore from '../store';
 import { websocketService } from '../services/websocket';
@@ -9,20 +9,23 @@ const CustomViewer = () => {
     const containerRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const { currentVideo, inputMode, isStreaming, streamMetrics } = useStore();
+    const { currentVideo, inputMode, isStreaming } = useStore();
 
     // Dynamic sizing
     useEffect(() => {
         const updateDimensions = () => {
-            if (containerRef.current) {
+            if (containerRef.current && canvasRef.current) {
                 const container = containerRef.current;
                 const width = container.offsetWidth;
                 const height = container.offsetHeight;
 
-                if (canvasRef.current) {
-                    canvasRef.current.width = width;
-                    canvasRef.current.height = height;
-                }
+                canvasRef.current.width = width;
+                canvasRef.current.height = height;
+
+                // Clear canvas with black background
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
             }
         };
 
@@ -48,69 +51,57 @@ const CustomViewer = () => {
     }, [inputMode, currentVideo]);
 
     // Handle camera stream display
-    const handleFrame = useCallback((frameData) => {
-        if (!canvasRef.current) return;
-
-        const ctx = canvasRef.current.getContext('2d');
-        
-        // Handle different types of frame data
-        if (frameData instanceof Blob) {
-            const img = new Image();
-            img.onload = () => {
-                // Clear previous frame
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                
-                // Calculate aspect ratio preserving dimensions
-                const canvas = canvasRef.current;
-                const hRatio = canvas.width / img.width;
-                const vRatio = canvas.height / img.height;
-                const ratio = Math.min(hRatio, vRatio);
-                
-                // Center the image
-                const centerShift_x = (canvas.width - img.width * ratio) / 2;
-                const centerShift_y = (canvas.height - img.height * ratio) / 2;
-                
-                ctx.drawImage(img, 0, 0, img.width, img.height,
-                             centerShift_x, centerShift_y, 
-                             img.width * ratio, img.height * ratio);
-                             
-                URL.revokeObjectURL(img.src);
-            };
-            img.src = URL.createObjectURL(frameData);
-        } else if (frameData instanceof ArrayBuffer) {
-            const blob = new Blob([frameData], { type: 'image/jpeg' });
-            const img = new Image();
-            img.onload = () => {
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
-                URL.revokeObjectURL(img.src);
-            };
-            img.src = URL.createObjectURL(blob);
-        }
-    }, []);
-
     useEffect(() => {
-        if (inputMode === 'camera') {
-            // Clear canvas when streaming stops
-            if (!isStreaming && canvasRef.current) {
-                const ctx = canvasRef.current.getContext('2d');
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
-            
-            // Always set up frame handler when in camera mode
-            websocketService.on('video_frame', handleFrame);
-            
-            return () => {
-                websocketService.off('video_frame', handleFrame);
-                // Clear canvas on cleanup
-                if (canvasRef.current) {
-                    const ctx = canvasRef.current.getContext('2d');
-                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                }
+        if (inputMode === 'camera' && canvasRef.current) {
+            const handleFrame = (frameData) => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                const blob = new Blob([frameData], { type: 'image/jpeg' });
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+
+                img.onload = () => {
+                    // Calculate dimensions to maintain aspect ratio
+                    const imgAspect = img.width / img.height;
+                    const canvasAspect = canvas.width / canvas.height;
+                    let drawWidth = canvas.width;
+                    let drawHeight = canvas.height;
+                    let offsetX = 0;
+                    let offsetY = 0;
+
+                    if (imgAspect > canvasAspect) {
+                        // Image is wider than canvas
+                        drawHeight = canvas.width / imgAspect;
+                        offsetY = (canvas.height - drawHeight) / 2;
+                    } else {
+                        // Image is taller than canvas
+                        drawWidth = canvas.height * imgAspect;
+                        offsetX = (canvas.width - drawWidth) / 2;
+                    }
+
+                    // Clear canvas
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw frame
+                    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+                    URL.revokeObjectURL(url);
+                };
+
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    console.error('Failed to load frame');
+                };
+
+                img.src = url;
             };
+
+            websocketService.on('frame', handleFrame);
+            return () => websocketService.off('frame', handleFrame);
         }
-    }, [inputMode, isStreaming, handleFrame]);
+    }, [inputMode]);
 
     return (
         <Box 
@@ -204,36 +195,16 @@ const CustomViewer = () => {
                 )}
 
                 {/* Camera Stream */}
-                {inputMode === 'camera' && (
-                    <>
-                        <canvas
-                            ref={canvasRef}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'block',
-                                backgroundColor: '#000',
-                                objectFit: 'contain'
-                            }}
-                        />
-                        {isStreaming && streamMetrics && (
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    bottom: 16,
-                                    right: 16,
-                                    bgcolor: 'rgba(0, 0, 0, 0.7)',
-                                    color: 'white',
-                                    p: 1,
-                                    borderRadius: 1,
-                                    fontSize: '0.8rem'
-                                }}
-                            >
-                                {`${streamMetrics.fps} FPS | ${streamMetrics.resolution}`}
-                            </Box>
-                        )}
-                    </>
-                )}
+                <canvas
+                    ref={canvasRef}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        display: inputMode === 'camera' ? 'block' : 'none',
+                        backgroundColor: '#000',
+                        objectFit: 'contain'
+                    }}
+                />
             </Box>
         </Box>
     );
