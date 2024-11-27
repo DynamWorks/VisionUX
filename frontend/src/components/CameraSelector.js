@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Box, FormControl, Select, MenuItem, IconButton, useTheme, useMediaQuery } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
@@ -110,9 +110,11 @@ const CameraSelector = () => {
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            cleanup();
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
         };
-    }, [cleanup]);
+    }, []);
 
     const buttonSize = isMobile ? 36 : 42;
     const iconSize = isMobile ? 20 : 24;
