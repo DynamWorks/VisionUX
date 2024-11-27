@@ -145,6 +145,11 @@ function App() {
                                 flexDirection: 'column'
                             }}>
                                 <CustomViewer />
+                                <AnalysisControls 
+                                    onSceneAnalysis={handleSceneAnalysis}
+                                    onEdgeDetection={handleEdgeDetection}
+                                    disabled={!isStreaming}
+                                />
                             </Box>
                         </Paper>
 
