@@ -108,26 +108,37 @@ def chat_analysis():
 def upload_file():
     """Upload a video file"""
     try:
+        logger.info("Upload request received")
         if 'file' not in request.files:
+            logger.error("No file in request")
             return jsonify({'error': 'No file provided'}), 400
             
         file = request.files['file']
         if not file.filename:
+            logger.error("No filename provided")
             return jsonify({'error': 'No filename provided'}), 400
             
-        # Create uploads directory
-        uploads_path = Path("tmp_content/uploads")
+        # Create uploads directory with absolute path
+        uploads_path = Path(current_app.root_path).parent / "tmp_content" / "uploads"
         uploads_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Upload directory: {uploads_path}")
         
         # Save file
         file_path = uploads_path / file.filename
-        file.save(file_path)
+        logger.info(f"Saving file to: {file_path}")
+        file.save(str(file_path))
         
-        return jsonify({
-            'message': 'File uploaded successfully',
-            'filename': file.filename,
-            'path': str(file_path)
-        })
+        # Verify file was saved
+        if file_path.exists():
+            logger.info(f"File saved successfully: {file_path}")
+            return jsonify({
+                'message': 'File uploaded successfully',
+                'filename': file.filename,
+                'path': str(file_path)
+            })
+        else:
+            logger.error(f"File not saved at {file_path}")
+            return jsonify({'error': 'Failed to save file'}), 500
     except Exception as e:
         logger.error("Upload failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
