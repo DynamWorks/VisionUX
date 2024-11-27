@@ -94,8 +94,20 @@ class WebSocketService {
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
-            const errorMessage = typeof error === 'object' ? error.message : String(error);
-            this.notifyListeners('error', { message: errorMessage });
+            let errorMessage;
+            
+            if (typeof error === 'object') {
+                // Handle various error object formats
+                errorMessage = error.message || error.error || JSON.stringify(error);
+            } else {
+                errorMessage = String(error);
+            }
+            
+            this.notifyListeners('error', { 
+                message: errorMessage,
+                timestamp: Date.now(),
+                type: 'socket_error'
+            });
             
             // Check connection state and attempt reconnect if needed
             if (!this.socket?.connected) {
@@ -146,12 +158,16 @@ class WebSocketService {
             }
 
             let frame;
-            if (frameData instanceof ArrayBuffer) {
+            // Handle array buffer or Uint8Array
+            if (frameData instanceof ArrayBuffer || frameData instanceof Uint8Array) {
                 frame = new Blob([frameData], { type: 'image/jpeg' });
             } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
                 frame = frameData;
             } else if (frameData instanceof Blob) {
                 frame = frameData;
+            } else if (Array.isArray(frameData)) {
+                // Handle array data by converting to Uint8Array
+                frame = new Blob([new Uint8Array(frameData)], { type: 'image/jpeg' });
             } else {
                 console.warn('Invalid frame data format:', typeof frameData);
                 return;
