@@ -61,58 +61,38 @@ const CustomViewer = () => {
 
     // Handle camera stream display
     useEffect(() => {
-        let frameHandler;
-        if (inputMode === 'camera' && canvasRef.current && isStreaming) {
-            frameHandler = (frameData) => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
+        let animationFrameId;
+        
+        if (inputMode === 'camera' && canvasRef.current && isStreaming && window.activeStream) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            
+            // Create video element to receive camera stream
+            const video = document.createElement('video');
+            video.srcObject = window.activeStream;
+            video.play();
 
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    console.error('Failed to get canvas context');
-                    return;
-                }
-
-                // Always treat as binary data
-                const blob = new Blob([frameData], { type: 'image/jpeg' });
-                const url = URL.createObjectURL(blob);
-                const img = new Image();
-
-                img.onload = () => {
-                    try {
-                        // Ensure canvas dimensions match image
-                        canvas.width = img.width || 640;  // Fallback size
-                        canvas.height = img.height || 480;
-
-                        // Clear previous frame
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        
-                        // Draw new frame
-                        ctx.drawImage(img, 0, 0);
-                        
-                        // Clean up
-                        URL.revokeObjectURL(url);
-                    } catch (err) {
-                        console.error('Error drawing frame:', err);
-                    }
-                };
-
-                img.onerror = (err) => {
-                    console.error('Error loading frame:', err);
-                    URL.revokeObjectURL(url);
-                };
-
-                img.src = url;
-
+            // Wait for video to be ready
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
             };
 
-            websocketService.on('frame', frameHandler);
+            // Draw frames from video to canvas
+            const drawFrame = () => {
+                if (ctx && video.readyState === video.HAVE_ENOUGH_DATA) {
+                    ctx.drawImage(video, 0, 0);
+                }
+                animationFrameId = requestAnimationFrame(drawFrame);
+            };
+            
+            drawFrame();
         }
 
         // Cleanup function
         return () => {
-            if (frameHandler) {
-                websocketService.off('frame', frameHandler);
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
             }
         };
     }, [inputMode, isStreaming]);

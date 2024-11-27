@@ -35,21 +35,30 @@ const CameraSelector = () => {
 
     const handleStartStop = useCallback(async () => {
         if (isStreaming) {
-            websocketService.emit('stop_stream');
+            if (window.activeStream) {
+                window.activeStream.getTracks().forEach(track => track.stop());
+                window.activeStream = null;
+            }
             setIsStreaming(false);
         } else {
             try {
                 // Request camera access with specific device
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined
+                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     }
                 });
                 
-                // Keep the stream active for the websocket connection
-                window.activeStream = stream; // Store stream reference globally
+                // Store stream reference globally
+                window.activeStream = stream;
 
-                websocketService.emit('start_stream', { deviceId: selectedDevice });
+                // Get video track settings
+                const videoTrack = stream.getVideoTracks()[0];
+                const settings = videoTrack.getSettings();
+                console.log('Camera settings:', settings);
+
                 setIsStreaming(true);
                 setError(null);
             } catch (error) {
