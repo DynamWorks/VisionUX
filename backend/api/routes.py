@@ -119,7 +119,7 @@ def upload_file():
             return jsonify({'error': 'No filename provided'}), 400
             
         # Create uploads directory with absolute path
-        uploads_path = Path("backend/tmp_content/uploads").resolve()
+        uploads_path = Path("tmp_content/uploads").resolve()
         uploads_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Upload directory: {uploads_path}")
             
@@ -149,7 +149,7 @@ def upload_file():
 def get_files_list():
     """Get list of uploaded video files"""
     try:
-        uploads_path = Path("backend/tmp_content/uploads")
+        uploads_path = Path("tmp_content/uploads")
         if not uploads_path.exists():
             uploads_path.mkdir(parents=True, exist_ok=True)
             return jsonify({"files": []})
