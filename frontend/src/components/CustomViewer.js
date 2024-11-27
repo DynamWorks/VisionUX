@@ -52,74 +52,47 @@ const CustomViewer = () => {
 
     // Handle camera stream display
     useEffect(() => {
-        if (inputMode === 'camera' && canvasRef.current) {
+        if (inputMode === 'camera' && canvasRef.current && isStreaming) {
             const handleFrame = (frameData) => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
-                let url;
                 
-                if (frameData instanceof ArrayBuffer) {
-                    const blob = new Blob([frameData], { type: 'image/jpeg' });
-                    url = URL.createObjectURL(blob);
-                } else if (typeof frameData === 'string' && frameData.startsWith('data:image')) {
-                    url = frameData;
-                } else {
-                    console.error('Invalid frame data format');
-                    return;
-                }
+                // Create video element for frame display
+                const videoElement = document.createElement('video');
+                videoElement.autoplay = true;
+                videoElement.playsInline = true;
 
-                const img = new Image();
+                // Create object URL from frame data
+                const blob = new Blob([frameData], { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                videoElement.src = url;
 
-                img.onload = () => {
-                    try {
-                        // Clear canvas
-                        ctx.fillStyle = '#000';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                videoElement.onloadedmetadata = () => {
+                    // Set canvas size to match video
+                    canvas.width = videoElement.videoWidth;
+                    canvas.height = videoElement.videoHeight;
 
-                        // Calculate dimensions to maintain aspect ratio
-                        const imgAspect = img.width / img.height;
-                        const canvasAspect = canvas.width / canvas.height;
-                        let drawWidth, drawHeight, offsetX, offsetY;
+                    // Draw frame
+                    ctx.drawImage(videoElement, 0, 0);
 
-                        if (imgAspect > canvasAspect) {
-                            // Image is wider than canvas
-                            drawWidth = canvas.width;
-                            drawHeight = canvas.width / imgAspect;
-                            offsetX = 0;
-                            offsetY = (canvas.height - drawHeight) / 2;
-                        } else {
-                            // Image is taller than canvas
-                            drawHeight = canvas.height;
-                            drawWidth = canvas.height * imgAspect;
-                            offsetX = (canvas.width - drawWidth) / 2;
-                            offsetY = 0;
-                        }
-
-                        // Draw frame with proper scaling
-                        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-                    } catch (error) {
-                        console.error('Error drawing frame:', error);
-                    } finally {
-                        if (url.startsWith('blob:')) {
-                            URL.revokeObjectURL(url);
-                        }
-                    }
-                };
-
-                img.onerror = () => {
+                    // Clean up
                     URL.revokeObjectURL(url);
-                    console.error('Failed to load frame');
+                    videoElement.remove();
                 };
 
-                img.src = url;
+                videoElement.onerror = () => {
+                    console.error('Error loading video frame');
+                    URL.revokeObjectURL(url);
+                    videoElement.remove();
+                };
             };
 
             websocketService.on('frame', handleFrame);
             return () => websocketService.off('frame', handleFrame);
         }
-    }, [inputMode]);
+    }, [inputMode, isStreaming]);
 
     return (
         <Box 
