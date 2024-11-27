@@ -14,6 +14,10 @@ from utils.config import Config
 import os
 import yaml
 
+# Initialize eventlet and monkey patch at the very beginning
+import eventlet
+eventlet.monkey_patch(socket=True, select=True, thread=True)
+
 class BackendApp:
     def __init__(self):
         # Create logs directory
@@ -22,6 +26,8 @@ class BackendApp:
         # Load config
         config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
         self.config = Config(config_path)
+        if not self.config._config:
+            self.config.reset()
         
         # Set debug mode from config
         self.debug = self.config.get('api', 'debug', default=False)
@@ -29,66 +35,115 @@ class BackendApp:
         # Setup logging
         self.setup_logging()
         self.logger = logging.getLogger(__name__)
+        
         # Get frontend path from config
         frontend_path = self.config.get('frontend', 'build_path', default='../frontend/build')
-        self.app = Flask(__name__, static_folder=frontend_path)
-        self.wsgi_app = self.app.wsgi_app  # Expose WSGI app
+        self.flask_app = Flask(__name__, static_folder=frontend_path)
         
-        # Initialize rate limiter
+        # Initialize rate limiter with proper format
+        default_limits = ["200 per day", "50 per hour"]
+        rate_limits = self.config.get('api', 'rate_limits', default={})
+        if isinstance(rate_limits, dict):
+            if 'default' in rate_limits:
+                default_limits = [rate_limits['default']]
+            if 'uploads' in rate_limits:
+                default_limits.append(rate_limits['uploads'])
+                
         self.limiter = Limiter(
-            app=self.app,
+            app=self.flask_app,
             key_func=get_remote_address,
-            default_limits=["200 per day", "50 per hour"],
+            default_limits=default_limits,
             storage_uri="memory://"
         )
         
-        # Get CORS settings from config
-        cors_origins = self.config.get('api', 'cors_origins', default="*")
-        CORS(self.app, resources={r"/api/*": {"origins": cors_origins}})
-        logging.info(f"Flask app initialized with CORS origins: {cors_origins}")
-        self.server = None
-        self.content_manager = None
-        self.models_loaded = False
-        self.socket_handler = SocketHandler(self.app)
+        # Setup CORS
+        CORS(self.flask_app, 
+             resources={
+                 r"/api/*": {"origins": self.config.get('api', 'cors_origins', default="*")},
+                 r"/socket.io/*": {
+                     "origins": "*",
+                     "allow_headers": ["Content-Type"],
+                     "methods": ["GET", "POST", "OPTIONS"],
+                     "supports_credentials": True
+                 }
+             },
+             supports_credentials=True)
+        
+        # Initialize Socket.IO with proper configuration
+        self.socketio = SocketIO(
+            self.flask_app,
+            cors_allowed_origins="*",
+            async_mode='eventlet',
+            logger=True,
+            engineio_logger=True,
+            ping_timeout=self.config.get('websocket', 'ping_timeout', default=60),
+            ping_interval=self.config.get('websocket', 'ping_interval', default=25),
+            max_http_buffer_size=self.config.get('websocket', 'max_buffer_size', default=100 * 1024 * 1024),
+            path='/socket.io/',
+            always_connect=True,
+            transports=['websocket'],
+            manage_session=True
+        )
+        
+        # Initialize core services
+        self.init_services()
         
         # Register blueprints and routes
-        self.app.register_blueprint(api, url_prefix='/api/v1')
+        self.flask_app.register_blueprint(api, url_prefix='/api/v1')
         self.setup_routes()
+        
+        self.server = None
+        logging.info("Backend app initialized")
+    
+    def init_services(self):
+        """Initialize core services"""
+        try:
+            # Initialize content manager with config
+            base_path = self.config.get('content_storage', 'base_path', default='tmp_content')
+            self.content_manager = ContentManager(base_path=base_path)
+            
+            # Initialize socket handler
+            with self.flask_app.app_context():
+                self.socket_handler = SocketHandler(self.flask_app)
+            
+            # Create required directories
+            Path(base_path).mkdir(parents=True, exist_ok=True)
+            Path(base_path, "uploads").mkdir(parents=True, exist_ok=True)
+            
+            self.logger.info("Core services initialized")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize services: {e}")
+            raise
     
     def setup_logging(self):
         """Initialize logging configuration"""
-        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-            
-        log_config = config.get('logging', {})
+        log_config = self.config.get('logging', default={
+            'level': 'INFO',
+            'file': 'video_analytics.log',
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        })
+        
         log_file = log_config.get('file', 'video_analytics.log')
         log_level = getattr(logging, log_config.get('level', 'INFO'))
         log_format = log_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
-        # Create logs directory if it doesn't exist
         log_dir = Path('logs')
         log_dir.mkdir(exist_ok=True)
         log_path = log_dir / log_file
         
-        # Configure root logger
         root_logger = logging.getLogger()
         root_logger.setLevel(log_level)
         
-        # Create formatters and handlers
         formatter = logging.Formatter(log_format)
         
-        # File handler
         file_handler = logging.FileHandler(log_path)
         file_handler.setFormatter(formatter)
         file_handler.setLevel(log_level)
         
-        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         console_handler.setLevel(log_level)
         
-        # Add handlers to root logger
         root_logger.addHandler(file_handler)
         root_logger.addHandler(console_handler)
         
@@ -96,127 +151,28 @@ class BackendApp:
         logging.info(f"Log file created at: {log_path}")
         
     def setup_routes(self):
-        @self.app.route('/', defaults={'path': ''})
-        @self.app.route('/<path:path>')
+        """Setup basic application routes"""
+        @self.flask_app.route('/', defaults={'path': ''})
+        @self.flask_app.route('/<path:path>')
         def serve(path):
-            if path and os.path.exists(self.app.static_folder + '/' + path):
-                return send_from_directory(self.app.static_folder, path)
-            return send_from_directory(self.app.static_folder, 'index.html')
+            if path and os.path.exists(self.flask_app.static_folder + '/' + path):
+                return send_from_directory(self.flask_app.static_folder, path)
+            return send_from_directory(self.flask_app.static_folder, 'index.html')
 
-        @self.app.route('/favicon.ico')
+        @self.flask_app.route('/favicon.ico')
         def favicon():
             return send_from_directory(
-                self.app.static_folder,
+                self.flask_app.static_folder,
                 'favicon.ico',
                 mimetype='image/vnd.microsoft.icon'
             )
 
-    def is_ready(self):
-        """Check if backend is ready"""
-        return True
-
-    def run(self, host='localhost', port=8000, debug=False):
+    def run(self, host='127.0.0.1', port=8000, debug=False):
         """Run the Flask application with Socket.IO"""
         try:
-
-            # # Start Rerun server in a separate thread
-            # rerun_thread = threading.Thread(
-            #     target=self.rerun_manager.start_web_server_sync,
-            #     daemon=True
-            # )
-            # rerun_thread.start()
-            # self.logger.info("Started Rerun web server thread")
-
-            # # Start Rerun server in a separate thread
-            # rerun_thread = threading.Thread(
-            #     target=self.rerun_manager.start_web_server_sync,
-            #     daemon=True
-            # )
-            # rerun_thread.start()
-            # self.logger.info("Started Rerun web server thread")
-
-            # # Wait for Rerun server to be ready
-            # max_retries = 5
-            # retry_delay = 2
-            # for attempt in range(max_retries):
-            #     try:
-            #         import requests
-            #         response = requests.get(f"http://{self.rerun_manager._web_host}:{self.rerun_manager._web_port}/health")
-            #         if response.status_code == 200:
-            #             self.logger.info(f"Rerun server verified running on port {self.rerun_manager._web_port}")
-            #             break
-            #     except Exception as e:
-            #         if attempt == max_retries - 1:
-            #             self.logger.error(f"Failed to verify Rerun server: {e}")
-            #             raise
-            #         self.logger.warning(f"Waiting for Rerun server (attempt {attempt + 1}/{max_retries})")
-            #         time.sleep(retry_delay)
-            
-            # Get host/port from config with fallbacks
-            host = self.config.get('api', 'host', default='0.0.0.0')
             port = self.config.get('api', 'port', default=port)
             debug = self.config.get('api', 'debug', default=debug)
-            
-            # Configure CORS for both REST and WebSocket
-            CORS(self.app, resources={
-                r"/api/*": {
-                    "origins": "*",
-                    "allow_headers": ["Content-Type"],
-                    "methods": ["GET", "POST", "OPTIONS"]
-                },
-                r"/socket.io/*": {
-                    "origins": "*",
-                    "allow_headers": ["Content-Type"],
-                    "methods": ["GET", "POST", "OPTIONS"]
-                }
-            })
 
-            try:
-                # Initialize eventlet
-                import eventlet
-                eventlet.monkey_patch()
-            
-                # Run Flask-SocketIO app with proper configuration
-                self.socket_handler.socketio.init_app(
-                    self.app,
-                    cors_allowed_origins="*",
-                    ping_timeout=60,
-                    ping_interval=25,
-                    async_mode='eventlet',  # Use eventlet for better WebSocket support
-                    engineio_logger=True,
-                    logger=True,
-                    reconnection=True,
-                    reconnection_attempts=10,
-                    reconnection_delay=1000,
-                    reconnection_delay_max=5000,
-                    http_compression=True,
-                    transports=['websocket'],  # WebSocket only, no polling
-                    upgrade_timeout=20000,
-                    max_http_buffer_size=100 * 1024 * 1024,
-                    manage_session=False,  # Disable session management
-                    allow_upgrades=True
-                )
-            
-                self.logger.info("WebSocket server initialized successfully")
-            except Exception as e:
-                self.logger.error(f"Failed to initialize WebSocket server: {e}")
-                raise RuntimeError(f"WebSocket initialization failed: {e}")
-            # Resolve hostname before starting server
-            import socket
-            import asyncio
-
-            # Simplified host resolution with fallbacks
-            try:
-                import socket
-                resolved_ip = socket.gethostbyname(host)
-                self.logger.info(f"Resolved host {host} to {resolved_ip}")
-            except socket.gaierror as e:
-                self.logger.warning(f"Could not resolve {host}: {e}")
-                if host not in ('localhost', '127.0.0.1', '0.0.0.0'):
-                    self.logger.info("Falling back to localhost")
-                    host = 'localhost'
-
-            # Get SSL configuration
             ssl_enabled = self.config.get('websocket', 'ssl_enabled', default=False)
             ssl_args = {}
             
@@ -224,92 +180,37 @@ class BackendApp:
                 keyfile = self.config.get('websocket', 'keyfile')
                 certfile = self.config.get('websocket', 'certfile')
                 
-                if not keyfile or not certfile:
-                    self.logger.warning("SSL enabled but key/cert files not configured. Falling back to non-SSL")
-                else:
+                if keyfile and certfile:
                     ssl_args = {
                         'keyfile': keyfile,
                         'certfile': certfile,
                         'ssl_protocol': 'TLSv1_2'
                     }
                     self.logger.info("Enabling SSL for WebSocket server")
-
-            # Initialize server with enhanced configuration and error handling
-            try:
-                self.socket_handler.socketio.run(
-                    self.wsgi_app,  # Use wsgi_app instead of app
-                    host=host,
-                    port=port,
-                    debug=debug,
-                    allow_unsafe_werkzeug=True,
-                    use_reloader=False,
-                    log_output=True,
-                    cors_allowed_origins="*",
-                    ping_timeout=60,
-                    ping_interval=25,
-                    async_mode='eventlet',
-                    engineio_logger=True,
-                    logger=True,
-                    **ssl_args
-                )
-            except Exception as e:
-                self.logger.error(f"Failed to start server on {host}:{port}")
-                if host not in ('localhost', '127.0.0.1', '0.0.0.0'):
-                    self.logger.info("Retrying with localhost...")
-                    host = 'localhost'
-                    self.socket_handler.socketio.run(
-                        self.wsgi_app,
-                        host=host,
-                        port=port,
-                        debug=debug,
-                        allow_unsafe_werkzeug=True,
-                        use_reloader=False,
-                        log_output=True,
-                        cors_allowed_origins="*",
-                        ping_timeout=60,
-                        ping_interval=25,
-                        async_mode='eventlet',
-                        engineio_logger=True,
-                        logger=True,
-                        **ssl_args
-                    )
                 else:
-                    raise
+                    self.logger.warning("SSL enabled but key/cert files not configured")
+
+            self.socketio.run(
+                self.flask_app,
+                host=host,
+                port=port,
+                debug=debug,
+                use_reloader=False,
+                log_output=True,
+                **ssl_args
+            )
+
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
             raise
 
-    def start(self, default_port=8000, config=None):
+    def start(self, default_port=8000):
         """Start the backend server in a separate thread"""
         def run_server():
             try:
-                # Initialize content manager
-                if config and 'backend' in config:
-                    content_config = config['backend'].get('content_storage', {})
-                    self.content_manager = ContentManager(
-                        base_path=content_config.get('base_path', 'tmp_content')
-                    )
-                    logging.info("Content manager initialized")
-                    
-                # Ensure model directories exist
-                Path("backend/models/yolo").mkdir(parents=True, exist_ok=True)
-                Path("backend/models/clip").mkdir(parents=True, exist_ok=True)
-                Path("backend/models/traffic_signs").mkdir(parents=True, exist_ok=True)
-                
-                # Get server config with default port from parameter
-                host = self.config.get('api', 'host', default='0.0.0.0')
-                configured_port = self.config.get('api', 'port')
-                port = configured_port if configured_port is not None else default_port
+                port = self.config.get('api', 'port', default=default_port)
                 debug = self.config.get('api', 'debug', default=False)
-                
-                # Start the Flask-SocketIO server
-                self.socket_handler.socketio.run(
-                    self.app,
-                    host=host,
-                    port=port, 
-                    debug=debug,
-                    allow_unsafe_werkzeug=True  # Required for production
-                )
+                self.run(host='127.0.0.1', port=port, debug=debug)
             except Exception as e:
                 raise RuntimeError(f"Failed to start backend server: {e}")
         
@@ -317,12 +218,9 @@ class BackendApp:
             self.server = threading.Thread(target=run_server, daemon=True)
             self.server.start()
 
-app = BackendApp()
+    def is_ready(self):
+        """Check if backend is ready"""
+        return True
 
-def is_ready():
-    """Check if backend is ready"""
-    return app.is_ready()
-
-def start(port=8000):
-    """Start the backend server"""
-    app.start(port=port)
+# Create a single instance of the application
+backend_app = BackendApp()

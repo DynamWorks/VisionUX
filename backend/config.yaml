@@ -1,112 +1,68 @@
-# Server Configuration
 api:
-  host: ${VIDEO_ANALYTICS_API_HOST:-0.0.0.0}  # Bind address (0.0.0.0 for all interfaces)
-  port: ${VIDEO_ANALYTICS_API_PORT:-8000}      # API server port
-  debug: ${VIDEO_ANALYTICS_API_DEBUG:-false}    # Enable debug mode
-  cors_origins: ${VIDEO_ANALYTICS_CORS_ORIGINS:-"*"}  # CORS allowed origins
-  viewer: ${VIDEO_ANALYTICS_VIEWER:-custom}      # Viewer type: 'custom'
+  debug: true
+  port: 8000
+  cors_origins: "*"
   rate_limits:
-    default: "100 per minute"
-    uploads: "10 per minute"
-    analysis: "20 per minute"
-  security:
-    max_upload_size: 500000000  # 500MB in bytes
-    allowed_extensions: [".mp4", ".avi", ".mov"]
-    scan_uploads: true
+    default: "200 per day"
+    uploads: "50 per hour"
 
 websocket:
-  host: ${VIDEO_ANALYTICS_WS_HOST:-localhost}    # WebSocket bind address
-  port: ${VIDEO_ANALYTICS_WS_PORT:-8001}        # WebSocket server port
-  debug: ${VIDEO_ANALYTICS_WS_DEBUG:-true}      # Enable WebSocket debug mode
-  max_buffer_size: 104857600  # 100MB in bytes
-  ssl_enabled: ${VIDEO_ANALYTICS_WS_SSL:-false}  # Enable SSL
-  keyfile: ${VIDEO_ANALYTICS_WS_KEY:-""}        # Path to SSL key file
-  certfile: ${VIDEO_ANALYTICS_WS_CERT:-""}      # Path to SSL certificate file
-  ping_interval: 25           # Ping interval in seconds
-  ping_timeout: 60           # Ping timeout in seconds
-  max_connections: 100       # Maximum concurrent connections
+  port: 8000
+  ssl_enabled: false
+  ping_timeout: 60
+  ping_interval: 25
+  max_buffer_size: 104857600  # 100MB
   reconnection:
     attempts: 10
     delay: 1000
     max_delay: 5000
 
-frontend:   
-  host: localhost
-  port: 8501
-  title: "Video Analytics Dashboard"
-  
-backend:
-  host: localhost
-  port: 8000
-  workers: 4
+logging:
+  level: "INFO"
+  file: "video_analytics.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-# Processing Configuration
-processing:
-  sample_rate: 30
-  max_workers: 4
-  confidence_threshold: 0.5
-  batch_size: 8
+frontend:
+  build_path: "../frontend/build"
 
-# Model Configuration  
-models:
-  clip:
-    name: "openai/clip-vit-base-patch32"
-    local_path: "backend/models/clip"
-    batch_size: 32
-    device: "cuda"
-    precision: "fp16"
-  yolo:
-    name: "yolov8x.pt"
-    local_path: "backend/models/yolo"
-    confidence: 0.25
-    iou: 0.45
-    device: "cuda"
-  traffic_signs:
-    name: "yolov8n.pt"
-    local_path: "backend/models/traffic_signs"
-    confidence: 0.3
-    iou: 0.45
-    device: "cuda"
+content_storage:
+  base_path: "tmp_content"
+  max_file_size: 104857600  # 100MB
+  allowed_extensions:
+    - ".mp4"
+    - ".avi"
+    - ".mov"
+    - ".webm"
+  cleanup_interval: 86400  # 24 hours
+  max_age: 604800  # 7 days
 
-# Service Configuration
-services:
-  openai:
-    model: gpt-4o-mini
-    max_tokens: 500
-    temperature: 0.7
-  
-  scene_analysis:
-    model: "gpt-4o-mini"
-    max_tokens: 500
-    temperature: 0.7
-    
-  detection:
-    model: yolov8n.pt
-    confidence: 0.25
-    sample_rate: 30
-    
-  rag:
-    embeddings_model: "sentence-transformers/all-mpnet-base-v2"
-    chunk_size: 1000
-    chunk_overlap: 200
+video:
+  max_frame_rate: 30
+  default_resolution:
+    width: 1280
+    height: 720
+  compression:
+    quality: 85
+    format: "jpeg"
 
-# Storage Configuration
+analysis:
+  edge_detection:
+    enabled: true
+    low_threshold: 100
+    high_threshold: 200
+  motion_detection:
+    enabled: true
+    sensitivity: 20
+    min_area: 500
+  object_detection:
+    enabled: true
+    confidence_threshold: 0.5
+    nms_threshold: 0.4
+
 storage:
   base_path: "tmp_content"
-  max_age_hours: 24
-  cleanup_interval: 3600  # Cleanup check interval in seconds
   subdirs:
-    - uploads
-    - analysis 
-    - chat_history
-    - visualizations
-  quotas:
-    max_total_size: 10737418240  # 10GB in bytes
-    max_file_count: 1000
-    per_user_limit: 1073741824  # 1GB per user
-
-# Logging Configuration
-logging:
-  level: DEBUG
-  file: video_analytics.log
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    - "uploads"
+    - "analysis"
+    - "chat_history"
+    - "visualizations"
