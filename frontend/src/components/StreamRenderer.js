@@ -8,114 +8,128 @@ const StreamRenderer = ({ source, isStreaming }) => {
     const containerRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const { setIsStreaming, setStreamMetrics } = useStore();
-    const lastFrameTimeRef = useRef(Date.now());
+    const { setStreamMetrics } = useStore();
+    const isFirstRender = useRef(true);
+
+
+    // Add FPS counter ref near the top
     const fpsCounterRef = useRef({ frames: 0, lastUpdate: Date.now() });
 
-    const updateMetrics = useCallback(() => {
-        const now = Date.now();
-        const elapsed = now - fpsCounterRef.current.lastUpdate;
-
-        if (elapsed >= 1000) {
-            const fps = Math.round((fpsCounterRef.current.frames * 1000) / elapsed);
-            setStreamMetrics(prev => ({
-                ...prev,
-                fps,
-                timestamp: now
-            }));
-
-            fpsCounterRef.current = { frames: 0, lastUpdate: now };
-        }
-
-        fpsCounterRef.current.frames++;
-    }, [setStreamMetrics]);
-
+    // Update the drawFrame function to include FPS counting and canvas sizing
     const drawFrame = useCallback(async (frameData) => {
         if (!canvasRef.current || !containerRef.current) return;
 
         try {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
-            let imageBitmap;
 
-            // Convert frame data to ImageBitmap
+            // Convert frame data to blob
             let blob;
-            if (frameData instanceof Blob) {
-                blob = frameData;
-            } else if (frameData instanceof ArrayBuffer || frameData instanceof Uint8Array) {
+            if (frameData instanceof ArrayBuffer) {
                 blob = new Blob([frameData], { type: 'image/jpeg' });
-            } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
-                const response = await fetch(frameData);
-                blob = await response.blob();
-            } else if (Array.isArray(frameData)) {
-                // Handle array data (e.g. from tuple)
-                const uint8Array = new Uint8Array(frameData);
-                blob = new Blob([uint8Array], { type: 'image/jpeg' });
+            } else if (frameData instanceof Blob) {
+                blob = frameData;
             } else {
-                throw new Error('Invalid frame data format');
+                throw new Error('Invalid frame data type');
             }
 
-            try {
-                imageBitmap = await createImageBitmap(blob);
-            } catch (err) {
-                console.error('Error creating ImageBitmap:', err);
-                throw new Error('Failed to create image from frame data');
-            }
+            // Create and load image
+            const img = new Image();
+            const url = URL.createObjectURL(blob);
 
-            // Calculate dimensions preserving aspect ratio
-            const containerWidth = containerRef.current.offsetWidth;
-            const containerHeight = containerRef.current.offsetHeight;
+            await new Promise((resolve, reject) => {
+                img.onload = () => {
+                    // Set canvas size to match first frame if needed
+                    if (canvas.width !== img.width || canvas.height !== img.height) {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
 
-            const scale = Math.min(
-                containerWidth / imageBitmap.width,
-                containerHeight / imageBitmap.height
-            );
+                        // Adjust canvas style to maintain aspect ratio
+                        const containerWidth = containerRef.current.offsetWidth;
+                        const containerHeight = containerRef.current.offsetHeight;
+                        const scale = Math.min(
+                            containerWidth / img.width,
+                            containerHeight / img.height
+                        );
 
-            const width = imageBitmap.width * scale;
-            const height = imageBitmap.height * scale;
+                        canvas.style.width = `${img.width * scale}px`;
+                        canvas.style.height = `${img.height * scale}px`;
+                    }
 
-            // Update canvas size if needed
-            if (canvas.width !== width || canvas.height !== height) {
-                canvas.width = width;
-                canvas.height = height;
-            }
+                    // Draw frame
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
 
-            // Clear canvas and draw frame
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(imageBitmap, 0, 0, width, height);
+                    URL.revokeObjectURL(url);
+                    resolve();
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to load image'));
+                };
+                img.src = url;
+            });
 
-            // Cleanup
-            imageBitmap.close();
-
-            // Update metrics
-            updateMetrics();
-            lastFrameTimeRef.current = Date.now();
+            setLoading(false);
+            setError(null);
 
         } catch (err) {
             console.error('Error drawing frame:', err);
             setError('Error displaying frame');
         }
-    }, [updateMetrics]);
+    }, []);
 
-    // Handle WebSocket frames
+
+    // Setup WebSocket event listeners
     useEffect(() => {
-        if (!isStreaming || source !== 'camera') return;
+        // Skip first render cleanup
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        if (!isStreaming || source !== 'camera') {
+            console.log('Stream not active or source not camera');
+            return;
+        }
+
+        console.log('Setting up WebSocket listeners for', source);
 
         const handleFrame = async (frameData) => {
-            setLoading(false);
+            console.log('Received frame data');
             await drawFrame(frameData);
         };
 
-        websocketService.on('frame', handleFrame);
-        setLoading(true);
-        setIsStreaming(true);
-
-        return () => {
-            websocketService.off('frame', handleFrame);
-            setIsStreaming(false);
+        const handleStreamStarted = () => {
+            console.log('Stream started event received');
+            setLoading(false);
         };
-    }, [isStreaming, source, drawFrame, setIsStreaming]);
+
+        const handleStreamError = (error) => {
+            console.error('Stream error:', error);
+            setError(error.message || 'Stream error occurred');
+            setLoading(false);
+        };
+
+        // Add event listeners
+        websocketService.on('frame', handleFrame);
+        websocketService.on('stream_started', handleStreamStarted);
+        websocketService.on('error', handleStreamError);
+
+        setLoading(true);
+        console.log('Stream listeners setup complete');
+
+        // Cleanup function
+        return () => {
+            // Only cleanup if we're actually stopping the stream
+            if (!isStreaming) {
+                console.log('Cleaning up WebSocket listeners');
+                websocketService.off('frame', handleFrame);
+                websocketService.off('stream_started', handleStreamStarted);
+                websocketService.off('error', handleStreamError);
+            }
+        };
+    }, [isStreaming, source, drawFrame]);
 
     // Handle container resizing
     useEffect(() => {
@@ -125,11 +139,8 @@ const StreamRenderer = ({ source, isStreaming }) => {
             if (canvasRef.current) {
                 const canvas = canvasRef.current;
                 const container = containerRef.current;
-
                 canvas.style.width = '100%';
                 canvas.style.height = '100%';
-                canvas.width = container.offsetWidth;
-                canvas.height = container.offsetHeight;
             }
         });
 
@@ -149,28 +160,33 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                position: 'relative'
+                position: 'relative',
+                justifyContent: 'center', // Center vertically
+                alignItems: 'center'      // Center horizontally
             }}
         >
             <canvas
                 ref={canvasRef}
                 style={{
                     display: isStreaming ? 'block' : 'none',
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain'
+                    maxWidth: '100%',     // Constrain to container
+                    maxHeight: '100%',    // Constrain to container
+                    objectFit: 'contain', // Maintain aspect ratio
+                    backgroundColor: '#000000' // Make it visible even when empty
                 }}
             />
 
             {loading && (
-                <CircularProgress
+                <Box
                     sx={{
                         position: 'absolute',
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)'
                     }}
-                />
+                >
+                    <CircularProgress />
+                </Box>
             )}
 
             {error && (
