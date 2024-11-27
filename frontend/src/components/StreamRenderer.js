@@ -1,105 +1,97 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { websocketService } from '../services/websocket';
+import useStore from '../store';
 
 const StreamRenderer = ({ source, isStreaming }) => {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
+    const videoRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const { setIsStreaming } = useStore();
 
-    // Handle frame rendering
-    useEffect(() => {
-        if (!isStreaming) return;
+    const handleFrame = useCallback(async (data) => {
+        if (!canvasRef.current) return;
+        
+        try {
+            const ctx = canvasRef.current.getContext('2d');
+            const canvas = canvasRef.current;
 
-        const handleFrame = async (data) => {
-            try {
-                let imageUrl;
-                if (data instanceof Blob) {
-                    imageUrl = URL.createObjectURL(data);
-                } else if (data instanceof ArrayBuffer) {
-                    const blob = new Blob([data], { type: 'image/jpeg' });
-                    imageUrl = URL.createObjectURL(blob);
-                } else if (typeof data === 'string' && data.startsWith('data:')) {
-                    imageUrl = data;
-                } else if (data instanceof HTMLVideoElement) {
-                    // Handle video element directly
-                    if (canvasRef.current) {
-                        const ctx = canvasRef.current.getContext('2d');
-                        const canvas = canvasRef.current;
-                        
-                        // Set canvas size to match video
-                        canvas.width = data.videoWidth;
-                        canvas.height = data.videoHeight;
-                        
-                        // Draw video frame
-                        ctx.drawImage(data, 0, 0, canvas.width, canvas.height);
-                        return;
-                    }
-                }
+            let imageData;
+            if (data instanceof Blob) {
+                imageData = await createImageBitmap(data);
+            } else if (data instanceof ArrayBuffer) {
+                const blob = new Blob([data], { type: 'image/jpeg' });
+                imageData = await createImageBitmap(blob);
+            } else if (typeof data === 'string' && data.startsWith('data:')) {
+                const response = await fetch(data);
+                const blob = await response.blob();
+                imageData = await createImageBitmap(blob);
+            } else if (data instanceof HTMLVideoElement) {
+                imageData = data;
+            } else {
+                throw new Error('Invalid frame data');
+            }
 
-                if (!imageUrl) {
-                    throw new Error('Invalid frame data');
-                }
+            // Calculate dimensions preserving aspect ratio
+            const containerWidth = containerRef.current?.offsetWidth || canvas.width;
+            const containerHeight = containerRef.current?.offsetHeight || canvas.height;
+            const scale = Math.min(
+                containerWidth / imageData.width,
+                containerHeight / imageData.height
+            );
 
-                // Load and draw the image
-                const img = new Image();
-                img.onload = () => {
-                    if (canvasRef.current) {
-                        const ctx = canvasRef.current.getContext('2d');
-                        const canvas = canvasRef.current;
-                        
-                        // Calculate aspect ratio preserving dimensions
-                        const containerWidth = containerRef.current.offsetWidth;
-                        const containerHeight = containerRef.current.offsetHeight;
-                        const scale = Math.min(
-                            containerWidth / img.width,
-                            containerHeight / img.height
-                        );
-                        
-                        canvas.width = img.width * scale;
-                        canvas.height = img.height * scale;
-                        
-                        // Clear and draw
-                        ctx.fillStyle = '#000';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    }
-                    URL.revokeObjectURL(imageUrl);
-                };
-                img.src = imageUrl;
+            canvas.width = imageData.width * scale;
+            canvas.height = imageData.height * scale;
+
+            // Clear and draw
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(imageData, 0, 0, canvas.width, canvas.height);
+
+            if (imageData instanceof ImageBitmap) {
+                imageData.close();
+            }
             } catch (err) {
                 console.error('Error processing frame:', err);
                 setError('Error displaying stream');
             }
         };
 
+    }, []);
+
+    // Handle frame rendering
+    useEffect(() => {
+        if (!isStreaming) return;
+
         let animationFrameId;
-        
-        if (source === 'camera') {
-            websocketService.on('frame', handleFrame);
-        } else if (source === 'video') {
-            // For video files, extract frames using requestAnimationFrame
-            const extractFrame = () => {
-                if (!isStreaming) return;
-                const video = document.querySelector('video');
-                if (video && !video.paused && !video.ended) {
-                    handleFrame(video);
+        const frameHandler = source === 'camera' ? 
+            (data) => handleFrame(data) :
+            () => {
+                if (videoRef.current && !videoRef.current.paused && !videoRef.current.ended) {
+                    handleFrame(videoRef.current);
                 }
-                animationFrameId = requestAnimationFrame(extractFrame);
+                animationFrameId = requestAnimationFrame(frameHandler);
             };
-            extractFrame();
+
+        if (source === 'camera') {
+            websocketService.on('frame', frameHandler);
+            setIsStreaming(true);
+        } else if (source === 'video' && videoRef.current) {
+            frameHandler();
         }
 
         return () => {
             if (source === 'camera') {
-                websocketService.off('frame', handleFrame);
+                websocketService.off('frame', frameHandler);
             }
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
+            setIsStreaming(false);
         };
-    }, [isStreaming, source]);
+    }, [isStreaming, source, handleFrame, setIsStreaming]);
 
     // Handle container resizing
     useEffect(() => {
