@@ -57,8 +57,6 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 console.error('Error processing frame:', err);
                 setError('Error displaying stream');
             }
-        };
-
     }, []);
 
     // Handle frame rendering
