@@ -11,11 +11,12 @@ from ..video_streaming.stream_publisher import Frame
 class CameraStreamHandler(BaseHandler):
     """Handler for camera streaming"""
     
-    def __init__(self, progress_handler: Optional[ProgressHandler] = None):
+    def __init__(self, progress_handler: Optional[ProgressHandler] = None, camera_index: int = 0):
         super().__init__("camera_stream", "stream")
         self.progress_handler = progress_handler
         self.stream_manager = StreamManager()
-        self.current_stream = None
+        self.camera_index = camera_index
+        self.capture = None
         self.frame_count = 0
         self.start_time = None
         self.client_keepalive = {}  # Track client keepalive status
@@ -85,10 +86,24 @@ class CameraStreamHandler(BaseHandler):
         """Start camera stream"""
         try:
             if not self.stream_manager.is_streaming:
+                # Initialize video capture
+                self.capture = cv2.VideoCapture(self.camera_index)
+                if not self.capture.isOpened():
+                    raise RuntimeError("Failed to open camera")
+                
+                # Set camera properties
+                self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                
                 self.stream_manager.start_streaming()
                 self.start_time = time.time()
                 self.frame_count = 0
                 self._set_active(True)
+                
+                # Start capture loop in a separate thread
+                import threading
+                self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
+                self.capture_thread.start()
                 return {
                     'status': 'success',
                     'message': 'Stream started',
@@ -182,6 +197,9 @@ class CameraStreamHandler(BaseHandler):
         super().cleanup()
         if self.stream_manager.is_streaming:
             self.stream_manager.stop_streaming()
+        if self.capture is not None:
+            self.capture.release()
+            self.capture = None
 
     def add_client(self, client_id: str) -> None:
         """Add a new streaming client"""
@@ -206,6 +224,29 @@ class CameraStreamHandler(BaseHandler):
         ]
         for client_id in stale_clients:
             self.remove_client(client_id)
+            
+    def _capture_loop(self):
+        """Continuous capture loop for camera frames"""
+        while self.stream_manager.is_streaming and self.capture and self.capture.isOpened():
+            if not self.stream_manager.is_paused:
+                ret, frame = self.capture.read()
+                if ret:
+                    frame_obj = Frame(
+                        data=frame,
+                        timestamp=time.time(),
+                        frame_number=self.frame_count,
+                        metadata={
+                            'source': 'camera',
+                            'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
+                            'channels': frame.shape[2] if len(frame.shape) > 2 else 1
+                        }
+                    )
+                    self.stream_manager.publish_frame(frame_obj)
+                    self.frame_count += 1
+                else:
+                    self.logger.error("Failed to read frame from camera")
+                    break
+            time.sleep(1/30)  # Limit to ~30 FPS
             
     def get_stream_stats(self) -> Dict:
         """Get streaming statistics"""

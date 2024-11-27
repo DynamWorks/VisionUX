@@ -46,6 +46,16 @@ class WebSocketService {
 
     setupEventHandlers() {
         if (!this.socket) return;
+        
+        // Add video stream handler
+        this.socket.on('video_frame', (frameData) => {
+            if (this.listeners.has('video_frame')) {
+                this.listeners.get('video_frame').forEach(callback => {
+                    const blob = new Blob([frameData], { type: 'image/jpeg' });
+                    callback(URL.createObjectURL(blob));
+                });
+            }
+        });
 
         this.socket.on('connect', () => {
             console.log('WebSocket Connected');
