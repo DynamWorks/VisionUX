@@ -1,17 +1,12 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import useStore from '../store';
-import CameraViewer from './CameraViewer';
 
-const CustomViewer = () => {
-    const videoRef = useRef(null);
+const CameraViewer = ({ isStreaming }) => {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const { currentVideo, inputMode, isStreaming } = useStore();
 
-    // Dynamic sizing
     useEffect(() => {
         const updateDimensions = () => {
             if (containerRef.current && canvasRef.current) {
@@ -38,31 +33,6 @@ const CustomViewer = () => {
             resizeObserver.disconnect();
         };
     }, []);
-
-    // Handle video playback
-    useEffect(() => {
-        if (inputMode === 'upload' && currentVideo && videoRef.current) {
-            const videoPath = `${process.env.REACT_APP_API_URL}/api/v1/tmp_content/uploads/${currentVideo.name}`;
-            videoRef.current.src = videoPath;
-            videoRef.current.load();
-            setError(null);
-            setLoading(true);
-
-            // Cleanup function
-            return () => {
-                if (videoRef.current) {
-                    videoRef.current.pause();
-                    videoRef.current.src = '';
-                    videoRef.current.load();
-                }
-            };
-        }
-    }, [inputMode, currentVideo]);
-
-    // Camera view
-    if (inputMode === 'camera') {
-        return <CameraViewer isStreaming={isStreaming} />;
-    }
 
     return (
         <Box 
@@ -115,7 +85,7 @@ const CustomViewer = () => {
                     </Typography>
                 )}
 
-                {!currentVideo && !isStreaming && !error && (
+                {!isStreaming && !error && (
                     <Typography 
                         variant="body1" 
                         sx={{ 
@@ -129,39 +99,16 @@ const CustomViewer = () => {
                             width: '80%'
                         }}
                     >
-                        {inputMode === 'upload' ? 'No video selected' : 'Camera not started'}
+                        Camera not started
                     </Typography>
                 )}
 
-                {/* Video Player */}
-                {inputMode === 'upload' && (
-                    <video
-                        ref={videoRef}
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            display: currentVideo && !loading ? 'block' : 'none',
-                            backgroundColor: '#000',
-                            objectFit: 'contain'
-                        }}
-                        controls
-                        autoPlay
-                        onLoadedData={() => setLoading(false)}
-                        onError={(e) => {
-                            console.error('Video error:', e);
-                            setError('Error loading video');
-                            setLoading(false);
-                        }}
-                    />
-                )}
-
-                {/* Camera Stream */}
                 <canvas
                     ref={canvasRef}
                     style={{
                         width: '100%',
                         height: '100%',
-                        display: inputMode === 'camera' && isStreaming ? 'block' : 'none',
+                        display: isStreaming ? 'block' : 'none',
                         backgroundColor: '#000',
                         objectFit: 'contain',
                         position: 'absolute',
@@ -174,4 +121,4 @@ const CustomViewer = () => {
     );
 };
 
-export default CustomViewer;
+export default CameraViewer;
