@@ -9,6 +9,15 @@ class WebSocketService {
         this._connected = false;
         this.pingInterval = null;
         this.connectionCheckInterval = null;
+        this.lastPongTime = Date.now();
+        this.frameBuffer = [];
+        this.maxBufferSize = 5;
+        this.frameCount = 0;
+        this.fpsCalculator = {
+            frames: 0,
+            lastCheck: Date.now(),
+            currentFps: 0
+        };
     }
 
     connect() {
@@ -18,11 +27,9 @@ class WebSocketService {
             return;
         }
 
-        // Get WebSocket URL from environment with fallback
         const wsUrl = process.env.REACT_APP_WS_URL || 'http://localhost:8000';
         console.log('Connecting to WebSocket:', wsUrl);
-        
-        // Enhanced connection options
+
         this.socket = io(wsUrl, {
             transports: ['websocket'],
             reconnection: true,
@@ -46,55 +53,13 @@ class WebSocketService {
 
     setupEventHandlers() {
         if (!this.socket) return;
-        
-        // Add video stream handler
-        this.socket.on('video_frame', (frameData) => {
-            if (this.listeners.has('video_frame')) {
-                this.listeners.get('video_frame').forEach(callback => {
-                    if (frameData instanceof ArrayBuffer) {
-                        const blob = new Blob([frameData], { type: 'image/jpeg' });
-                        callback(URL.createObjectURL(blob));
-                    } else if (typeof frameData === 'string' && frameData.startsWith('data:image')) {
-                        callback(frameData);
-                    }
-                });
-            }
-        });
-
-        // Handle stream metrics
-        this.socket.on('stream_metrics', (metrics) => {
-            if (this.listeners.has('stream_metrics')) {
-                this.listeners.get('stream_metrics').forEach(callback => callback(metrics));
-            }
-        });
-
-        // Handle camera devices list
-        this.socket.on('camera_devices', (devices) => {
-            if (this.listeners.has('camera_devices')) {
-                this.listeners.get('camera_devices').forEach(callback => callback(devices));
-            }
-        });
-
-        // Handle camera access status
-        this.socket.on('camera_access', (status) => {
-            if (this.listeners.has('camera_access')) {
-                this.listeners.get('camera_access').forEach(callback => callback(status));
-            }
-        });
-
-        // Handle stream source change
-        this.socket.on('stream_source_changed', (source) => {
-            if (this.listeners.has('stream_source_changed')) {
-                this.listeners.get('stream_source_changed').forEach(callback => callback(source));
-            }
-        });
 
         this.socket.on('connect', () => {
             console.log('WebSocket Connected');
             this._connected = true;
             this.reconnectAttempts = 0;
             this.startPingInterval();
-            
+
             // Send initial connection data
             this.socket.emit('client_info', {
                 timestamp: Date.now(),
@@ -103,10 +68,7 @@ class WebSocketService {
                 connectionType: navigator.connection?.type || 'unknown'
             });
 
-            // Notify all listeners
-            if (this.listeners.has('connect')) {
-                this.listeners.get('connect').forEach(callback => callback());
-            }
+            this.notifyListeners('connect');
         });
 
         this.socket.on('connect_error', (error) => {
@@ -114,16 +76,17 @@ class WebSocketService {
             this._connected = false;
             this.clearPingInterval();
             this.handleReconnect();
+            this.notifyListeners('connect_error', error);
         });
 
         this.socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
             this._connected = false;
             this.clearPingInterval();
-            
+            this.notifyListeners('disconnect', reason);
+
             if (reason === 'io server disconnect') {
                 setTimeout(() => {
-                    console.log('Attempting reconnection...');
                     this.socket.connect();
                 }, 1000);
             }
@@ -131,21 +94,112 @@ class WebSocketService {
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
+            this.notifyListeners('error', error);
             if (!this.socket.connected) {
                 this.handleReconnect();
             }
         });
 
-        this.socket.on('pong', () => {
-            this.lastPongTime = Date.now();
+        // Handle incoming frames
+        this.socket.on('frame', (frameData) => {
+            this.handleFrame(frameData);
         });
 
-        // Handle connection established confirmation
-        this.socket.on('connection_established', (data) => {
-            console.log('Connection established:', data);
-            this._connected = true;
-            this.startPingInterval();
+        // Handle stream control events
+        this.socket.on('stream_started', (data) => {
+            console.log('Stream started:', data);
+            this.notifyListeners('stream_started', data);
         });
+
+        this.socket.on('stream_stopped', (data) => {
+            console.log('Stream stopped:', data);
+            this.notifyListeners('stream_stopped', data);
+        });
+
+        this.socket.on('stream_error', (error) => {
+            console.error('Stream error:', error);
+            this.notifyListeners('stream_error', error);
+        });
+
+        // Handle frame metadata
+        this.socket.on('frame_metadata', (metadata) => {
+            this.updateStreamMetrics(metadata);
+            this.notifyListeners('frame_metadata', metadata);
+        });
+
+        // Keep-alive mechanism
+        this.socket.on('pong', () => {
+            this.lastPongTime = Date.now();
+            this.notifyListeners('pong');
+        });
+    }
+
+    handleFrame(frameData) {
+        try {
+            let frame;
+            if (frameData instanceof ArrayBuffer) {
+                frame = new Blob([frameData], { type: 'image/jpeg' });
+            } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
+                frame = frameData;
+            } else {
+                console.warn('Invalid frame data format');
+                return;
+            }
+
+            // Update frame count and FPS
+            this.frameCount++;
+            this.updateFps();
+
+            // Add to buffer with metadata
+            const frameObject = {
+                data: frame,
+                timestamp: Date.now(),
+                frameNumber: this.frameCount
+            };
+
+            this.frameBuffer.push(frameObject);
+
+            // Maintain buffer size
+            while (this.frameBuffer.length > this.maxBufferSize) {
+                const oldFrame = this.frameBuffer.shift();
+                if (oldFrame.data instanceof Blob) {
+                    URL.revokeObjectURL(URL.createObjectURL(oldFrame.data));
+                }
+            }
+
+            // Notify listeners
+            this.notifyListeners('frame', frameObject);
+
+        } catch (error) {
+            console.error('Frame handling error:', error);
+            this.notifyListeners('frame_error', error);
+        }
+    }
+
+    updateFps() {
+        const now = Date.now();
+        const elapsed = now - this.fpsCalculator.lastCheck;
+
+        this.fpsCalculator.frames++;
+
+        if (elapsed >= 1000) {
+            this.fpsCalculator.currentFps = Math.round((this.fpsCalculator.frames * 1000) / elapsed);
+            this.fpsCalculator.frames = 0;
+            this.fpsCalculator.lastCheck = now;
+
+            this.notifyListeners('fps_update', this.fpsCalculator.currentFps);
+        }
+    }
+
+    updateStreamMetrics(metadata) {
+        const metrics = {
+            fps: this.fpsCalculator.currentFps,
+            frameCount: this.frameCount,
+            timestamp: Date.now(),
+            ...metadata
+        };
+
+        this.notifyListeners('stream_metrics', metrics);
     }
 
     startConnectionCheck() {
@@ -154,20 +208,9 @@ class WebSocketService {
             const isReallyConnected = this.socket?.connected && this._connected;
             if (this._connected !== isReallyConnected) {
                 this._connected = isReallyConnected;
-                if (this.listeners.has('connection_change')) {
-                    this.listeners.get('connection_change').forEach(callback => 
-                        callback(isReallyConnected)
-                    );
-                }
+                this.notifyListeners('connection_change', isReallyConnected);
             }
         }, 1000);
-    }
-
-    clearConnectionCheck() {
-        if (this.connectionCheckInterval) {
-            clearInterval(this.connectionCheckInterval);
-            this.connectionCheckInterval = null;
-        }
     }
 
     startPingInterval() {
@@ -177,9 +220,9 @@ class WebSocketService {
         this.pingInterval = setInterval(() => {
             if (this.socket?.connected) {
                 this.socket.emit('ping');
-                
+
                 const timeSinceLastPong = Date.now() - this.lastPongTime;
-                if (timeSinceLastPong > 120000) { // Increase to 2 minutes
+                if (timeSinceLastPong > 120000) { // 2 minutes
                     console.warn('No pong received in 120s, reconnecting...');
                     this._connected = false;
                     this.clearPingInterval();
@@ -187,7 +230,7 @@ class WebSocketService {
                     setTimeout(() => this.socket.connect(), 1000);
                 }
             }
-        }, 15000);
+        }, 15000); // Every 15 seconds
     }
 
     clearPingInterval() {
@@ -197,11 +240,19 @@ class WebSocketService {
         }
     }
 
+    clearConnectionCheck() {
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+            this.connectionCheckInterval = null;
+        }
+    }
+
     handleReconnect() {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
             console.log(`Reconnecting... Attempt ${this.reconnectAttempts} in ${delay}ms`);
+
             setTimeout(() => {
                 if (this.socket) {
                     this.socket.connect();
@@ -209,8 +260,8 @@ class WebSocketService {
             }, delay);
         } else {
             console.error('Max reconnection attempts reached');
-            this.clearPingInterval();
-            this.clearConnectionCheck();
+            this.notifyListeners('max_reconnects_reached');
+            this.cleanup();
         }
     }
 
@@ -219,17 +270,11 @@ class WebSocketService {
             this.listeners.set(event, new Set());
         }
         this.listeners.get(event).add(callback);
-        if (this.socket) {
-            this.socket.on(event, callback);
-        }
     }
 
     off(event, callback) {
         if (this.listeners.has(event)) {
             this.listeners.get(event).delete(callback);
-        }
-        if (this.socket) {
-            this.socket.off(event, callback);
         }
     }
 
@@ -243,14 +288,46 @@ class WebSocketService {
         }
     }
 
+    notifyListeners(event, data) {
+        if (this.listeners.has(event)) {
+            this.listeners.get(event).forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error(`Error in listener for ${event}:`, error);
+                }
+            });
+        }
+    }
+
     disconnect() {
-        this.clearPingInterval();
-        this.clearConnectionCheck();
+        this.cleanup();
         if (this.socket) {
             this._connected = false;
             this.socket.disconnect();
             this.socket = null;
         }
+    }
+
+    cleanup() {
+        this.clearPingInterval();
+        this.clearConnectionCheck();
+
+        // Clean up frame buffer
+        this.frameBuffer.forEach(frame => {
+            if (frame.data instanceof Blob) {
+                URL.revokeObjectURL(URL.createObjectURL(frame.data));
+            }
+        });
+        this.frameBuffer = [];
+
+        // Reset metrics
+        this.frameCount = 0;
+        this.fpsCalculator = {
+            frames: 0,
+            lastCheck: Date.now(),
+            currentFps: 0
+        };
     }
 
     isConnected() {
@@ -262,55 +339,16 @@ class WebSocketService {
             connected: this.isConnected(),
             socket: !!this.socket,
             attempts: this.reconnectAttempts,
-            lastPong: this.lastPongTime
+            lastPong: this.lastPongTime,
+            fps: this.fpsCalculator.currentFps,
+            frameCount: this.frameCount
         };
     }
 
-    async requestCameraAccess(deviceId) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    deviceId: deviceId ? { exact: deviceId } : undefined
-                }
-            });
-            stream.getTracks().forEach(track => track.stop()); // Release camera immediately
-            return true;
-        } catch (error) {
-            console.error('Camera access denied:', error);
-            return false;
-        }
-    }
-
-    async getCameraDevices() {
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            return devices.filter(device => device.kind === 'videoinput');
-        } catch (error) {
-            console.error('Error getting camera devices:', error);
-            return [];
-        }
-    }
-
-    async getCameraDevices() {
-        if (!this.socket?.connected) return [];
-        return new Promise((resolve) => {
-            this.socket.emit('get_camera_devices', {}, (response) => {
-                resolve(response.devices || {});
-            });
-        });
-    }
-
-    selectCameraDevice(deviceId) {
-        if (this.socket?.connected) {
-            this.socket.emit('set_camera_device', { device_index: deviceId });
-        }
-    }
-
-    setStreamSource(source, options = {}) {
-        if (this.socket?.connected) {
-            this.socket.emit('set_stream_source', { source, ...options });
-        }
+    getFrameBuffer() {
+        return [...this.frameBuffer];
     }
 }
 
+// Create singleton instance
 export const websocketService = new WebSocketService();
