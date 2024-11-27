@@ -60,26 +60,43 @@ def health_check():
 
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():
-    """Analyze scene and suggest computer vision applications"""
+    """Analyze scene from current stream"""
     try:
         data = request.get_json()
-        if not data or 'video_path' not in data:
-            return jsonify({'error': 'Missing video_path'}), 400
-
-        video_path = Path(data['video_path'])
-        if not video_path.exists():
-            return jsonify({'error': 'Video file not found'}), 404
-
+        stream_type = data.get('stream_type', 'video')
+        
+        # Get stream manager instance
+        from backend.utils.video_streaming.stream_manager import StreamManager
+        stream_manager = StreamManager()
+        
+        if not stream_manager.is_streaming:
+            return jsonify({'error': 'No active stream'}), 400
+            
+        # Collect 8 frames from stream
+        frames = []
+        frame_numbers = []
+        timestamps = []
+        
+        for frame in stream_manager.get_frames(max_frames=8):
+            frames.append(frame.data)
+            frame_numbers.append(frame.frame_number)
+            timestamps.append(frame.timestamp)
+            
+        if not frames:
+            return jsonify({'error': 'No frames captured'}), 400
+            
+        # Analyze frames
         analysis = scene_service.analyze_scene(
-            str(video_path),
-            context=f"Analyzing video file: {video_path.name}"
+            frames,
+            context=f"Analyzing {stream_type} stream",
+            frame_numbers=frame_numbers,
+            timestamps=timestamps
         )
-
-        content_manager.save_analysis(
-            analysis,
-            f"scene_analysis_{int(time.time())}"
-        )
-
+        
+        # Save analysis results
+        analysis_id = f"scene_analysis_{int(time.time())}"
+        content_manager.save_analysis(analysis, analysis_id)
+        
         return jsonify(analysis)
 
     except Exception as e:

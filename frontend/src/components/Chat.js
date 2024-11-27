@@ -30,13 +30,14 @@ const Chat = () => {
         }
 
         try {
+            setMessage('');  // Clear current message
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    stream_type: 'camera'
+                    stream_type: inputMode === 'camera' ? 'camera' : 'video'
                 })
             });
 
@@ -47,13 +48,34 @@ const Chat = () => {
             const data = await response.json();
             
             if (data.scene_analysis?.description) {
-                handleSceneAnalysis(data.scene_analysis.description);
+                // Add system message with analysis results
+                setMessages(prevMessages => [
+                    ...prevMessages,
+                    {
+                        role: 'system',
+                        content: `Scene Analysis:\n${data.scene_analysis.description}`
+                    }
+                ]);
             } else {
                 console.warn('No scene analysis description in response:', data);
+                setMessages(prevMessages => [
+                    ...prevMessages,
+                    {
+                        role: 'system',
+                        content: 'Scene analysis completed but no description available.'
+                    }
+                ]);
             }
 
         } catch (error) {
             console.error('Error handling scene analysis:', error);
+            setMessages(prevMessages => [
+                ...prevMessages,
+                {
+                    role: 'system',
+                    content: `Error during scene analysis: ${error.message}`
+                }
+            ]);
         }
     };
 
