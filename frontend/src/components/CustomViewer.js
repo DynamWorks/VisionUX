@@ -214,9 +214,12 @@ const CustomViewer = () => {
                     style={{
                         width: '100%',
                         height: '100%',
-                        display: inputMode === 'camera' ? 'block' : 'none',
+                        display: inputMode === 'camera' && isStreaming ? 'block' : 'none',
                         backgroundColor: '#000',
-                        objectFit: 'contain'
+                        objectFit: 'contain',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0
                     }}
                 />
             </Box>
