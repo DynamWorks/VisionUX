@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Box, List, ListItem, ListItemIcon, ListItemText, Typography, IconButton } from '@mui/material';
+import { Box, List, ListItem, ListItemIcon, ListItemText, Typography, IconButton, LinearProgress } from '@mui/material';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useDropzone } from 'react-dropzone';
@@ -9,9 +9,17 @@ import useStore from '../store';
 const FileList = () => {
     const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles } = useStore();
 
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState(null);
+
     const onDrop = useCallback(async (acceptedFiles) => {
         const file = acceptedFiles[0];
         if (!file) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+        setUploadError(null);
 
         try {
             const formData = new FormData();
@@ -19,21 +27,29 @@ const FileList = () => {
 
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/upload`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                onUploadProgress: (progressEvent) => {
+                    const progress = (progressEvent.loaded / progressEvent.total) * 100;
+                    setUploadProgress(Math.round(progress));
+                }
             });
 
             if (!response.ok) {
-                throw new Error(`Upload failed: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
             }
 
             // Refresh file list
             const listResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
             const data = await listResponse.json();
             setUploadedFiles(data.files || []);
+            setUploadProgress(100);
 
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Failed to upload file: ' + error.message);
+            setUploadError(error.message);
+        } finally {
+            setIsUploading(false);
         }
     }, [setUploadedFiles]);
 
@@ -52,28 +68,61 @@ const FileList = () => {
     return (
         <Box sx={{ mt: 2 }}>
             {/* Upload Zone */}
-            <Box
-                {...getRootProps()}
-                sx={{
-                    border: '2px dashed #bd9544',
-                    borderRadius: 1,
-                    p: 2,
-                    mb: 2,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    bgcolor: isDragActive ? 'rgba(189, 149, 68, 0.1)' : 'transparent',
-                    '&:hover': {
-                        bgcolor: 'rgba(189, 149, 68, 0.1)'
-                    }
-                }}
-            >
-                <input {...getInputProps()} />
-                <CloudUploadIcon sx={{ fontSize: 40, color: '#bd9544', mb: 1 }} />
-                <Typography>
-                    {isDragActive
-                        ? "Drop the video here"
-                        : "Drag & drop a video file here, or click to select"}
-                </Typography>
+            <Box sx={{ width: '100%', mb: 2 }}>
+                <Box
+                    {...getRootProps()}
+                    sx={{
+                        border: '2px dashed #bd9544',
+                        borderRadius: 1,
+                        p: 2,
+                        textAlign: 'center',
+                        cursor: isUploading ? 'not-allowed' : 'pointer',
+                        bgcolor: isDragActive ? 'rgba(189, 149, 68, 0.1)' : 'transparent',
+                        opacity: isUploading ? 0.7 : 1,
+                        '&:hover': {
+                            bgcolor: isUploading ? 'transparent' : 'rgba(189, 149, 68, 0.1)'
+                        }
+                    }}
+                >
+                    <input {...getInputProps()} disabled={isUploading} />
+                    <CloudUploadIcon sx={{ fontSize: 40, color: '#bd9544', mb: 1 }} />
+                    <Typography>
+                        {isUploading ? "Uploading..." :
+                         isDragActive ? "Drop the video here" :
+                         "Drag & drop a video file here, or click to select"}
+                    </Typography>
+                </Box>
+                
+                {isUploading && (
+                    <Box sx={{ mt: 2 }}>
+                        <LinearProgress 
+                            variant="determinate" 
+                            value={uploadProgress}
+                            sx={{
+                                height: 8,
+                                borderRadius: 4,
+                                bgcolor: 'rgba(189, 149, 68, 0.2)',
+                                '& .MuiLinearProgress-bar': {
+                                    bgcolor: '#bd9544'
+                                }
+                            }}
+                        />
+                        <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 1 }}>
+                            {uploadProgress}% uploaded
+                        </Typography>
+                    </Box>
+                )}
+
+                {uploadError && (
+                    <Typography 
+                        color="error" 
+                        variant="body2" 
+                        align="center"
+                        sx={{ mt: 1 }}
+                    >
+                        {uploadError}
+                    </Typography>
+                )}
             </Box>
 
             {/* File List */}
