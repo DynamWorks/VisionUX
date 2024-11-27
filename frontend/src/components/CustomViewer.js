@@ -68,35 +68,41 @@ const CustomViewer = () => {
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
-
-                // Handle different frame data types
-                if (frameData instanceof ArrayBuffer) {
-                    // Binary frame data
-                    const blob = new Blob([frameData], { type: 'image/jpeg' });
-                    const url = URL.createObjectURL(blob);
-                    const img = new Image();
-                    img.onload = () => {
-                        // Set canvas size to match image if needed
-                        if (canvas.width !== img.width || canvas.height !== img.height) {
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                        }
-                        ctx.drawImage(img, 0, 0);
-                        URL.revokeObjectURL(url);
-                    };
-                    img.src = url;
-                } else if (typeof frameData === 'string' && frameData.startsWith('data:image')) {
-                    // Data URL frame
-                    const img = new Image();
-                    img.onload = () => {
-                        if (canvas.width !== img.width || canvas.height !== img.height) {
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                        }
-                        ctx.drawImage(img, 0, 0);
-                    };
-                    img.src = frameData;
+                if (!ctx) {
+                    console.error('Failed to get canvas context');
+                    return;
                 }
+
+                // Always treat as binary data
+                const blob = new Blob([frameData], { type: 'image/jpeg' });
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+
+                img.onload = () => {
+                    try {
+                        // Ensure canvas dimensions match image
+                        canvas.width = img.width || 640;  // Fallback size
+                        canvas.height = img.height || 480;
+
+                        // Clear previous frame
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Draw new frame
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Clean up
+                        URL.revokeObjectURL(url);
+                    } catch (err) {
+                        console.error('Error drawing frame:', err);
+                    }
+                };
+
+                img.onerror = (err) => {
+                    console.error('Error loading frame:', err);
+                    URL.revokeObjectURL(url);
+                };
+
+                img.src = url;
 
             };
 
