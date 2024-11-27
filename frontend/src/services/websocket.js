@@ -57,6 +57,27 @@ class WebSocketService {
             }
         });
 
+        // Handle camera devices list
+        this.socket.on('camera_devices', (devices) => {
+            if (this.listeners.has('camera_devices')) {
+                this.listeners.get('camera_devices').forEach(callback => callback(devices));
+            }
+        });
+
+        // Handle camera access status
+        this.socket.on('camera_access', (status) => {
+            if (this.listeners.has('camera_access')) {
+                this.listeners.get('camera_access').forEach(callback => callback(status));
+            }
+        });
+
+        // Handle stream source change
+        this.socket.on('stream_source_changed', (source) => {
+            if (this.listeners.has('stream_source_changed')) {
+                this.listeners.get('stream_source_changed').forEach(callback => callback(source));
+            }
+        });
+
         this.socket.on('connect', () => {
             console.log('WebSocket Connected');
             this._connected = true;
@@ -232,6 +253,38 @@ class WebSocketService {
             attempts: this.reconnectAttempts,
             lastPong: this.lastPongTime
         };
+    }
+
+    async requestCameraAccess() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop()); // Release camera immediately
+            return true;
+        } catch (error) {
+            console.error('Camera access denied:', error);
+            return false;
+        }
+    }
+
+    async getCameraDevices() {
+        if (!this.socket?.connected) return [];
+        return new Promise((resolve) => {
+            this.socket.emit('get_camera_devices', {}, (response) => {
+                resolve(response.devices || {});
+            });
+        });
+    }
+
+    selectCameraDevice(deviceId) {
+        if (this.socket?.connected) {
+            this.socket.emit('set_camera_device', { device_index: deviceId });
+        }
+    }
+
+    setStreamSource(source, options = {}) {
+        if (this.socket?.connected) {
+            this.socket.emit('set_stream_source', { source, ...options });
+        }
     }
 }
 

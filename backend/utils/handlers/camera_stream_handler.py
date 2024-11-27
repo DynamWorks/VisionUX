@@ -19,7 +19,57 @@ class CameraStreamHandler(BaseHandler):
         self.current_stream = None
         self.frame_count = 0
         self.start_time = None
+        self.camera_index = 0
+        self.available_cameras = self._get_available_cameras()
         self.logger.info("Initialized CameraStreamHandler")
+
+    def _get_available_cameras(self) -> Dict[int, str]:
+        """Get list of available camera devices"""
+        available_cameras = {}
+        for i in range(10):  # Check first 10 indexes
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                ret, _ = cap.read()
+                if ret:
+                    name = f"Camera {i}"
+                    try:
+                        name = cap.getBackendName()
+                    except:
+                        pass
+                    available_cameras[i] = name
+                cap.release()
+        return available_cameras
+
+    def get_available_cameras(self) -> Dict:
+        """Return list of available cameras"""
+        return {
+            'status': 'success',
+            'devices': self.available_cameras,
+            'current_device': self.camera_index
+        }
+
+    def set_camera_device(self, device_index: int) -> Dict:
+        """Set the camera device to use"""
+        if device_index not in self.available_cameras:
+            return {
+                'status': 'error',
+                'message': f'Camera device {device_index} not available',
+                'available_devices': self.available_cameras
+            }
+        
+        was_streaming = self.stream_manager.is_streaming
+        if was_streaming:
+            self.stop_stream()
+            
+        self.camera_index = device_index
+        
+        if was_streaming:
+            return self.start_stream()
+        return {
+            'status': 'success',
+            'message': f'Camera device set to {device_index}',
+            'device_name': self.available_cameras[device_index]
+        }
 
     def _handle_impl(self, data: Any) -> Dict:
         """Handle incoming frame data"""
