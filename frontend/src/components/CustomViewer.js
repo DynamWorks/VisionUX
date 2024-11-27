@@ -74,14 +74,42 @@ const CustomViewer = () => {
 
             // Wait for video to be ready
             video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                const containerWidth = containerRef.current.offsetWidth;
+                const containerHeight = containerRef.current.offsetHeight;
+                canvas.width = containerWidth;
+                canvas.height = containerHeight;
+                setLoading(false);
             };
 
             // Draw frames from video to canvas
             const drawFrame = () => {
                 if (ctx && video.readyState === video.HAVE_ENOUGH_DATA) {
-                    ctx.drawImage(video, 0, 0);
+                    // Get container dimensions
+                    const containerWidth = containerRef.current.offsetWidth;
+                    const containerHeight = containerRef.current.offsetHeight;
+                    
+                    // Calculate aspect ratio
+                    const videoAspect = video.videoWidth / video.videoHeight;
+                    const containerAspect = containerWidth / containerHeight;
+                    
+                    let drawWidth = containerWidth;
+                    let drawHeight = containerHeight;
+                    
+                    // Maintain aspect ratio while fitting in container
+                    if (containerAspect > videoAspect) {
+                        drawWidth = containerHeight * videoAspect;
+                    } else {
+                        drawHeight = containerWidth / videoAspect;
+                    }
+                    
+                    // Center the video
+                    const x = (containerWidth - drawWidth) / 2;
+                    const y = (containerHeight - drawHeight) / 2;
+                    
+                    // Clear canvas and draw frame
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, containerWidth, containerHeight);
+                    ctx.drawImage(video, x, y, drawWidth, drawHeight);
                 }
                 animationFrameId = requestAnimationFrame(drawFrame);
             };
