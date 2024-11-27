@@ -58,36 +58,54 @@ const CustomViewer = () => {
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
-                const blob = new Blob([frameData], { type: 'image/jpeg' });
-                const url = URL.createObjectURL(blob);
+                let url;
+                
+                if (frameData instanceof ArrayBuffer) {
+                    const blob = new Blob([frameData], { type: 'image/jpeg' });
+                    url = URL.createObjectURL(blob);
+                } else if (typeof frameData === 'string' && frameData.startsWith('data:image')) {
+                    url = frameData;
+                } else {
+                    console.error('Invalid frame data format');
+                    return;
+                }
+
                 const img = new Image();
 
                 img.onload = () => {
-                    // Calculate dimensions to maintain aspect ratio
-                    const imgAspect = img.width / img.height;
-                    const canvasAspect = canvas.width / canvas.height;
-                    let drawWidth = canvas.width;
-                    let drawHeight = canvas.height;
-                    let offsetX = 0;
-                    let offsetY = 0;
+                    try {
+                        // Clear canvas
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    if (imgAspect > canvasAspect) {
-                        // Image is wider than canvas
-                        drawHeight = canvas.width / imgAspect;
-                        offsetY = (canvas.height - drawHeight) / 2;
-                    } else {
-                        // Image is taller than canvas
-                        drawWidth = canvas.height * imgAspect;
-                        offsetX = (canvas.width - drawWidth) / 2;
+                        // Calculate dimensions to maintain aspect ratio
+                        const imgAspect = img.width / img.height;
+                        const canvasAspect = canvas.width / canvas.height;
+                        let drawWidth, drawHeight, offsetX, offsetY;
+
+                        if (imgAspect > canvasAspect) {
+                            // Image is wider than canvas
+                            drawWidth = canvas.width;
+                            drawHeight = canvas.width / imgAspect;
+                            offsetX = 0;
+                            offsetY = (canvas.height - drawHeight) / 2;
+                        } else {
+                            // Image is taller than canvas
+                            drawHeight = canvas.height;
+                            drawWidth = canvas.height * imgAspect;
+                            offsetX = (canvas.width - drawWidth) / 2;
+                            offsetY = 0;
+                        }
+
+                        // Draw frame with proper scaling
+                        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+                    } catch (error) {
+                        console.error('Error drawing frame:', error);
+                    } finally {
+                        if (url.startsWith('blob:')) {
+                            URL.revokeObjectURL(url);
+                        }
                     }
-
-                    // Clear canvas
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    // Draw frame
-                    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-                    URL.revokeObjectURL(url);
                 };
 
                 img.onerror = () => {

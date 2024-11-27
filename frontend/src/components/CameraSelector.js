@@ -114,11 +114,17 @@ const CameraSelector = () => {
         setIsStreaming(false);
     }, [setIsStreaming]);
 
-    const handleStartStop = useCallback(() => {
+    const handleStartStop = useCallback(async () => {
         if (isStreaming) {
             cleanup();
         } else {
-            startCamera();
+            try {
+                await startCamera();
+                websocketService.emit('start_stream');
+            } catch (error) {
+                console.error('Failed to start camera:', error);
+                cleanup();
+            }
         }
     }, [isStreaming, startCamera, cleanup]);
 
