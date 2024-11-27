@@ -133,8 +133,7 @@ const CustomViewer = () => {
                     </Typography>
                 )}
 
-                {/* Video Player */}
-                {inputMode === 'upload' && (
+                {inputMode === 'upload' ? (
                     <video
                         ref={videoRef}
                         style={{
@@ -153,22 +152,9 @@ const CustomViewer = () => {
                             setLoading(false);
                         }}
                     />
+                ) : (
+                    <CameraViewer isStreaming={isStreaming} />
                 )}
-
-                {/* Camera Stream */}
-                <canvas
-                    ref={canvasRef}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        display: inputMode === 'camera' && isStreaming ? 'block' : 'none',
-                        backgroundColor: '#000',
-                        objectFit: 'contain',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0
-                    }}
-                />
             </Box>
         </Box>
     );
