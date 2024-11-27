@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Box, IconButton, Typography, useTheme, useMediaQuery } from '@mui/material';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Box, IconButton, Typography, useTheme, useMediaQuery, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -11,6 +11,27 @@ const CameraSelector = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [error, setError] = useState(null);
+    const [devices, setDevices] = useState([]);
+    const [selectedDevice, setSelectedDevice] = useState('');
+
+    useEffect(() => {
+        // Get available camera devices when component mounts
+        const getDevices = async () => {
+            try {
+                const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = mediaDevices.filter(device => device.kind === 'videoinput');
+                setDevices(videoDevices);
+                if (videoDevices.length > 0) {
+                    setSelectedDevice(videoDevices[0].deviceId);
+                }
+            } catch (err) {
+                console.error('Error getting devices:', err);
+                setError('Failed to get camera devices');
+            }
+        };
+
+        getDevices();
+    }, []);
 
     const handleStartStop = useCallback(async () => {
         if (isStreaming) {
@@ -18,12 +39,17 @@ const CameraSelector = () => {
             setIsStreaming(false);
         } else {
             try {
-                const hasAccess = await websocketService.requestCameraAccess();
-                if (!hasAccess) {
-                    throw new Error('Camera access denied');
-                }
+                // Request camera access with specific device
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined
+                    }
+                });
+                
+                // Stop the stream immediately - we just needed permission
+                stream.getTracks().forEach(track => track.stop());
 
-                websocketService.emit('start_stream');
+                websocketService.emit('start_stream', { deviceId: selectedDevice });
                 setIsStreaming(true);
                 setError(null);
             } catch (error) {
@@ -32,7 +58,19 @@ const CameraSelector = () => {
                 setIsStreaming(false);
             }
         }
-    }, [isStreaming, setIsStreaming]);
+    }, [isStreaming, setIsStreaming, selectedDevice]);
+
+    const handleDeviceChange = (event) => {
+        setSelectedDevice(event.target.value);
+        if (isStreaming) {
+            // Stop current stream before switching
+            websocketService.emit('stop_stream');
+            setIsStreaming(false);
+        }
+    };
+
+    const buttonSize = isMobile ? 36 : 42;
+    const iconSize = isMobile ? 20 : 24;
 
     const buttonSize = isMobile ? 36 : 42;
     const iconSize = isMobile ? 20 : 24;
@@ -56,8 +94,25 @@ const CameraSelector = () => {
                     </Typography>
                 </Box>
 
+                <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                    <InputLabel>Camera Device</InputLabel>
+                    <Select
+                        value={selectedDevice}
+                        onChange={handleDeviceChange}
+                        label="Camera Device"
+                        disabled={isStreaming}
+                    >
+                        {devices.map((device) => (
+                            <MenuItem key={device.deviceId} value={device.deviceId}>
+                                {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
                 <IconButton
                     onClick={handleStartStop}
+                    disabled={!selectedDevice}
                     sx={{
                         width: buttonSize,
                         height: buttonSize,
@@ -65,6 +120,9 @@ const CameraSelector = () => {
                         color: 'white',
                         '&:hover': {
                             bgcolor: isStreaming ? '#9a0007' : '#1b5e20'
+                        },
+                        '&.Mui-disabled': {
+                            bgcolor: '#666666'
                         }
                     }}
                 >

@@ -266,14 +266,28 @@ class WebSocketService {
         };
     }
 
-    async requestCameraAccess() {
+    async requestCameraAccess(deviceId) {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined
+                }
+            });
             stream.getTracks().forEach(track => track.stop()); // Release camera immediately
             return true;
         } catch (error) {
             console.error('Camera access denied:', error);
             return false;
+        }
+    }
+
+    async getCameraDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.filter(device => device.kind === 'videoinput');
+        } catch (error) {
+            console.error('Error getting camera devices:', error);
+            return [];
         }
     }
 
