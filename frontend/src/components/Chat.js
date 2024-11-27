@@ -37,7 +37,7 @@ const Chat = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    stream_type: inputMode === 'camera' ? 'camera' : 'video'
+                    stream_type: 'camera'
                 })
             });
 
@@ -49,13 +49,12 @@ const Chat = () => {
             
             if (data.scene_analysis?.description) {
                 // Add system message with analysis results
-                setMessages(prevMessages => [
-                    ...prevMessages,
+                messages.push(
                     {
                         role: 'system',
                         content: `Scene Analysis:\n${data.scene_analysis.description}`
                     }
-                ]);
+                );
             } else {
                 console.warn('No scene analysis description in response:', data);
                 setMessages(prevMessages => [
@@ -69,13 +68,10 @@ const Chat = () => {
 
         } catch (error) {
             console.error('Error handling scene analysis:', error);
-            setMessages(prevMessages => [
-                ...prevMessages,
-                {
-                    role: 'system',
-                    content: `Error during scene analysis: ${error.message}`
-                }
-            ]);
+            messages.push({
+                role: 'system',
+                content: `Error during scene analysis: ${error.message}`
+            });
         }
     };
 
