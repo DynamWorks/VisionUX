@@ -11,7 +11,7 @@ const useStore = create((set) => ({
     }),
 
     // Video state
-    uploadedFiles: [], // Initialize as empty array instead of null
+    uploadedFiles: [],
     currentVideo: null,
     isStreaming: false,
     streamMetrics: {
@@ -22,7 +22,7 @@ const useStore = create((set) => ({
     },
 
     // Video actions
-    setUploadedFiles: (files) => set({ uploadedFiles: files || [] }), // Ensure array
+    setUploadedFiles: (files) => set({ uploadedFiles: Array.isArray(files) ? files : [] }),
     setCurrentVideo: (video) => set({ currentVideo: video }),
     setIsStreaming: (isStreaming) => set({ isStreaming }),
     setStreamMetrics: (metrics) => set({ streamMetrics: metrics }),

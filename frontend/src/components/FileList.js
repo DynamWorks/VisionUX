@@ -5,14 +5,14 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import useStore from '../store';
 
 const FileList = () => {
-    const { uploadedFiles = [], currentVideo, setCurrentVideo } = useStore();
+    const { uploadedFiles, currentVideo, setCurrentVideo } = useStore();
 
     const handleVideoSelect = (file) => {
         setCurrentVideo(file);
     };
 
     // Empty state
-    if (uploadedFiles.length === 0) {
+    if (!uploadedFiles || uploadedFiles.length === 0) {
         return (
             <Box sx={{ p: 2, textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
