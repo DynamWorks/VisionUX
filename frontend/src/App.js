@@ -58,6 +58,10 @@ function App() {
 
     const handleSceneAnalysis = async () => {
         try {
+            if (!isStreaming) {
+                throw new Error('No active stream to analyze');
+            }
+
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                 method: 'POST',
                 headers: {
@@ -68,14 +72,17 @@ function App() {
                 })
             });
 
+            const data = await response.json();
+            
             if (!response.ok) {
-                throw new Error(`Scene analysis failed: ${response.statusText}`);
+                throw new Error(data.error || `Scene analysis failed: ${response.statusText}`);
             }
 
-            const data = await response.json();
             console.log('Scene analysis result:', data);
+            return data;
         } catch (error) {
             console.error('Error in scene analysis:', error);
+            throw error; // Re-throw to be handled by caller
         }
     };
 

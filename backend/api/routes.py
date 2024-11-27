@@ -62,7 +62,13 @@ def health_check():
 def analyze_scene():
     """Analyze scene from current stream"""
     try:
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+            
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+            
         stream_type = data.get('stream_type', 'video')
         
         # Get stream manager instance
