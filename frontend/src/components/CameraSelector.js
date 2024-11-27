@@ -72,9 +72,6 @@ const CameraSelector = () => {
     const buttonSize = isMobile ? 36 : 42;
     const iconSize = isMobile ? 20 : 24;
 
-    const buttonSize = isMobile ? 36 : 42;
-    const iconSize = isMobile ? 20 : 24;
-
     return (
         <Box sx={{ mb: 2 }}>
             <Box sx={{ 
