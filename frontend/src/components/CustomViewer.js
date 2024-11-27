@@ -48,34 +48,45 @@ const CustomViewer = () => {
     }, [inputMode, currentVideo]);
 
     // Handle camera stream display
-    const handleFrame = useCallback((frameUrl) => {
+    const handleFrame = useCallback((frameData) => {
         if (!canvasRef.current) return;
 
         const ctx = canvasRef.current.getContext('2d');
-        const img = new Image();
         
-        img.onload = () => {
-            // Clear previous frame
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            
-            // Calculate aspect ratio preserving dimensions
-            const canvas = canvasRef.current;
-            const hRatio = canvas.width / img.width;
-            const vRatio = canvas.height / img.height;
-            const ratio = Math.min(hRatio, vRatio);
-            
-            // Center the image
-            const centerShift_x = (canvas.width - img.width * ratio) / 2;
-            const centerShift_y = (canvas.height - img.height * ratio) / 2;
-            
-            ctx.drawImage(img, 0, 0, img.width, img.height,
-                         centerShift_x, centerShift_y, 
-                         img.width * ratio, img.height * ratio);
-                         
-            URL.revokeObjectURL(frameUrl); // Clean up the blob URL
-        };
-        
-        img.src = frameUrl;
+        // Handle different types of frame data
+        if (frameData instanceof Blob) {
+            const img = new Image();
+            img.onload = () => {
+                // Clear previous frame
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                
+                // Calculate aspect ratio preserving dimensions
+                const canvas = canvasRef.current;
+                const hRatio = canvas.width / img.width;
+                const vRatio = canvas.height / img.height;
+                const ratio = Math.min(hRatio, vRatio);
+                
+                // Center the image
+                const centerShift_x = (canvas.width - img.width * ratio) / 2;
+                const centerShift_y = (canvas.height - img.height * ratio) / 2;
+                
+                ctx.drawImage(img, 0, 0, img.width, img.height,
+                             centerShift_x, centerShift_y, 
+                             img.width * ratio, img.height * ratio);
+                             
+                URL.revokeObjectURL(img.src);
+            };
+            img.src = URL.createObjectURL(frameData);
+        } else if (frameData instanceof ArrayBuffer) {
+            const blob = new Blob([frameData], { type: 'image/jpeg' });
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                URL.revokeObjectURL(img.src);
+            };
+            img.src = URL.createObjectURL(blob);
+        }
     }, []);
 
     useEffect(() => {
