@@ -62,26 +62,27 @@ const CustomViewer = () => {
     // Handle camera stream display
     useEffect(() => {
         let frameHandler;
-        let tempVideoElement;
-
         if (inputMode === 'camera' && canvasRef.current && isStreaming) {
             frameHandler = (frameData) => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
-                
-                // Reuse video element if possible
-                if (!tempVideoElement) {
-                    tempVideoElement = document.createElement('video');
-                    tempVideoElement.autoplay = true;
-                    tempVideoElement.playsInline = true;
-                }
 
                 // Create object URL from frame data
-                const blob = new Blob([frameData], { type: 'video/webm' });
+                const blob = new Blob([frameData], { type: 'image/jpeg' });
                 const url = URL.createObjectURL(blob);
-                tempVideoElement.src = url;
+                const img = new Image();
+                img.onload = () => {
+                    // Set canvas size to match image if needed
+                    if (canvas.width !== img.width || canvas.height !== img.height) {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                    }
+                    ctx.drawImage(img, 0, 0);
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
 
                 tempVideoElement.onloadedmetadata = () => {
                     // Set canvas size to match video
@@ -108,12 +109,6 @@ const CustomViewer = () => {
         return () => {
             if (frameHandler) {
                 websocketService.off('frame', frameHandler);
-            }
-            if (tempVideoElement) {
-                tempVideoElement.pause();
-                tempVideoElement.src = '';
-                tempVideoElement.remove();
-                tempVideoElement = null;
             }
         };
     }, [inputMode, isStreaming]);
