@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Box, Paper, Typography } from '@mui/material';
+import { Container, Box, Paper, Typography, useTheme } from '@mui/material';
+import AnalysisControls from './components/AnalysisControls';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
 import FileList from './components/FileList';
@@ -13,7 +14,7 @@ import { websocketService } from './services/websocket';
 function App() {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { setUploadedFiles, inputMode } = useStore();
+    const { setUploadedFiles, inputMode, isStreaming } = useStore();
 
     // Initialize WebSocket connection
     useEffect(() => {
@@ -54,6 +55,52 @@ function App() {
             setUploadedFiles([]);
         }
     }, [setUploadedFiles, inputMode]);
+
+    const handleSceneAnalysis = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stream_type: inputMode === 'camera' ? 'camera' : 'video'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Scene analysis failed: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('Scene analysis result:', data);
+        } catch (error) {
+            console.error('Error in scene analysis:', error);
+        }
+    };
+
+    const handleEdgeDetection = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/edge_detection`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stream_type: inputMode === 'camera' ? 'camera' : 'video'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Edge detection failed: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('Edge detection result:', data);
+        } catch (error) {
+            console.error('Error in edge detection:', error);
+        }
+    };
 
     return (
         <ThemeProvider theme={theme}>
