@@ -47,51 +47,75 @@ const CustomViewer = () => {
             videoRef.current.load();
             setError(null);
             setLoading(true);
+
+            // Cleanup function
+            return () => {
+                if (videoRef.current) {
+                    videoRef.current.pause();
+                    videoRef.current.src = '';
+                    videoRef.current.load();
+                }
+            };
         }
     }, [inputMode, currentVideo]);
 
     // Handle camera stream display
     useEffect(() => {
+        let frameHandler;
+        let tempVideoElement;
+
         if (inputMode === 'camera' && canvasRef.current && isStreaming) {
-            const handleFrame = (frameData) => {
+            frameHandler = (frameData) => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
                 
-                // Create video element for frame display
-                const videoElement = document.createElement('video');
-                videoElement.autoplay = true;
-                videoElement.playsInline = true;
+                // Reuse video element if possible
+                if (!tempVideoElement) {
+                    tempVideoElement = document.createElement('video');
+                    tempVideoElement.autoplay = true;
+                    tempVideoElement.playsInline = true;
+                }
 
                 // Create object URL from frame data
                 const blob = new Blob([frameData], { type: 'video/webm' });
                 const url = URL.createObjectURL(blob);
-                videoElement.src = url;
+                tempVideoElement.src = url;
 
-                videoElement.onloadedmetadata = () => {
+                tempVideoElement.onloadedmetadata = () => {
                     // Set canvas size to match video
-                    canvas.width = videoElement.videoWidth;
-                    canvas.height = videoElement.videoHeight;
+                    canvas.width = tempVideoElement.videoWidth;
+                    canvas.height = tempVideoElement.videoHeight;
 
                     // Draw frame
-                    ctx.drawImage(videoElement, 0, 0);
+                    ctx.drawImage(tempVideoElement, 0, 0);
 
-                    // Clean up
+                    // Clean up URL only
                     URL.revokeObjectURL(url);
-                    videoElement.remove();
                 };
 
-                videoElement.onerror = () => {
+                tempVideoElement.onerror = () => {
                     console.error('Error loading video frame');
                     URL.revokeObjectURL(url);
-                    videoElement.remove();
                 };
             };
 
-            websocketService.on('frame', handleFrame);
-            return () => websocketService.off('frame', handleFrame);
+            websocketService.on('frame', frameHandler);
         }
+
+        // Cleanup function
+        return () => {
+            if (frameHandler) {
+                websocketService.off('frame', frameHandler);
+            }
+            if (tempVideoElement) {
+                tempVideoElement.pause();
+                tempVideoElement.src = '';
+                tempVideoElement.remove();
+                tempVideoElement = null;
+            }
+        };
     }, [inputMode, isStreaming]);
 
     return (
