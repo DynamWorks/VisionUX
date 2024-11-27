@@ -69,20 +69,34 @@ const CustomViewer = () => {
 
                 const ctx = canvas.getContext('2d');
 
-                // Create object URL from frame data
-                const blob = new Blob([frameData], { type: 'image/jpeg' });
-                const url = URL.createObjectURL(blob);
-                const img = new Image();
-                img.onload = () => {
-                    // Set canvas size to match image if needed
-                    if (canvas.width !== img.width || canvas.height !== img.height) {
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                    }
-                    ctx.drawImage(img, 0, 0);
-                    URL.revokeObjectURL(url);
-                };
-                img.src = url;
+                // Handle different frame data types
+                if (frameData instanceof ArrayBuffer) {
+                    // Binary frame data
+                    const blob = new Blob([frameData], { type: 'image/jpeg' });
+                    const url = URL.createObjectURL(blob);
+                    const img = new Image();
+                    img.onload = () => {
+                        // Set canvas size to match image if needed
+                        if (canvas.width !== img.width || canvas.height !== img.height) {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                        }
+                        ctx.drawImage(img, 0, 0);
+                        URL.revokeObjectURL(url);
+                    };
+                    img.src = url;
+                } else if (typeof frameData === 'string' && frameData.startsWith('data:image')) {
+                    // Data URL frame
+                    const img = new Image();
+                    img.onload = () => {
+                        if (canvas.width !== img.width || canvas.height !== img.height) {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                        }
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = frameData;
+                }
 
             };
 
