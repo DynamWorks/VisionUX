@@ -20,8 +20,22 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 } else if (data instanceof ArrayBuffer) {
                     const blob = new Blob([data], { type: 'image/jpeg' });
                     imageUrl = URL.createObjectURL(blob);
-                } else if (typeof data === 'string') {
+                } else if (typeof data === 'string' && data.startsWith('data:')) {
                     imageUrl = data;
+                } else if (data instanceof HTMLVideoElement) {
+                    // Handle video element directly
+                    if (canvasRef.current) {
+                        const ctx = canvasRef.current.getContext('2d');
+                        const canvas = canvasRef.current;
+                        
+                        // Set canvas size to match video
+                        canvas.width = data.videoWidth;
+                        canvas.height = data.videoHeight;
+                        
+                        // Draw video frame
+                        ctx.drawImage(data, 0, 0, canvas.width, canvas.height);
+                        return;
+                    }
                 }
 
                 if (!imageUrl) {
@@ -46,10 +60,6 @@ const StreamRenderer = ({ source, isStreaming }) => {
                         canvas.width = img.width * scale;
                         canvas.height = img.height * scale;
                         
-                        // Center the image
-                        const x = (containerWidth - canvas.width) / 2;
-                        const y = (containerHeight - canvas.height) / 2;
-                        
                         // Clear and draw
                         ctx.fillStyle = '#000';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -64,18 +74,19 @@ const StreamRenderer = ({ source, isStreaming }) => {
             }
         };
 
-        // Subscribe to frame events
+        let animationFrameId;
+        
         if (source === 'camera') {
             websocketService.on('frame', handleFrame);
-        } else {
+        } else if (source === 'video') {
             // For video files, extract frames using requestAnimationFrame
             const extractFrame = () => {
                 if (!isStreaming) return;
                 const video = document.querySelector('video');
-                if (video) {
+                if (video && !video.paused && !video.ended) {
                     handleFrame(video);
                 }
-                requestAnimationFrame(extractFrame);
+                animationFrameId = requestAnimationFrame(extractFrame);
             };
             extractFrame();
         }
@@ -83,6 +94,9 @@ const StreamRenderer = ({ source, isStreaming }) => {
         return () => {
             if (source === 'camera') {
                 websocketService.off('frame', handleFrame);
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
             }
         };
     }, [isStreaming, source]);
