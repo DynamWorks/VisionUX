@@ -49,21 +49,16 @@ const Chat = () => {
             
             if (data.scene_analysis?.description) {
                 // Add system message with analysis results
-                messages.push(
-                    {
-                        role: 'system',
-                        content: `Scene Analysis:\n${data.scene_analysis.description}`
-                    }
-                );
+                messages.push({
+                    role: 'system',
+                    content: `Scene Analysis:\n${data.scene_analysis.description}`
+                });
             } else {
                 console.warn('No scene analysis description in response:', data);
-                setMessages(prevMessages => [
-                    ...prevMessages,
-                    {
-                        role: 'system',
-                        content: 'Scene analysis completed but no description available.'
-                    }
-                ]);
+                messages.push({
+                    role: 'system',
+                    content: 'Scene analysis completed but no description available.'
+                });
             }
 
         } catch (error) {
