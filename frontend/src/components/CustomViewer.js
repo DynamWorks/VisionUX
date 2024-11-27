@@ -84,22 +84,6 @@ const CustomViewer = () => {
                 };
                 img.src = url;
 
-                tempVideoElement.onloadedmetadata = () => {
-                    // Set canvas size to match video
-                    canvas.width = tempVideoElement.videoWidth;
-                    canvas.height = tempVideoElement.videoHeight;
-
-                    // Draw frame
-                    ctx.drawImage(tempVideoElement, 0, 0);
-
-                    // Clean up URL only
-                    URL.revokeObjectURL(url);
-                };
-
-                tempVideoElement.onerror = () => {
-                    console.error('Error loading video frame');
-                    URL.revokeObjectURL(url);
-                };
             };
 
             websocketService.on('frame', frameHandler);
