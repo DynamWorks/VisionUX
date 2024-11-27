@@ -29,7 +29,10 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 blob = new Blob([frameData], { type: 'image/jpeg' });
             } else if (frameData instanceof Blob) {
                 blob = frameData;
+            } else if (frameData instanceof Uint8Array) {
+                blob = new Blob([frameData.buffer], { type: 'image/jpeg' });
             } else {
+                console.error('Invalid frame data type:', typeof frameData);
                 throw new Error('Invalid frame data type');
             }
 
@@ -38,6 +41,10 @@ const StreamRenderer = ({ source, isStreaming }) => {
             const url = URL.createObjectURL(blob);
 
             await new Promise((resolve, reject) => {
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to load image'));
+                };
                 img.onload = () => {
                     // Set canvas size to match first frame if needed
                     if (canvas.width !== img.width || canvas.height !== img.height) {
@@ -96,8 +103,12 @@ const StreamRenderer = ({ source, isStreaming }) => {
         console.log('Setting up WebSocket listeners for', source);
 
         const handleFrame = async (frameData) => {
-            console.log('Received frame data');
-            await drawFrame(frameData);
+            console.log('Received frame data', typeof frameData, frameData instanceof Uint8Array);
+            try {
+                await drawFrame(frameData);
+            } catch (error) {
+                console.error('Error drawing frame:', error);
+            }
         };
 
         const handleStreamStarted = () => {
