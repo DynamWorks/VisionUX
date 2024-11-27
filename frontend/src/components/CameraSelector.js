@@ -46,8 +46,8 @@ const CameraSelector = () => {
                     }
                 });
                 
-                // Stop the stream immediately - we just needed permission
-                stream.getTracks().forEach(track => track.stop());
+                // Keep the stream active for the websocket connection
+                window.activeStream = stream; // Store stream reference globally
 
                 websocketService.emit('start_stream', { deviceId: selectedDevice });
                 setIsStreaming(true);
@@ -56,9 +56,31 @@ const CameraSelector = () => {
                 console.error('Camera error:', error);
                 setError(error.message);
                 setIsStreaming(false);
+                if (window.activeStream) {
+                    window.activeStream.getTracks().forEach(track => track.stop());
+                    window.activeStream = null;
+                }
             }
         }
     }, [isStreaming, setIsStreaming, selectedDevice]);
+
+    // Cleanup on unmount or when streaming stops
+    useEffect(() => {
+        return () => {
+            if (window.activeStream) {
+                window.activeStream.getTracks().forEach(track => track.stop());
+                window.activeStream = null;
+            }
+        };
+    }, []);
+
+    // Stop stream when streaming state changes to false
+    useEffect(() => {
+        if (!isStreaming && window.activeStream) {
+            window.activeStream.getTracks().forEach(track => track.stop());
+            window.activeStream = null;
+        }
+    }, [isStreaming]);
 
     const handleDeviceChange = (event) => {
         setSelectedDevice(event.target.value);
