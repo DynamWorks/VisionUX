@@ -126,6 +126,12 @@ const useVideo = () => {
         setIsPlaying(false);
         setIsStreaming(false);
 
+        // Stop all camera tracks
+        if (videoElement?.srcObject instanceof MediaStream) {
+            videoElement.srcObject.getTracks().forEach(track => track.stop());
+            videoElement.srcObject = null;
+        }
+
         if (videoUrl) {
             URL.revokeObjectURL(videoUrl);
             setVideoUrl(null);

@@ -110,6 +110,11 @@ const CameraSelector = () => {
     }, [selectedDevice, setIsStreaming]);
 
     const stopCamera = useCallback(() => {
+        // Stop all tracks from the stream
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
         websocketService.emit('stop_stream');
         setIsStreaming(false);
         setLocalStreaming(false);
