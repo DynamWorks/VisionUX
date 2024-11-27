@@ -94,8 +94,12 @@ class WebSocketService {
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
-            this.notifyListeners('error', error);
-            if (!this.socket.connected) {
+            const errorMessage = typeof error === 'object' ? error.message : String(error);
+            this.notifyListeners('error', { message: errorMessage });
+            
+            // Check connection state and attempt reconnect if needed
+            if (!this.socket?.connected) {
+                this._connected = false;
                 this.handleReconnect();
             }
         });
@@ -136,13 +140,20 @@ class WebSocketService {
 
     handleFrame(frameData) {
         try {
+            if (!frameData) {
+                console.warn('Empty frame data received');
+                return;
+            }
+
             let frame;
             if (frameData instanceof ArrayBuffer) {
                 frame = new Blob([frameData], { type: 'image/jpeg' });
             } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
                 frame = frameData;
+            } else if (frameData instanceof Blob) {
+                frame = frameData;
             } else {
-                console.warn('Invalid frame data format');
+                console.warn('Invalid frame data format:', typeof frameData);
                 return;
             }
 
