@@ -1,129 +1,176 @@
 import logging
-from typing import Dict, Set, Optional, Protocol
-import threading
-import queue
-import cv2
-import numpy as np
 import time
-from dataclasses import dataclass
-
-class StreamSubscriber(Protocol):
-    def process_frame(self, frame_data: Dict) -> None: ...
-    
-class StreamPublisher(Protocol):
-    def publish_frame(self, frame_data: Dict) -> None: ...
-
-@dataclass
-class Frame:
-    data: np.ndarray
-    timestamp: float
-    frame_number: int
-    metadata: Dict = None
+from typing import Optional, Dict, List
+from .stream_publisher import StreamPublisher, Frame
 
 class StreamManager:
+    """Manages video streaming and frame processing"""
     
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
-        
     def __init__(self):
-        if not getattr(self, '_initialized', False):
-            self.logger = logging.getLogger(__name__)
-            self.subscribers: Set[StreamSubscriber] = set()
-            self.publishers: Set[StreamPublisher] = set()
-            self.frame_queue = queue.Queue(maxsize=30)  # Buffer 30 frames
-            self.current_frame: Optional[Frame] = None
-            self.frame_count = 0
-            self.is_streaming = False
-            self.stream_thread = None
-            self._initialized = True
-            
-    def register_subscriber(self, subscriber: StreamSubscriber) -> None:
-        """Register a new subscriber"""
-        self.subscribers.add(subscriber)
-        self.logger.info(f"Registered subscriber: {subscriber.__class__.__name__}")
-        
-    def unregister_subscriber(self, subscriber: StreamSubscriber) -> None:
-        """Unregister a subscriber"""
-        self.subscribers.discard(subscriber)
-        self.logger.info(f"Unregistered subscriber: {subscriber.__class__.__name__}")
-        
-    def register_publisher(self, publisher: StreamPublisher) -> None:
-        """Register a new publisher"""
-        self.publishers.add(publisher)
+        self.logger = logging.getLogger(__name__)
+        self.publishers: List[StreamPublisher] = []
+        self.subscribers = []
+        self.is_streaming = False
+        self.is_paused = False
+        self.frame_count = 0
+        self.current_file: Optional[str] = None
+        self.frame_metadata: Optional[Dict] = None
+        self.last_frame_time = time.time()
+        self.fps = 0
+        self.active_clients = set()
+
+    def register_publisher(self, publisher: StreamPublisher):
+        """Register a publisher for frame distribution"""
+        self.publishers.append(publisher)
         self.logger.info(f"Registered publisher: {publisher.__class__.__name__}")
-        
-    def unregister_publisher(self, publisher: StreamPublisher) -> None:
-        """Unregister a publisher"""
-        self.publishers.discard(publisher)
-        self.logger.info(f"Unregistered publisher: {publisher.__class__.__name__}")
-        
-    def publish_frame(self, frame: np.ndarray, metadata: Dict = None) -> None:
-        """Publish a new frame to all subscribers"""
+
+    def register_subscriber(self, subscriber):
+        """Register a subscriber for frame processing"""
+        self.subscribers.append(subscriber)
+        self.logger.info(f"Registered subscriber: {subscriber.__class__.__name__}")
+
+    def clear_subscribers(self):
+        """Remove all subscribers"""
+        self.subscribers.clear()
+        self.logger.info("Cleared all subscribers")
+
+    def add_client(self, client_id: str):
+        """Add a streaming client"""
+        self.active_clients.add(client_id)
+        self.logger.info(f"Added client: {client_id}")
+
+    def remove_client(self, client_id: str):
+        """Remove a streaming client"""
+        self.active_clients.discard(client_id)
+        self.logger.info(f"Removed client: {client_id}")
+        if not self.active_clients:
+            self.stop_streaming()
+
+    def start_streaming(self, filename: Optional[str] = None):
+        """Start streaming with optional filename"""
+        if self.is_streaming and not self.is_paused:
+            self.logger.warning("Streaming already in progress")
+            return False
+
+        self.is_streaming = True
+        self.is_paused = False
+        self.frame_count = 0
+        self.current_file = filename
+        self.last_frame_time = time.time()
+        self.fps = 0
+
+        # Start publishers
+        for publisher in self.publishers:
+            publisher.start_publishing()
+
+        self.logger.info(f"Started streaming{' for file: ' + filename if filename else ''}")
+        return True
+
+    def pause_streaming(self):
+        """Pause streaming"""
+        if not self.is_streaming:
+            self.logger.warning("No active stream to pause")
+            return False
+
+        if self.is_paused:
+            self.logger.warning("Stream already paused")
+            return False
+
+        self.is_paused = True
+        self.logger.info("Streaming paused")
+        return True
+
+    def resume_streaming(self):
+        """Resume streaming"""
+        if not self.is_streaming:
+            self.logger.warning("No active stream to resume")
+            return False
+
+        if not self.is_paused:
+            self.logger.warning("Stream not paused")
+            return False
+
+        self.is_paused = False
+        self.last_frame_time = time.time()
+        self.logger.info("Streaming resumed")
+        return True
+
+    def stop_streaming(self):
+        """Stop streaming"""
+        if not self.is_streaming:
+            self.logger.warning("No active stream to stop")
+            return False
+
+        self.is_streaming = False
+        self.is_paused = False
+        self.frame_count = 0
+        self.current_file = None
+        self.frame_metadata = None
+        self.fps = 0
+
+        # Stop publishers
+        for publisher in self.publishers:
+            publisher.stop_publishing()
+
+        self.logger.info("Streaming stopped")
+        return True
+
+    def set_frame_metadata(self, metadata: Dict):
+        """Set metadata for next frame"""
+        self.frame_metadata = metadata
+
+    def publish_frame(self, frame: Frame):
+        """Process and publish a frame"""
+        if not self.is_streaming or self.is_paused:
+            return False
+
         try:
-            if self.frame_queue.full():
-                # Drop oldest frame if queue is full
-                try:
-                    self.frame_queue.get_nowait()
-                except queue.Empty:
-                    pass
-                    
-            frame_obj = Frame(
-                data=frame,
-                timestamp=time.time(),
-                frame_number=self.frame_count,
-                metadata=metadata or {}
-            )
-            
-            self.frame_queue.put(frame_obj)
-            self.current_frame = frame_obj
+            # Calculate FPS
+            current_time = time.time()
+            time_diff = current_time - self.last_frame_time
+            if time_diff >= 1.0:
+                self.fps = round(self.frame_count / time_diff)
+                self.frame_count = 0
+                self.last_frame_time = current_time
             self.frame_count += 1
-            
-            # Notify subscribers
+
+            # Add metadata if available
+            if self.frame_metadata:
+                frame.metadata.update(self.frame_metadata)
+                self.frame_metadata = None  # Clear after use
+
+            # Add FPS to metadata
+            frame.metadata['fps'] = self.fps
+
+            # Process frame through subscribers
             for subscriber in self.subscribers:
                 try:
-                    subscriber.on_frame(frame_obj)
+                    subscriber.process_frame(frame)
                 except Exception as e:
                     self.logger.error(f"Error in subscriber {subscriber.__class__.__name__}: {e}")
-                    
+
+            # Publish processed frame
+            for publisher in self.publishers:
+                try:
+                    publisher.publish_frame(frame)
+                except Exception as e:
+                    self.logger.error(f"Error in publisher {publisher.__class__.__name__}: {e}")
+
+            return True
+
         except Exception as e:
-            self.logger.error(f"Error publishing frame: {e}")
-            
-    def start_streaming(self) -> None:
-        """Start the streaming process"""
-        if not self.is_streaming:
-            self.is_streaming = True
-            self.stream_thread = threading.Thread(target=self._stream_frames)
-            self.stream_thread.daemon = True
-            self.stream_thread.start()
-            
-    def stop_streaming(self) -> None:
-        """Stop the streaming process"""
-        self.is_streaming = False
-        if self.stream_thread:
-            self.stream_thread.join(timeout=2.0)
-            
-    def _stream_frames(self) -> None:
-        """Main streaming loop"""
-        while self.is_streaming:
-            try:
-                if not self.frame_queue.empty():
-                    frame = self.frame_queue.get()
-                    # Notify publishers
-                    for publisher in self.publishers:
-                        try:
-                            publisher.publish_frame(frame)
-                        except Exception as e:
-                            self.logger.error(f"Error in publisher {publisher.__class__.__name__}: {e}")
-                else:
-                    time.sleep(0.001)  # Small sleep to prevent CPU spinning
-            except Exception as e:
-                self.logger.error(f"Error in streaming loop: {e}")
-                
-    def get_current_frame(self) -> Optional[Frame]:
-        """Get the most recent frame"""
-        return self.current_frame
+            self.logger.error(f"Error processing frame: {e}")
+            return False
+
+    def get_status(self) -> Dict:
+        """Get current streaming status"""
+        return {
+            'is_streaming': self.is_streaming,
+            'is_paused': self.is_paused,
+            'frame_count': self.frame_count,
+            'current_file': self.current_file,
+            'fps': self.fps,
+            'active_clients': len(self.active_clients),
+            'subscribers': len(self.subscribers),
+            'publishers': len(self.publishers)
+        }

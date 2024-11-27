@@ -6,74 +6,52 @@ class WebSocketService {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
         this.listeners = new Map();
+        this._connected = false;
+        this.pingInterval = null;
+        this.connectionCheckInterval = null;
     }
 
-    connect(url) {
+    connect() {
         if (this.socket?.connected) {
             console.log('WebSocket already connected');
+            this._connected = true;
             return;
         }
 
-        // Construct WebSocket URL with fallbacks
-        const wsUrl = this._constructWebSocketUrl(url);
+        // Get WebSocket URL from environment with fallback
+        const wsUrl = process.env.REACT_APP_WS_URL || 'http://localhost:8000';
         console.log('Connecting to WebSocket:', wsUrl);
         
         // Enhanced connection options
         this.socket = io(wsUrl, {
-            transports: ['websocket'],  // WebSocket only for video streaming
+            transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 10000, // Reduced timeout for faster failure detection
-            binary: true,   // Enable binary frame support
+            timeout: 20000,
             autoConnect: true,
-            forceNew: true,
             path: '/socket.io/',
-            rejectUnauthorized: false,
-            pingTimeout: 30000,
-            pingInterval: 10000,
-            upgrade: true,
-            rememberUpgrade: true,
-            perMessageDeflate: true,
+            withCredentials: true,
+            pingTimeout: 60000,
+            pingInterval: 25000,
             extraHeaders: {
                 'User-Agent': navigator.userAgent
-            },
-            query: {
-                clientInfo: JSON.stringify({
-                    userAgent: navigator.userAgent,
-                    timestamp: Date.now(),
-                    screenResolution: `${window.screen.width}x${window.screen.height}`
-                })
             }
         });
 
         this.setupEventHandlers();
-    }
-
-    _constructWebSocketUrl(url) {
-        // If full URL provided, use it
-        if (url) {
-            return url;
-        }
-
-        // Get WebSocket URL with fallbacks
-        const wsPort = process.env.REACT_APP_WS_PORT || '8001';
-        const wsHost = process.env.REACT_APP_WS_HOST || window.location.hostname;
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        
-        // Remove any trailing slashes from host
-        const cleanHost = wsHost.replace(/\/$/, '');
-        
-        // Construct Socket.IO URL
-        return `${window.location.protocol}//${cleanHost}:${wsPort}`;
+        this.startConnectionCheck();
     }
 
     setupEventHandlers() {
+        if (!this.socket) return;
+
         this.socket.on('connect', () => {
             console.log('WebSocket Connected');
+            this._connected = true;
             this.reconnectAttempts = 0;
-            this.socket.emit('get_uploaded_files');
+            this.startPingInterval();
             
             // Send initial connection data
             this.socket.emit('client_info', {
@@ -82,16 +60,26 @@ class WebSocketService {
                 screenResolution: `${window.screen.width}x${window.screen.height}`,
                 connectionType: navigator.connection?.type || 'unknown'
             });
+
+            // Notify all listeners
+            if (this.listeners.has('connect')) {
+                this.listeners.get('connect').forEach(callback => callback());
+            }
         });
 
         this.socket.on('connect_error', (error) => {
             console.error('Connection error:', error);
+            this._connected = false;
+            this.clearPingInterval();
             this.handleReconnect();
         });
 
         this.socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
-            if (reason === 'io server disconnect' || reason === 'transport close') {
+            this._connected = false;
+            this.clearPingInterval();
+            
+            if (reason === 'io server disconnect') {
                 setTimeout(() => {
                     console.log('Attempting reconnection...');
                     this.socket.connect();
@@ -101,39 +89,70 @@ class WebSocketService {
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
-            // Attempt recovery on error
             if (!this.socket.connected) {
                 this.handleReconnect();
             }
         });
 
-        this.socket.on('reconnect_attempt', (attemptNumber) => {
-            console.log(`Reconnection attempt ${attemptNumber}`);
-        });
-
-        this.socket.on('reconnect_failed', () => {
-            console.error('Failed to reconnect after all attempts');
-        });
-
-        // Enhanced ping/pong with timeout detection
-        let lastPongTime = Date.now();
-        
         this.socket.on('pong', () => {
-            lastPongTime = Date.now();
+            this.lastPongTime = Date.now();
         });
 
-        setInterval(() => {
+        // Handle connection established confirmation
+        this.socket.on('connection_established', (data) => {
+            console.log('Connection established:', data);
+            this._connected = true;
+            this.startPingInterval();
+        });
+    }
+
+    startConnectionCheck() {
+        this.clearConnectionCheck();
+        this.connectionCheckInterval = setInterval(() => {
+            const isReallyConnected = this.socket?.connected && this._connected;
+            if (this._connected !== isReallyConnected) {
+                this._connected = isReallyConnected;
+                if (this.listeners.has('connection_change')) {
+                    this.listeners.get('connection_change').forEach(callback => 
+                        callback(isReallyConnected)
+                    );
+                }
+            }
+        }, 1000);
+    }
+
+    clearConnectionCheck() {
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+            this.connectionCheckInterval = null;
+        }
+    }
+
+    startPingInterval() {
+        this.clearPingInterval();
+        this.lastPongTime = Date.now();
+
+        this.pingInterval = setInterval(() => {
             if (this.socket?.connected) {
                 this.socket.emit('ping');
                 
-                // Check if we haven't received a pong in too long
-                if (Date.now() - lastPongTime > 30000) {
-                    console.warn('No pong received in 30s, reconnecting...');
+                const timeSinceLastPong = Date.now() - this.lastPongTime;
+                if (timeSinceLastPong > 45000) {
+                    console.warn('No pong received in 45s, reconnecting...');
+                    this._connected = false;
+                    this.clearPingInterval();
                     this.socket.disconnect();
-                    this.socket.connect();
+                    setTimeout(() => this.socket.connect(), 1000);
                 }
             }
-        }, 10000);
+        }, 15000);
+    }
+
+    clearPingInterval() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
     }
 
     handleReconnect() {
@@ -141,9 +160,15 @@ class WebSocketService {
             this.reconnectAttempts++;
             const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
             console.log(`Reconnecting... Attempt ${this.reconnectAttempts} in ${delay}ms`);
-            setTimeout(() => this.socket.connect(), delay);
+            setTimeout(() => {
+                if (this.socket) {
+                    this.socket.connect();
+                }
+            }, delay);
         } else {
             console.error('Max reconnection attempts reached');
+            this.clearPingInterval();
+            this.clearConnectionCheck();
         }
     }
 
@@ -152,29 +177,51 @@ class WebSocketService {
             this.listeners.set(event, new Set());
         }
         this.listeners.get(event).add(callback);
-        this.socket.on(event, callback);
+        if (this.socket) {
+            this.socket.on(event, callback);
+        }
     }
 
     off(event, callback) {
         if (this.listeners.has(event)) {
             this.listeners.get(event).delete(callback);
         }
-        this.socket.off(event, callback);
+        if (this.socket) {
+            this.socket.off(event, callback);
+        }
     }
 
     emit(event, data) {
         if (this.socket?.connected) {
             this.socket.emit(event, data);
+            return true;
         } else {
             console.warn('Socket not connected, cannot emit:', event);
+            return false;
         }
     }
 
     disconnect() {
+        this.clearPingInterval();
+        this.clearConnectionCheck();
         if (this.socket) {
+            this._connected = false;
             this.socket.disconnect();
             this.socket = null;
         }
+    }
+
+    isConnected() {
+        return this.socket?.connected && this._connected;
+    }
+
+    getConnectionStatus() {
+        return {
+            connected: this.isConnected(),
+            socket: !!this.socket,
+            attempts: this.reconnectAttempts,
+            lastPong: this.lastPongTime
+        };
     }
 }
 
