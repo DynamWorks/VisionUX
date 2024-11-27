@@ -55,7 +55,23 @@ const CustomViewer = () => {
         const img = new Image();
         
         img.onload = () => {
-            ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
+            // Clear previous frame
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            
+            // Calculate aspect ratio preserving dimensions
+            const canvas = canvasRef.current;
+            const hRatio = canvas.width / img.width;
+            const vRatio = canvas.height / img.height;
+            const ratio = Math.min(hRatio, vRatio);
+            
+            // Center the image
+            const centerShift_x = (canvas.width - img.width * ratio) / 2;
+            const centerShift_y = (canvas.height - img.height * ratio) / 2;
+            
+            ctx.drawImage(img, 0, 0, img.width, img.height,
+                         centerShift_x, centerShift_y, 
+                         img.width * ratio, img.height * ratio);
+                         
             URL.revokeObjectURL(frameUrl); // Clean up the blob URL
         };
         
@@ -64,19 +80,24 @@ const CustomViewer = () => {
 
     useEffect(() => {
         if (inputMode === 'camera') {
-            if (!isStreaming) {
+            // Clear canvas when streaming stops
+            if (!isStreaming && canvasRef.current) {
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
+            
+            // Always set up frame handler when in camera mode
+            websocketService.on('video_frame', handleFrame);
+            
+            return () => {
+                websocketService.off('video_frame', handleFrame);
+                // Clear canvas on cleanup
                 if (canvasRef.current) {
                     const ctx = canvasRef.current.getContext('2d');
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
                 }
-            } else {
-                // Subscribe to video frames when streaming starts
-                websocketService.on('video_frame', handleFrame);
-                return () => {
-                    websocketService.off('video_frame', handleFrame);
-                };
-            }
+            };
         }
     }, [inputMode, isStreaming, handleFrame]);
 
