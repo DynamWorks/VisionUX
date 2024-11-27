@@ -75,8 +75,9 @@ def analyze_scene():
         from backend.utils.video_streaming.stream_manager import StreamManager
         stream_manager = StreamManager()
         
-        if not stream_manager.is_streaming:
-            return jsonify({'error': 'No active stream'}), 400
+        # For video uploads, we don't require an active stream
+        if stream_type == 'camera' and not stream_manager.is_streaming:
+            return jsonify({'error': 'No active camera stream'}), 400
             
         # Collect 8 frames from stream
         frames = []

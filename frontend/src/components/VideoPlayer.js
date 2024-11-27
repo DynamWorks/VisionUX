@@ -320,3 +320,49 @@ const VideoPlayer = ({ file }) => {
 };
 
 export default VideoPlayer;
+import React, { useEffect, useRef } from 'react';
+import { Box } from '@mui/material';
+import useStore from '../store';
+
+const VideoPlayer = ({ file }) => {
+    const videoRef = useRef(null);
+    const { setIsStreaming } = useStore();
+
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        
+        if (videoElement) {
+            const handlePlay = () => setIsStreaming(true);
+            const handlePause = () => setIsStreaming(false);
+            const handleEnded = () => setIsStreaming(false);
+
+            videoElement.addEventListener('play', handlePlay);
+            videoElement.addEventListener('pause', handlePause);
+            videoElement.addEventListener('ended', handleEnded);
+
+            return () => {
+                videoElement.removeEventListener('play', handlePlay);
+                videoElement.removeEventListener('pause', handlePause);
+                videoElement.removeEventListener('ended', handleEnded);
+                setIsStreaming(false);
+            };
+        }
+    }, [setIsStreaming]);
+
+    return (
+        <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <video
+                ref={videoRef}
+                src={URL.createObjectURL(file)}
+                controls
+                style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain'
+                }}
+            />
+        </Box>
+    );
+};
+
+export default VideoPlayer;

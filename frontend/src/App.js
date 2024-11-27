@@ -58,8 +58,12 @@ function App() {
 
     const handleSceneAnalysis = async () => {
         try {
-            if (!isStreaming) {
-                throw new Error('No active stream to analyze');
+            // Check if video is currently playing or camera is streaming
+            const isActive = isStreaming || 
+                           (inputMode === 'upload' && document.querySelector('video')?.currentTime < document.querySelector('video')?.duration);
+
+            if (!isActive) {
+                throw new Error('No active stream or video playback');
             }
 
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
@@ -82,7 +86,7 @@ function App() {
             return data;
         } catch (error) {
             console.error('Error in scene analysis:', error);
-            throw error; // Re-throw to be handled by caller
+            throw error;
         }
     };
 
