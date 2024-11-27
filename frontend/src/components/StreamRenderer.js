@@ -39,17 +39,27 @@ const StreamRenderer = ({ source, isStreaming }) => {
             let imageBitmap;
 
             // Convert frame data to ImageBitmap
+            let blob;
             if (frameData instanceof Blob) {
-                imageBitmap = await createImageBitmap(frameData);
+                blob = frameData;
             } else if (frameData instanceof ArrayBuffer || frameData instanceof Uint8Array) {
-                const blob = new Blob([frameData], { type: 'image/jpeg' });
-                imageBitmap = await createImageBitmap(blob);
+                blob = new Blob([frameData], { type: 'image/jpeg' });
             } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
                 const response = await fetch(frameData);
-                const blob = await response.blob();
-                imageBitmap = await createImageBitmap(blob);
+                blob = await response.blob();
+            } else if (Array.isArray(frameData)) {
+                // Handle array data (e.g. from tuple)
+                const uint8Array = new Uint8Array(frameData);
+                blob = new Blob([uint8Array], { type: 'image/jpeg' });
             } else {
                 throw new Error('Invalid frame data format');
+            }
+
+            try {
+                imageBitmap = await createImageBitmap(blob);
+            } catch (err) {
+                console.error('Error creating ImageBitmap:', err);
+                throw new Error('Failed to create image from frame data');
             }
 
             // Calculate dimensions preserving aspect ratio
