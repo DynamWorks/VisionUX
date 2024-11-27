@@ -26,8 +26,16 @@ api = Blueprint('api', __name__)
 def serve_video(filename):
     """Serve uploaded video files"""
     try:
-        uploads_path = Path("backend/tmp_content/uploads")
-        return send_from_directory(uploads_path, filename)
+        # Use absolute path resolved from project root
+        uploads_path = Path("tmp_content/uploads").resolve()
+        if not uploads_path.exists():
+            uploads_path.mkdir(parents=True, exist_ok=True)
+            
+        file_path = uploads_path / filename
+        if not file_path.exists():
+            return jsonify({'error': f'File not found: {filename}'}), 404
+            
+        return send_from_directory(uploads_path, filename, as_attachment=False)
     except Exception as e:
         logger.error(f"Error serving video file: {e}")
         return jsonify({'error': str(e)}), 500
