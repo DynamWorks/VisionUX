@@ -51,9 +51,20 @@ class WebSocketService {
         this.socket.on('video_frame', (frameData) => {
             if (this.listeners.has('video_frame')) {
                 this.listeners.get('video_frame').forEach(callback => {
-                    const blob = new Blob([frameData], { type: 'image/jpeg' });
-                    callback(URL.createObjectURL(blob));
+                    if (frameData instanceof ArrayBuffer) {
+                        const blob = new Blob([frameData], { type: 'image/jpeg' });
+                        callback(URL.createObjectURL(blob));
+                    } else if (typeof frameData === 'string' && frameData.startsWith('data:image')) {
+                        callback(frameData);
+                    }
                 });
+            }
+        });
+
+        // Handle stream metrics
+        this.socket.on('stream_metrics', (metrics) => {
+            if (this.listeners.has('stream_metrics')) {
+                this.listeners.get('stream_metrics').forEach(callback => callback(metrics));
             }
         });
 

@@ -13,7 +13,7 @@ const CameraSelector = ({
     isStreaming,
     refreshDevices
 }) => {
-    const { setIsStreaming } = useStore();
+    const { setIsStreaming, setStreamMetrics } = useStore();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const streamRef = useRef(null);
@@ -79,8 +79,20 @@ const CameraSelector = ({
             const ctx = canvasRef.current.getContext('2d');
 
             // Start stream on server
-            websocketService.emit('start_stream');
+            websocketService.emit('start_stream', {
+                deviceId: selectedDevice,
+                width: 1280,
+                height: 720
+            });
             setIsStreaming(true);
+            
+            // Set initial metrics
+            setStreamMetrics({
+                fps: 0,
+                frameCount: 0,
+                resolution: '1280x720',
+                timestamp: Date.now()
+            });
 
             // Start frame capture loop
             const captureFrame = async () => {

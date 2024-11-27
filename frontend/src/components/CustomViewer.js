@@ -8,7 +8,7 @@ const CustomViewer = () => {
     const containerRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const { currentVideo, inputMode, isStreaming } = useStore();
+    const { currentVideo, inputMode, isStreaming, streamMetrics } = useStore();
 
     // Dynamic sizing
     useEffect(() => {
@@ -152,16 +152,34 @@ const CustomViewer = () => {
 
                 {/* Camera Stream */}
                 {inputMode === 'camera' && (
-                    <canvas
-                        ref={canvasRef}
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'block',
-                            backgroundColor: '#000',
-                            objectFit: 'contain'
-                        }}
-                    />
+                    <>
+                        <canvas
+                            ref={canvasRef}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'block',
+                                backgroundColor: '#000',
+                                objectFit: 'contain'
+                            }}
+                        />
+                        {isStreaming && streamMetrics && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    bottom: 16,
+                                    right: 16,
+                                    bgcolor: 'rgba(0, 0, 0, 0.7)',
+                                    color: 'white',
+                                    p: 1,
+                                    borderRadius: 1,
+                                    fontSize: '0.8rem'
+                                }}
+                            >
+                                {`${streamMetrics.fps} FPS | ${streamMetrics.resolution}`}
+                            </Box>
+                        )}
+                    </>
                 )}
             </Box>
         </Box>
