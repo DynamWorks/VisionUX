@@ -153,7 +153,11 @@ def upload_file():
         logger.error("Upload failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+from flask_limiter.util import get_remote_address
+from flask import current_app
+
 @api.route('/files/list', methods=['GET'])
+@current_app.limiter.limit("200 per hour")
 def get_files_list():
     """Get list of uploaded video files"""
     try:

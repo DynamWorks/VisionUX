@@ -41,13 +41,12 @@ class BackendApp:
         self.flask_app = Flask(__name__, static_folder=frontend_path)
         
         # Initialize rate limiter with proper format
-        default_limits = ["200 per day", "50 per hour"]
+        default_limits = ["1000 per day"]
         rate_limits = self.config.get('api', 'rate_limits', default={})
         if isinstance(rate_limits, dict):
             if 'default' in rate_limits:
                 default_limits = [rate_limits['default']]
-            if 'uploads' in rate_limits:
-                default_limits.append(rate_limits['uploads'])
+            # Don't add upload limit to default_limits
                 
         self.limiter = Limiter(
             app=self.flask_app,

@@ -3,8 +3,9 @@ api:
   port: 8000
   cors_origins: "*"
   rate_limits:
-    default: "200 per day"
-    uploads: "50 per hour"
+    default: "1000 per day"
+    uploads: "100 per hour"
+    files_list: "200 per hour"
 
 websocket:
   port: 8000
