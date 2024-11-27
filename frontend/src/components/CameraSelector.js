@@ -1,156 +1,203 @@
-import React from 'react';
-import { Box, Button, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
-import { PlayArrow, Stop, Refresh } from '@mui/icons-material';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { Box, FormControl, Select, MenuItem, IconButton, useTheme, useMediaQuery } from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import useStore from '../store';
+import { websocketService } from '../services/websocket';
 
 const CameraSelector = ({ 
     devices, 
     selectedDevice, 
     setSelectedDevice, 
     isStreaming,
-    startCamera,
-    stopCamera,
-    refreshDevices,
-    ws
+    refreshDevices
 }) => {
-    const handleStartStop = async () => {
+    const { setIsStreaming } = useStore();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const streamRef = useRef(null);
+    const frameRequestRef = useRef(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+
+    const cleanup = useCallback(() => {
+        if (frameRequestRef.current) {
+            cancelAnimationFrame(frameRequestRef.current);
+            frameRequestRef.current = null;
+        }
+
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => {
+                track.stop();
+                track.enabled = false;
+            });
+            streamRef.current = null;
+        }
+
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+            videoRef.current = null;
+        }
+
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            canvasRef.current = null;
+        }
+    }, []);
+
+    const startCamera = useCallback(async () => {
+        if (!selectedDevice) {
+            alert('Please select a camera device first');
+            return;
+        }
+
+        try {
+            // Clean up any existing resources
+            cleanup();
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+            
+            streamRef.current = stream;
+
+            // Initialize video element
+            videoRef.current = document.createElement('video');
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+
+            // Initialize canvas
+            canvasRef.current = document.createElement('canvas');
+            canvasRef.current.width = 1280;
+            canvasRef.current.height = 720;
+            const ctx = canvasRef.current.getContext('2d');
+
+            // Start stream on server
+            websocketService.emit('start_stream');
+            setIsStreaming(true);
+
+            // Start frame capture loop
+            const captureFrame = async () => {
+                if (!isStreaming || !websocketService.isConnected()) {
+                    cleanup();
+                    setIsStreaming(false);
+                    return;
+                }
+
+                try {
+                    // Draw frame to canvas
+                    ctx.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                    
+                    // Convert to blob and emit
+                    const blob = await new Promise(resolve => {
+                        canvasRef.current.toBlob(resolve, 'image/jpeg', 0.85);
+                    });
+
+                    // Convert blob to buffer
+                    const arrayBuffer = await blob.arrayBuffer();
+                    
+                    // Emit frame metadata
+                    websocketService.emit('frame_metadata', {
+                        timestamp: Date.now(),
+                        width: canvasRef.current.width,
+                        height: canvasRef.current.height
+                    });
+                    
+                    // Emit binary frame data
+                    websocketService.emit('frame', arrayBuffer);
+
+                    // Wait for next frame
+                    frameRequestRef.current = requestAnimationFrame(captureFrame);
+                } catch (error) {
+                    console.error('Error capturing frame:', error);
+                    if (error.message !== 'WebSocket not connected') {
+                        frameRequestRef.current = requestAnimationFrame(captureFrame);
+                    }
+                }
+            };
+
+            frameRequestRef.current = requestAnimationFrame(captureFrame);
+
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            alert('Failed to access camera: ' + error.message);
+            cleanup();
+            setIsStreaming(false);
+        }
+    }, [selectedDevice, isStreaming, setIsStreaming, cleanup]);
+
+    const stopCamera = useCallback(async () => {
+        try {
+            // Stop stream on server first
+            websocketService.emit('stop_stream');
+            
+            // Clean up resources
+            cleanup();
+            
+            // Update state
+            setIsStreaming(false);
+        } catch (error) {
+            console.error('Error stopping camera:', error);
+            // Force cleanup even if there's an error
+            cleanup();
+            setIsStreaming(false);
+        }
+    }, [cleanup, setIsStreaming]);
+
+    const handleStartStop = useCallback(() => {
         if (isStreaming) {
-            // Send stop command to WebSocket before stopping camera
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'stop_camera_stream'
-                }));
-            }
             stopCamera();
         } else {
-            if (!selectedDevice) {
-                alert('Please select a camera device first');
-                return;
-            }
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                });
-                
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.play();
-
-                const canvas = document.createElement('canvas');
-                canvas.width = 1280;
-                canvas.height = 720;
-                const ctx = canvas.getContext('2d');
-
-                // Start frame capture loop
-                const captureFrame = async () => {
-                    if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) {
-                        stream.getTracks().forEach(track => track.stop());
-                        return;
-                    }
-
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    
-                    try {
-                        // Always draw frame to canvas for local display
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        
-                        // Only send to backend if WebSocket is connected
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            // Optimize frame before sending
-                            const blob = await new Promise(resolve => {
-                                canvas.toBlob(resolve, 'image/jpeg', 0.85);
-                            });
-
-                            // Convert to ArrayBuffer for efficient transfer
-                            const arrayBuffer = await blob.arrayBuffer();
-                            
-                            // Send frame metadata first
-                            ws.send(JSON.stringify({
-                                type: 'camera_frame',
-                                timestamp: Date.now(),
-                                width: canvas.width,
-                                height: canvas.height
-                            }));
-                            
-                            // Then send binary frame data
-                            ws.send(arrayBuffer);
-                        }
-
-                        // Send frame type indicator first
-                        const frameMetadata = {
-                            type: 'camera_frame',
-                            timestamp: Date.now(),
-                            width: canvas.width,
-                            height: canvas.height
-                        };
-                        ws.send(JSON.stringify(frameMetadata));
-                        
-                        // Convert frame to blob and send
-                        const blob = await new Promise(resolve => {
-                            canvas.toBlob(resolve, 'image/jpeg', 0.85);
-                        });
-                        const frameBuffer = await blob.arrayBuffer();
-                        ws.send(frameBuffer);
-                        
-                        // Wait for frame processed confirmation
-                        const confirmation = await new Promise((resolve, reject) => {
-                            const timeout = setTimeout(() => {
-                                reject(new Error('Frame confirmation timeout'));
-                            }, 5000);
-                            
-                            const handler = (event) => {
-                                try {
-                                    const data = JSON.parse(event.data);
-                                    if (data.type === 'frame_processed') {
-                                        ws.removeEventListener('message', handler);
-                                        clearTimeout(timeout);
-                                        resolve(data);
-                                    }
-                                } catch (e) {
-                                    console.warn('Non-JSON message received:', event.data);
-                                }
-                            };
-                            
-                            ws.addEventListener('message', handler);
-                        });
-                        
-                        console.log('Frame processed:', confirmation);
-                        requestAnimationFrame(captureFrame);
-                    } catch (error) {
-                        console.error('Error sending frame:', error);
-                        if (error.message !== 'Frame confirmation timeout') {
-                            requestAnimationFrame(captureFrame);
-                        }
-                    }
-                };
-
-                video.onloadedmetadata = () => {
-                    startCamera(selectedDevice);
-                    requestAnimationFrame(captureFrame);
-                };
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                alert('Failed to access camera: ' + error.message);
-            }
+            startCamera();
         }
-    };
+    }, [isStreaming, startCamera, stopCamera]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            cleanup();
+        };
+    }, [cleanup]);
+
+    const buttonSize = isMobile ? 36 : 42;
+    const iconSize = isMobile ? 20 : 24;
 
     return (
         <Box sx={{ mb: 2 }}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl 
+                fullWidth 
+                sx={{ 
+                    mb: 2,
+                    '& .MuiOutlinedInput-root': {
+                        height: buttonSize,
+                        bgcolor: '#1a1a1a',
+                        color: 'white',
+                        '& fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.23)',
+                        },
+                        '&:hover fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.5)',
+                        },
+                    }
+                }}
+            >
                 <Select
-                    value={selectedDevice}
+                    value={selectedDevice || ''}
                     onChange={(e) => setSelectedDevice(e.target.value)}
                     disabled={isStreaming}
-                    sx={{
-                        '& .MuiSelect-select': {
-                            whiteSpace: 'normal',
-                            minHeight: '1.4375em',
-                            textOverflow: 'ellipsis',
-                            overflow: 'hidden'
+                    MenuProps={{
+                        PaperProps: {
+                            sx: {
+                                bgcolor: '#1a1a1a',
+                                color: 'white',
+                                maxHeight: 300
+                            }
                         }
                     }}
                 >
@@ -159,6 +206,7 @@ const CameraSelector = ({
                             key={device.deviceId} 
                             value={device.deviceId}
                             sx={{
+                                height: buttonSize,
                                 whiteSpace: 'normal',
                                 wordBreak: 'break-word'
                             }}
@@ -169,27 +217,42 @@ const CameraSelector = ({
                 </Select>
             </FormControl>
             <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                    variant="contained"
+                <IconButton
                     onClick={handleStartStop}
-                    startIcon={isStreaming ? <Stop /> : <PlayArrow />}
                     sx={{
+                        width: buttonSize,
+                        height: buttonSize,
                         bgcolor: isStreaming ? '#d32f2f' : '#2e7d32',
+                        color: 'white',
                         '&:hover': {
                             bgcolor: isStreaming ? '#9a0007' : '#1b5e20'
                         }
                     }}
                 >
-                    {isStreaming ? 'Stop' : 'Start'}
-                </Button>
-                <Button
-                    variant="outlined"
+                    {isStreaming ? 
+                        <StopIcon sx={{ fontSize: iconSize }} /> : 
+                        <PlayArrowIcon sx={{ fontSize: iconSize }} />
+                    }
+                </IconButton>
+                <IconButton
                     onClick={refreshDevices}
-                    startIcon={<Refresh />}
                     disabled={isStreaming}
+                    sx={{
+                        width: buttonSize,
+                        height: buttonSize,
+                        bgcolor: '#1976d2',
+                        color: 'white',
+                        '&:hover': {
+                            bgcolor: '#1565c0'
+                        },
+                        '&.Mui-disabled': {
+                            bgcolor: 'rgba(25, 118, 210, 0.3)',
+                            color: 'rgba(255, 255, 255, 0.3)'
+                        }
+                    }}
                 >
-                    Refresh
-                </Button>
+                    <RefreshIcon sx={{ fontSize: iconSize }} />
+                </IconButton>
             </Box>
         </Box>
     );
