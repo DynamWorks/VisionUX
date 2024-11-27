@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import useStore from '../store';
+import { websocketService } from '../services/websocket';
 
 const CustomViewer = () => {
     const videoRef = useRef(null);
@@ -47,6 +48,20 @@ const CustomViewer = () => {
     }, [inputMode, currentVideo]);
 
     // Handle camera stream display
+    const handleFrame = useCallback((frameUrl) => {
+        if (!canvasRef.current) return;
+
+        const ctx = canvasRef.current.getContext('2d');
+        const img = new Image();
+        
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
+            URL.revokeObjectURL(frameUrl); // Clean up the blob URL
+        };
+        
+        img.src = frameUrl;
+    }, []);
+
     useEffect(() => {
         if (inputMode === 'camera') {
             if (!isStreaming) {
@@ -55,9 +70,15 @@ const CustomViewer = () => {
                     ctx.fillStyle = '#000';
                     ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
                 }
+            } else {
+                // Subscribe to video frames when streaming starts
+                websocketService.on('video_frame', handleFrame);
+                return () => {
+                    websocketService.off('video_frame', handleFrame);
+                };
             }
         }
-    }, [inputMode, isStreaming]);
+    }, [inputMode, isStreaming, handleFrame]);
 
     return (
         <Box 
