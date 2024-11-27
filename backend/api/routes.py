@@ -26,7 +26,7 @@ api = Blueprint('api', __name__)
 def serve_video(filename):
     """Serve uploaded video files"""
     try:
-        uploads_path = Path("tmp_content/uploads")
+        uploads_path = Path("backend/tmp_content/uploads")
         return send_from_directory(uploads_path, filename)
     except Exception as e:
         logger.error(f"Error serving video file: {e}")
@@ -119,12 +119,14 @@ def upload_file():
             return jsonify({'error': 'No filename provided'}), 400
             
         # Create uploads directory with absolute path
-        uploads_path = Path(current_app.root_path).parent / "tmp_content" / "uploads"
+        uploads_path = Path("backend/tmp_content/uploads").resolve()
         uploads_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Upload directory: {uploads_path}")
-        
-        # Save file
-        file_path = uploads_path / file.filename
+            
+        # Save file with secure filename
+        from werkzeug.utils import secure_filename
+        safe_filename = secure_filename(file.filename)
+        file_path = uploads_path / safe_filename
         logger.info(f"Saving file to: {file_path}")
         file.save(str(file_path))
         
@@ -147,7 +149,7 @@ def upload_file():
 def get_files_list():
     """Get list of uploaded video files"""
     try:
-        uploads_path = Path("tmp_content/uploads")
+        uploads_path = Path("backend/tmp_content/uploads")
         if not uploads_path.exists():
             uploads_path.mkdir(parents=True, exist_ok=True)
             return jsonify({"files": []})
