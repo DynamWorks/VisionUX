@@ -57,19 +57,12 @@ const CameraSelector = () => {
             setLoading(true);
             setError(null);
 
-            // Stop any existing stream
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
+            // Connect WebSocket if needed
+            if (!websocketService.isConnected()) {
+                websocketService.connect();
             }
 
-            // Initialize canvas if needed
-            if (!canvasRef.current) {
-                canvasRef.current = document.createElement('canvas');
-                canvasRef.current.width = 1280;
-                canvasRef.current.height = 720;
-            }
-
-            // Get camera stream
+            // Initialize stream
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     deviceId: { exact: selectedDevice },
@@ -80,49 +73,32 @@ const CameraSelector = () => {
             });
 
             streamRef.current = stream;
-
-            // Create video element for stream
+            
+            // Setup video and canvas
             const video = document.createElement('video');
             video.srcObject = stream;
             video.muted = true;
             await video.play();
 
-            // Start frame capture loop
+            canvasRef.current = document.createElement('canvas');
+            canvasRef.current.width = 1280;
+            canvasRef.current.height = 720;
             const ctx = canvasRef.current.getContext('2d');
-            const captureFrame = async () => {
-                if (!streamRef.current || !websocketService.isConnected()) {
-                    stopCameraStream();
-                    return;
-                }
 
-                try {
-                    // Draw frame to canvas
-                    ctx.drawImage(video, 0, 0, canvasRef.current.width, canvasRef.current.height);
+            // Start frame capture
+            websocketService.emit('start_stream');
+            
+            const captureFrame = () => {
+                if (!streamRef.current) return;
 
-                    // Convert to JPEG and send
-                    canvasRef.current.toBlob(
-                        (blob) => {
-                            websocketService.emit('frame', blob);
-                        },
-                        'image/jpeg',
-                        0.85
-                    );
+                ctx.drawImage(video, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                canvasRef.current.toBlob(
+                    (blob) => websocketService.emit('frame', blob),
+                    'image/jpeg',
+                    0.85
+                );
 
-                    // Send metadata
-                    websocketService.emit('frame_metadata', {
-                        timestamp: Date.now(),
-                        deviceId: selectedDevice,
-                        width: canvasRef.current.width,
-                        height: canvasRef.current.height
-                    });
-
-                    animationFrameRef.current = requestAnimationFrame(captureFrame);
-                } catch (err) {
-                    console.error('Frame capture error:', err);
-                    if (err.name !== 'NotConnectedError') {
-                        animationFrameRef.current = requestAnimationFrame(captureFrame);
-                    }
-                }
+                animationFrameRef.current = requestAnimationFrame(captureFrame);
             };
 
             animationFrameRef.current = requestAnimationFrame(captureFrame);
@@ -131,26 +107,52 @@ const CameraSelector = () => {
         } catch (err) {
             console.error('Camera start error:', err);
             setError(err.message);
-            setIsStreaming(false);
         } finally {
             setLoading(false);
         }
     }, [selectedDevice, setIsStreaming]);
 
     const stopCameraStream = useCallback(() => {
+        // Cleanup animation frame
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
         }
 
+        // Stop media tracks
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
 
-        setIsStreaming(false);
+        // Stop WebSocket stream
         websocketService.emit('stop_stream');
+        setIsStreaming(false);
     }, [setIsStreaming]);
+
+    // Setup WebSocket listeners
+    useEffect(() => {
+        websocketService.on('stream_started', () => {
+            console.log('Stream started on server');
+        });
+
+        websocketService.on('stream_stopped', () => {
+            console.log('Stream stopped on server');
+        });
+
+        websocketService.on('error', (error) => {
+            console.error('Stream error:', error);
+            setError(error.message);
+            stopCameraStream();
+        });
+
+        return () => {
+            websocketService.off('stream_started');
+            websocketService.off('stream_stopped');
+            websocketService.off('error');
+            stopCameraStream();
+        };
+    }, [stopCameraStream]);
 
     // Cleanup on unmount
     useEffect(() => {
