@@ -6,14 +6,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import useStore from '../store';
 import { websocketService } from '../services/websocket';
 
-const CameraSelector = ({ 
-    devices, 
-    selectedDevice, 
-    setSelectedDevice, 
-    isStreaming,
-    refreshDevices
-}) => {
+const CameraSelector = () => {
     const { setIsStreaming, setStreamMetrics } = useStore();
+    const [devices, setDevices] = useState([]);
+    const [selectedDevice, setSelectedDevice] = useState('');
+    const [isStreaming, setLocalStreaming] = useState(false);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const streamRef = useRef(null);
@@ -21,31 +18,34 @@ const CameraSelector = ({
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
 
-    const cleanup = useCallback(() => {
-        if (frameRequestRef.current) {
-            cancelAnimationFrame(frameRequestRef.current);
-            frameRequestRef.current = null;
-        }
-
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => {
-                track.stop();
-                track.enabled = false;
-            });
-            streamRef.current = null;
-        }
-
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-            videoRef.current = null;
-        }
-
-        if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext('2d');
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            canvasRef.current = null;
-        }
+    // Get available cameras on mount
+    useEffect(() => {
+        const getDevices = async () => {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                setDevices(videoDevices);
+                if (videoDevices.length > 0 && !selectedDevice) {
+                    setSelectedDevice(videoDevices[0].deviceId);
+                }
+            } catch (error) {
+                console.error('Error getting camera devices:', error);
+            }
+        };
+        getDevices();
     }, []);
+
+    // Handle WebSocket connection
+    useEffect(() => {
+        const handleStreamMetrics = (metrics) => {
+            setStreamMetrics(metrics);
+        };
+
+        websocketService.on('stream_metrics', handleStreamMetrics);
+        return () => {
+            websocketService.off('stream_metrics', handleStreamMetrics);
+        };
+    }, [setStreamMetrics]);
 
     const startCamera = useCallback(async () => {
         if (!selectedDevice) {
@@ -54,113 +54,50 @@ const CameraSelector = ({
         }
 
         try {
-            // Clean up any existing resources
-            cleanup();
-
+            // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
+                    deviceId: { exact: selectedDevice },
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 }
             });
-            
-            streamRef.current = stream;
 
-            // Initialize video element
-            videoRef.current = document.createElement('video');
-            videoRef.current.srcObject = stream;
-            await videoRef.current.play();
-
-            // Initialize canvas
-            canvasRef.current = document.createElement('canvas');
-            canvasRef.current.width = 1280;
-            canvasRef.current.height = 720;
-            const ctx = canvasRef.current.getContext('2d');
-
-            // Start stream on server
+            // Start stream via WebSocket
             websocketService.emit('start_stream', {
                 deviceId: selectedDevice,
                 width: 1280,
                 height: 720
             });
+
             setIsStreaming(true);
-            
-            // Set initial metrics
-            setStreamMetrics({
-                fps: 0,
-                frameCount: 0,
-                resolution: '1280x720',
-                timestamp: Date.now()
-            });
+            setLocalStreaming(true);
 
-            // Start frame capture loop
-            const captureFrame = async () => {
-                if (!isStreaming || !websocketService.isConnected()) {
-                    cleanup();
-                    setIsStreaming(false);
-                    return;
-                }
-
-                try {
-                    // Draw frame to canvas
-                    ctx.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-                    
-                    // Convert to blob and emit
-                    const blob = await new Promise(resolve => {
-                        canvasRef.current.toBlob(resolve, 'image/jpeg', 0.85);
-                    });
-
-                    // Convert blob to buffer
-                    const arrayBuffer = await blob.arrayBuffer();
-                    
-                    // Emit frame metadata
-                    websocketService.emit('frame_metadata', {
-                        timestamp: Date.now(),
-                        width: canvasRef.current.width,
-                        height: canvasRef.current.height
-                    });
-                    
-                    // Emit binary frame data
-                    websocketService.emit('frame', arrayBuffer);
-
-                    // Wait for next frame
-                    frameRequestRef.current = requestAnimationFrame(captureFrame);
-                } catch (error) {
-                    console.error('Error capturing frame:', error);
-                    if (error.message !== 'WebSocket not connected') {
-                        frameRequestRef.current = requestAnimationFrame(captureFrame);
-                    }
-                }
+            // Clean up stream when component unmounts
+            return () => {
+                stream.getTracks().forEach(track => track.stop());
             };
-
-            frameRequestRef.current = requestAnimationFrame(captureFrame);
-
         } catch (error) {
             console.error('Error accessing camera:', error);
             alert('Failed to access camera: ' + error.message);
-            cleanup();
-            setIsStreaming(false);
         }
-    }, [selectedDevice, isStreaming, setIsStreaming, cleanup]);
+    }, [selectedDevice, setIsStreaming]);
 
-    const stopCamera = useCallback(async () => {
+    const stopCamera = useCallback(() => {
+        websocketService.emit('stop_stream');
+        setIsStreaming(false);
+        setLocalStreaming(false);
+    }, [setIsStreaming]);
+
+    const refreshDevices = useCallback(async () => {
         try {
-            // Stop stream on server first
-            websocketService.emit('stop_stream');
-            
-            // Clean up resources
-            cleanup();
-            
-            // Update state
-            setIsStreaming(false);
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            setDevices(videoDevices);
         } catch (error) {
-            console.error('Error stopping camera:', error);
-            // Force cleanup even if there's an error
-            cleanup();
-            setIsStreaming(false);
+            console.error('Error refreshing devices:', error);
         }
-    }, [cleanup, setIsStreaming]);
+    }, []);
 
     const handleStartStop = useCallback(() => {
         if (isStreaming) {
