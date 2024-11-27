@@ -137,8 +137,8 @@ class WebSocketService {
                 this.socket.emit('ping');
                 
                 const timeSinceLastPong = Date.now() - this.lastPongTime;
-                if (timeSinceLastPong > 45000) {
-                    console.warn('No pong received in 45s, reconnecting...');
+                if (timeSinceLastPong > 120000) { // Increase to 2 minutes
+                    console.warn('No pong received in 120s, reconnecting...');
                     this._connected = false;
                     this.clearPingInterval();
                     this.socket.disconnect();

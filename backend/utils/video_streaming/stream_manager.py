@@ -43,8 +43,6 @@ class StreamManager:
         """Remove a streaming client"""
         self.active_clients.discard(client_id)
         self.logger.info(f"Removed client: {client_id}")
-        if not self.active_clients:
-            self.stop_streaming()
 
     def start_streaming(self, filename: Optional[str] = None):
         """Start streaming with optional filename"""

@@ -18,6 +18,7 @@ class CameraStreamHandler(BaseHandler):
         self.current_stream = None
         self.frame_count = 0
         self.start_time = None
+        self.client_keepalive = {}  # Track client keepalive status
         self.logger.info("Initialized CameraStreamHandler")
 
     def _handle_impl(self, data: Any) -> Dict:
@@ -182,6 +183,30 @@ class CameraStreamHandler(BaseHandler):
         if self.stream_manager.is_streaming:
             self.stream_manager.stop_streaming()
 
+    def add_client(self, client_id: str) -> None:
+        """Add a new streaming client"""
+        self.stream_manager.add_client(client_id)
+        self.client_keepalive[client_id] = time.time()
+        
+    def remove_client(self, client_id: str) -> None:
+        """Remove a streaming client"""
+        self.stream_manager.remove_client(client_id)
+        self.client_keepalive.pop(client_id, None)
+        
+    def update_client_keepalive(self, client_id: str) -> None:
+        """Update client keepalive timestamp"""
+        self.client_keepalive[client_id] = time.time()
+        
+    def cleanup_stale_clients(self) -> None:
+        """Remove clients that haven't sent keepalive in 2 minutes"""
+        current_time = time.time()
+        stale_clients = [
+            client_id for client_id, last_seen in self.client_keepalive.items()
+            if current_time - last_seen > 120  # 2 minutes timeout
+        ]
+        for client_id in stale_clients:
+            self.remove_client(client_id)
+            
     def get_stream_stats(self) -> Dict:
         """Get streaming statistics"""
         if not self.stream_manager.is_streaming:
