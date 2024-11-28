@@ -70,53 +70,67 @@ def analyze_scene():
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
         
-        # Get video file information from request
+        # Get stream type and video file information
+        stream_type = data.get('stream_type', 'video')
         video_file = data.get('video_file')
-        if not video_file:
-            return jsonify({'error': 'No video file specified'}), 400
-
-        # Verify video file exists
-        video_path = Path("tmp_content/uploads") / video_file
-        if not video_path.exists():
-            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+        
+        # For video files, verify existence
+        if stream_type == 'video':
+            if not video_file:
+                return jsonify({'error': 'No video file specified'}), 400
+            video_path = Path("tmp_content/uploads") / video_file
+            if not video_path.exists():
+                return jsonify({'error': f'Video file not found: {video_file}'}), 404
             
         num_frames = int(data.get('num_frames', 8))
         
         try:
-            # Create video capture directly
-            cap = cv2.VideoCapture(str(video_path))
-            if not cap.isOpened():
-                return jsonify({'error': 'Failed to open video file'}), 500
+            # Get frames based on source type
+            if stream_type == 'video':
+                cap = cv2.VideoCapture(str(video_path))
+                if not cap.isOpened():
+                    return jsonify({'error': 'Failed to open video file'}), 500
 
-            try:
-                # Get video information
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                duration = total_frames / fps if fps > 0 else 0
+                try:
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    duration = total_frames / fps if fps > 0 else 0
 
-                # Calculate frame positions
-                if total_frames < num_frames:
-                    num_frames = total_frames
+                    if total_frames < num_frames:
+                        num_frames = total_frames
 
-                interval = max(1, total_frames // num_frames)
-                frame_positions = [i * interval for i in range(num_frames)]
+                    interval = max(1, total_frames // num_frames)
+                    frame_positions = [i * interval for i in range(num_frames)]
 
-                # Capture frames
+                    frames = []
+                    frame_numbers = []
+                    timestamps = []
+
+                    for pos in frame_positions:
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
+                        ret, frame = cap.read()
+                        if ret:
+                            timestamp = pos / fps if fps > 0 else 0
+                            frames.append(frame)
+                            frame_numbers.append(int(pos))
+                            timestamps.append(timestamp)
+                finally:
+                    cap.release()
+            else:
+                # Get frames from stream manager
+                stream_manager = StreamManager()
+                captured_frames = stream_manager.capture_frames_for_analysis(num_frames)
                 frames = []
                 frame_numbers = []
                 timestamps = []
-
-                for pos in frame_positions:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
-                    ret, frame = cap.read()
-                    if ret:
-                        timestamp = pos / fps if fps > 0 else 0
-                        frames.append(frame)
-                        frame_numbers.append(int(pos))
-                        timestamps.append(timestamp)
-
-            finally:
-                cap.release()
+                
+                for frame, timestamp, frame_number in captured_frames:
+                    frames.append(frame)
+                    timestamps.append(timestamp)
+                    frame_numbers.append(frame_number)
+                    
+                duration = max(timestamps) - min(timestamps) if timestamps else 0
+                fps = len(frames) / duration if duration > 0 else 0
 
             if not frames:
                 return jsonify({'error': 'Failed to capture frames'}), 500

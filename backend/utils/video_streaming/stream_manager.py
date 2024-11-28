@@ -61,14 +61,33 @@ class StreamManager:
 
     def capture_frames_for_analysis(self, num_frames: int = 8) -> List[Tuple[np.ndarray, float, int]]:
         """
-        Capture frames for analysis independently of streaming
+        Capture frames for analysis from either live stream or video file
         """
         try:
+            captured_frames = []
+            
+            # If streaming is active, capture from frame buffer
+            if self.is_streaming and self.frame_buffer:
+                with self.buffer_lock:
+                    # Get evenly spaced frames from buffer
+                    buffer_frames = list(self.frame_buffer)
+                    step = max(1, len(buffer_frames) // num_frames)
+                    for frame in buffer_frames[::step][:num_frames]:
+                        captured_frames.append((
+                            frame.data if isinstance(frame.data, np.ndarray) else cv2.imdecode(
+                                np.frombuffer(frame.data, np.uint8), 
+                                cv2.IMREAD_COLOR
+                            ),
+                            frame.timestamp,
+                            frame.frame_number
+                        ))
+                return captured_frames
+                
+            # Otherwise try to capture from video file
             video_path = self.get_video_path()
             if not video_path:
-                raise ValueError("No video file available")
+                raise ValueError("No video file or active stream available")
                 
-            # Create separate capture for analysis
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
                 raise ValueError("Failed to open video file")
