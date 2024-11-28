@@ -55,6 +55,9 @@ function App() {
 
             const data = await response.json();
 
+            // Add system message to chat about scene analysis
+            addMessage('system', `Scene Analysis:\n${data.scene_analysis.description}`);
+
             // Handle the analysis results in chat
             await chatHandleAnalysis(data);
 
