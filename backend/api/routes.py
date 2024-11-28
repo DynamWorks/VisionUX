@@ -6,9 +6,25 @@ import os
 from pathlib import Path
 from flask import Blueprint, request, jsonify, Response, send_file, current_app, send_from_directory
 import shutil
+import logging
 
 from backend.utils.video_streaming.stream_manager import StreamManager
+from backend.services import SceneAnalysisService, ChatService
+from backend.utils.config import Config
+from backend.content_manager import ContentManager
 from pathlib import Path
+
+# Initialize services and managers
+content_manager = ContentManager()
+config = Config()
+scene_service = SceneAnalysisService()
+chat_service = ChatService()
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Create Blueprint
+api = Blueprint('api', __name__)
 
 @api.route('/files/clear', methods=['POST'])
 def clear_files():
