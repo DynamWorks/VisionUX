@@ -7,6 +7,7 @@ from api.routes import api
 import threading
 import logging
 import time
+import shutil
 from pathlib import Path
 from content_manager import ContentManager
 from utils.socket_handler import SocketHandler
@@ -85,6 +86,12 @@ class BackendApp:
             transports=['websocket'],
             manage_session=True
         )
+        
+        # Clear tmp_content directory on startup
+        tmp_content = Path('tmp_content')
+        if tmp_content.exists():
+            shutil.rmtree(tmp_content)
+            self.logger.info("Cleared tmp_content directory")
         
         # Clear tmp_content directory on startup
         tmp_content = Path('tmp_content')
