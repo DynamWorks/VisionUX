@@ -22,21 +22,6 @@ const FileList = () => {
         setUploadError(null);
 
         try {
-            // Delete existing files if any exist
-            if (uploadedFiles.length > 0) {
-                try {
-                    const deleteResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/clear`, {
-                        method: 'POST'
-                    });
-                    if (!deleteResponse.ok) {
-                        throw new Error('Failed to clear existing files');
-                    }
-                } catch (error) {
-                    console.error('Error clearing files:', error);
-                    setUploadError('Failed to clear existing files');
-                    return;
-                }
-            }
 
             const formData = new FormData();
             formData.append('file', file);

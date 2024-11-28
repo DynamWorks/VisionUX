@@ -11,6 +11,7 @@ const VideoUpload = ({ onUpload, setUploadedFiles, disabled }) => {
         },
         maxFiles: 1,
         multiple: false,
+        maxSize: 100 * 1024 * 1024, // 100MB max
         onDrop: files => {
             if (files?.[0]) {
                 const file = files[0];

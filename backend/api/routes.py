@@ -264,10 +264,19 @@ def upload_file():
         if not file.filename:
             logger.error("No filename provided")
             return jsonify({'error': 'No filename provided'}), 400
-            
-        # Create uploads directory with absolute path
-        uploads_path = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "tmp_content/uploads")).resolve()
-        uploads_path.mkdir(parents=True, exist_ok=True)
+
+        # Clear tmp_content directory first
+        tmp_content = Path("tmp_content")
+        if tmp_content.exists():
+            shutil.rmtree(tmp_content)
+        
+        # Recreate required directories
+        uploads_path = tmp_content / "uploads"
+        (tmp_content / "analysis").mkdir(parents=True)
+        (tmp_content / "chat_history").mkdir(parents=True)
+        (tmp_content / "visualizations").mkdir(parents=True)
+        uploads_path.mkdir(parents=True)
+        
         logger.info(f"Upload directory: {uploads_path}")
             
         # Save file with secure filename
