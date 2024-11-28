@@ -53,10 +53,11 @@ class ObjectDetectionSubscriber(StreamSubscriber):
 class EdgeDetectionSubscriber(StreamSubscriber):
     """Subscriber for edge detection processing"""
     
-    def __init__(self, low_threshold: int = 100, high_threshold: int = 200):
+    def __init__(self, low_threshold: int = 100, high_threshold: int = 200, overlay_mode: bool = True):
         self.low_threshold = low_threshold
         self.high_threshold = high_threshold
         self.enabled = True
+        self.overlay_mode = overlay_mode
         self.logger = logging.getLogger(__name__)
         
     def on_frame(self, frame: Frame) -> None:
@@ -81,27 +82,34 @@ class EdgeDetectionSubscriber(StreamSubscriber):
             if not success:
                 raise ValueError("Failed to encode edge frame")
 
-            # Get stream manager instance and emit edge frame
+            # Get stream manager instance
             from .stream_manager import StreamManager
             stream_manager = StreamManager()
             
-            # Create frame with edge detection data
-            edge_frame = Frame(
-                data=buffer.tobytes(),
-                timestamp=time.time(),
-                frame_number=frame.frame_number,
-                metadata={
-                    'type': 'edge_detection',
-                    'original_frame': frame.frame_number,
-                    'edge_params': {
-                        'low_threshold': self.low_threshold,
-                        'high_threshold': self.high_threshold
+            if self.overlay_mode:
+                # Update original frame metadata with edge frame
+                frame.metadata = frame.metadata or {}
+                frame.metadata['overlay_edges'] = True
+                frame.metadata['edge_frame'] = edges_bgr
+                # Publish original frame with edge overlay
+                stream_manager.publish_frame(frame)
+            else:
+                # Create separate edge detection frame
+                edge_frame = Frame(
+                    data=buffer.tobytes(),
+                    timestamp=time.time(),
+                    frame_number=frame.frame_number,
+                    metadata={
+                        'type': 'edge_detection',
+                        'original_frame': frame.frame_number,
+                        'edge_params': {
+                            'low_threshold': self.low_threshold,
+                            'high_threshold': self.high_threshold
+                        }
                     }
-                }
-            )
-            
-            # Publish edge frame
-            stream_manager.publish_frame(edge_frame, frame_type='edge_frame')
+                )
+                # Publish edge frame
+                stream_manager.publish_frame(edge_frame, frame_type='edge_frame')
             
         except Exception as e:
             self.logger.error(f"Edge detection error: {e}")
