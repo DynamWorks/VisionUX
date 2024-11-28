@@ -74,42 +74,32 @@ class EdgeDetectionSubscriber(StreamSubscriber):
             # Apply Canny edge detection
             edges = cv2.Canny(blurred, self.low_threshold, self.high_threshold)
             
-            # Convert back to BGR for visualization
-            edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+            # Convert edges to BGR and color them green
+            edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+            edges_colored[edges > 0] = [0, 255, 0]  # Color edges green
             
-            # Convert edges to JPEG bytes
-            success, buffer = cv2.imencode('.jpg', edges_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            if not success:
-                raise ValueError("Failed to encode edge frame")
-
-            # Get stream manager instance
+            # Blend with original frame
+            alpha = 0.7  # Original frame weight
+            beta = 0.3   # Edge overlay weight
+            blended_frame = cv2.addWeighted(frame.data, alpha, edges_colored, beta, 0)
+            
+            # Update frame with blended result
+            frame.data = blended_frame
+            frame.metadata = frame.metadata or {}
+            frame.metadata.update({
+                'edge_detection': True,
+                'edge_params': {
+                    'low_threshold': self.low_threshold,
+                    'high_threshold': self.high_threshold,
+                    'blend_alpha': alpha,
+                    'blend_beta': beta
+                }
+            })
+            
+            # Get stream manager instance and publish blended frame
             from .stream_manager import StreamManager
             stream_manager = StreamManager()
-            
-            if self.overlay_mode:
-                # Update original frame metadata with edge frame
-                frame.metadata = frame.metadata or {}
-                frame.metadata['overlay_edges'] = True
-                frame.metadata['edge_frame'] = edges_bgr
-                # Publish original frame with edge overlay
-                stream_manager.publish_frame(frame)
-            else:
-                # Create separate edge detection frame
-                edge_frame = Frame(
-                    data=buffer.tobytes(),
-                    timestamp=time.time(),
-                    frame_number=frame.frame_number,
-                    metadata={
-                        'type': 'edge_detection',
-                        'original_frame': frame.frame_number,
-                        'edge_params': {
-                            'low_threshold': self.low_threshold,
-                            'high_threshold': self.high_threshold
-                        }
-                    }
-                )
-                # Publish edge frame
-                stream_manager.publish_frame(edge_frame, frame_type='edge_frame')
+            stream_manager.publish_frame(frame)
             
         except Exception as e:
             self.logger.error(f"Edge detection error: {e}")
