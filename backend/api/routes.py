@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify, Response, send_file, current_app, send_from_directory
 import shutil
 
+from backend.utils.video_streaming.stream_manager import StreamManager
 from backend.services import SceneAnalysisService, ChatService
 from backend.utils.config import Config
 from backend.content_manager import ContentManager
@@ -60,7 +61,7 @@ def health_check():
 
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():
-    """Analyze scene from current stream"""
+    """Analyze scene from video file"""
     try:
         if not request.is_json:
             return jsonify({'error': 'Content-Type must be application/json'}), 400
@@ -68,43 +69,107 @@ def analyze_scene():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
+        
+        # Get video file information from request
+        video_file = data.get('video_file')
+        if not video_file:
+            return jsonify({'error': 'No video file specified'}), 400
+
+        # Verify video file exists
+        video_path = Path("tmp_content/uploads") / video_file
+        if not video_path.exists():
+            return jsonify({'error': f'Video file not found: {video_file}'}), 404
             
-        stream_type = data.get('stream_type', 'video')
+        num_frames = int(data.get('num_frames', 8))
         
-        # Get stream manager instance
-        from backend.utils.video_streaming.stream_manager import StreamManager
-        stream_manager = StreamManager()
-        
-        # For video uploads, we don't require an active stream
-        if stream_type == 'camera' and not stream_manager.is_streaming:
-            return jsonify({'error': 'No active camera stream'}), 400
-            
-        # Collect 8 frames from stream
-        frames = []
-        frame_numbers = []
-        timestamps = []
-        
-        for frame in stream_manager.get_frames(max_frames=8):
-            frames.append(frame.data)
-            frame_numbers.append(frame.frame_number)
-            timestamps.append(frame.timestamp)
-            
-        if not frames:
-            return jsonify({'error': 'No frames captured'}), 400
-            
-        # Analyze frames
-        analysis = scene_service.analyze_scene(
-            frames,
-            context=f"Analyzing {stream_type} stream",
-            frame_numbers=frame_numbers,
-            timestamps=timestamps
-        )
-        
-        # Save analysis results
-        analysis_id = f"scene_analysis_{int(time.time())}"
-        content_manager.save_analysis(analysis, analysis_id)
-        
-        return jsonify(analysis)
+        try:
+            # Create video capture directly
+            cap = cv2.VideoCapture(str(video_path))
+            if not cap.isOpened():
+                return jsonify({'error': 'Failed to open video file'}), 500
+
+            try:
+                # Get video information
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                duration = total_frames / fps if fps > 0 else 0
+
+                # Calculate frame positions
+                if total_frames < num_frames:
+                    num_frames = total_frames
+
+                interval = max(1, total_frames // num_frames)
+                frame_positions = [i * interval for i in range(num_frames)]
+
+                # Capture frames
+                frames = []
+                frame_numbers = []
+                timestamps = []
+
+                for pos in frame_positions:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
+                    ret, frame = cap.read()
+                    if ret:
+                        timestamp = pos / fps if fps > 0 else 0
+                        frames.append(frame)
+                        frame_numbers.append(int(pos))
+                        timestamps.append(timestamp)
+
+            finally:
+                cap.release()
+
+            if not frames:
+                return jsonify({'error': 'Failed to capture frames'}), 500
+
+            # Build context information
+            context = {
+                'video_file': video_file,
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'frame_count': len(frames),
+                'total_frames': total_frames,
+                'duration': duration,
+                'fps': fps,
+                'frames_analyzed': frame_numbers
+            }
+
+            # Perform analysis
+            analysis = scene_service.analyze_scene(
+                frames,
+                context=str(context),
+                frame_numbers=frame_numbers,
+                timestamps=timestamps
+            )
+
+            if 'error' in analysis:
+                return jsonify({'error': analysis['error']}), 500
+
+            # Prepare response
+            response_data = {
+                'scene_analysis': analysis['scene_analysis'],
+                'technical_details': analysis['technical_details'],
+                'metadata': {
+                    'timestamp': time.time(),
+                    'video_file': video_file,
+                    'frame_count': len(frames),
+                    'frame_numbers': frame_numbers,
+                    'duration': duration,
+                    'fps': fps
+                }
+            }
+
+            # Save analysis results
+            analysis_id = f"scene_analysis_{int(time.time())}"
+            saved_path = content_manager.save_analysis(response_data, analysis_id)
+            response_data['storage'] = {'path': str(saved_path), 'id': analysis_id}
+
+            return jsonify(response_data)
+
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+
+        except Exception as e:
+            logger.error(f"Frame processing error: {e}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
 
     except Exception as e:
         logger.error("Scene analysis failed", exc_info=True)
