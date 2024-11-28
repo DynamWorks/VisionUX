@@ -52,10 +52,15 @@ const FileList = () => {
             const files = listData.files || [];
             setUploadedFiles(files);
             
+            // Clear old session data if this is a new upload
+            if (file) {
+                localStorage.clear();
+            }
+            
             // Auto-select logic:
-            // 1. If there's only one file, select it
+            // 1. If there's only one file, select it (new upload case)
             // 2. If this is a new upload, select the uploaded file
-            // 3. If there's a current video, maintain that selection
+            // 3. Otherwise maintain current selection if it still exists
             if (files.length === 1) {
                 handleVideoSelect(files[0]);
             } else if (file && files.length > 0) {
