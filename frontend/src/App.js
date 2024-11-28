@@ -43,7 +43,7 @@ function App() {
                 },
                 body: JSON.stringify({
                     stream_type: 'video',
-                    video_file: currentVideo.name, // Send video filename to backend
+                    video_file: currentVideo.name,
                     num_frames: 8
                 })
             });
@@ -55,10 +55,15 @@ function App() {
 
             const data = await response.json();
 
-            // Add system message to chat about scene analysis
-            addMessage('system', `Scene Analysis:\n${data.scene_analysis.description}`);
+            // Add loading message to chat
+            addMessage('system', 'Analyzing scene...');
 
-            // Handle the analysis results in chat
+            if (data.scene_analysis?.description) {
+                // Add scene analysis description to chat
+                addMessage('system', `Scene Analysis:\n${data.scene_analysis.description}`);
+            }
+
+            // Handle the analysis results
             await chatHandleAnalysis(data);
 
             // Notify WebSocket about analysis completion
