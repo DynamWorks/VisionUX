@@ -8,6 +8,25 @@ from flask import Blueprint, request, jsonify, Response, send_file, current_app,
 import shutil
 
 from backend.utils.video_streaming.stream_manager import StreamManager
+from pathlib import Path
+
+@api.route('/files/clear', methods=['POST'])
+def clear_files():
+    """Clear all files from tmp_content directory"""
+    try:
+        tmp_content = Path("tmp_content")
+        if tmp_content.exists():
+            shutil.rmtree(tmp_content)
+            tmp_content.mkdir(parents=True)
+            # Recreate required subdirectories
+            (tmp_content / "uploads").mkdir()
+            (tmp_content / "analysis").mkdir()
+            (tmp_content / "chat_history").mkdir()
+            (tmp_content / "visualizations").mkdir()
+        return jsonify({"status": "success", "message": "All files cleared"})
+    except Exception as e:
+        logger.error(f"Error clearing files: {e}")
+        return jsonify({"error": str(e)}), 500
 from backend.services import SceneAnalysisService, ChatService
 from backend.utils.config import Config
 from backend.content_manager import ContentManager

@@ -10,6 +10,7 @@ const VideoUpload = ({ onUpload, setUploadedFiles, disabled }) => {
             'video/*': ['.mp4', '.webm', '.ogg']
         },
         maxFiles: 1,
+        multiple: false,
         onDrop: files => {
             if (files?.[0]) {
                 const file = files[0];
