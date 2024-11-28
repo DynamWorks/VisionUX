@@ -29,6 +29,19 @@ class VideoUploadHandler(BaseHandler):
             if not file:
                 raise ValueError("No file provided")
 
+            # Clear tmp_content directory
+            import shutil
+            tmp_content_path = Path("tmp_content")
+            if tmp_content_path.exists():
+                shutil.rmtree(tmp_content_path)
+            tmp_content_path.mkdir(parents=True)
+            
+            # Recreate required subdirectories
+            (tmp_content_path / "uploads").mkdir()
+            (tmp_content_path / "analysis").mkdir()
+            (tmp_content_path / "chat_history").mkdir()
+            (tmp_content_path / "visualizations").mkdir()
+
             # Create operation in progress handler
             operation_id = f"upload_{int(time.time())}"
             if self.progress_handler:
