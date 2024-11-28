@@ -1,35 +1,31 @@
 import cv2
 import numpy as np
-from ..frame_processor import FrameProcessor
+from .stream_subscriber import StreamSubscriber, Frame
 import logging
 from typing import Dict, Any
 import time
 
-class ObjectDetectionSubscriber(FrameProcessor):
+class ObjectDetectionSubscriber(StreamSubscriber):
     """Subscriber for object detection processing"""
     
     def __init__(self, confidence_threshold: float = 0.5):
-        super().__init__()
         self.confidence_threshold = confidence_threshold
         self.model = None
         self.enabled = True
+        self.logger = logging.getLogger(__name__)
         
-    def process_frame(self, frame_data: Dict[str, Any]):
+    def on_frame(self, frame: Frame) -> None:
         if not self.enabled:
             return
             
         try:
-            frame = frame_data['frame']
-            if frame is None:
-                return
-                
             # Initialize model if needed
             if self.model is None:
                 from ultralytics import YOLO
                 self.model = YOLO('yolov8n.pt')
                 
             # Run detection
-            results = self.model(frame, conf=self.confidence_threshold)
+            results = self.model(frame.data, conf=self.confidence_threshold)
             
             # Process results
             detections = []
@@ -47,33 +43,29 @@ class ObjectDetectionSubscriber(FrameProcessor):
                         'class': name
                     })
                     
-            # Add detections to frame metadata
-            frame_data['metadata'] = frame_data.get('metadata', {})
-            frame_data['metadata']['detections'] = detections
+            # Update frame metadata
+            frame.metadata = frame.metadata or {}
+            frame.metadata['detections'] = detections
             
         except Exception as e:
             self.logger.error(f"Object detection error: {e}")
 
-class EdgeDetectionSubscriber(FrameProcessor):
+class EdgeDetectionSubscriber(StreamSubscriber):
     """Subscriber for edge detection processing"""
     
     def __init__(self, low_threshold: int = 100, high_threshold: int = 200):
-        super().__init__()
         self.low_threshold = low_threshold
         self.high_threshold = high_threshold
         self.enabled = True
+        self.logger = logging.getLogger(__name__)
         
-    def process_frame(self, frame_data: Dict[str, Any]):
+    def on_frame(self, frame: Frame) -> None:
         if not self.enabled:
             return
             
         try:
-            frame = frame_data['frame']
-            if frame is None:
-                return
-                
             # Convert to grayscale
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray = cv2.cvtColor(frame.data, cv2.COLOR_BGR2GRAY)
             
             # Apply Gaussian blur
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -81,33 +73,44 @@ class EdgeDetectionSubscriber(FrameProcessor):
             # Apply Canny edge detection
             edges = cv2.Canny(blurred, self.low_threshold, self.high_threshold)
             
-            # Add edges to frame metadata
-            frame_data['metadata'] = frame_data.get('metadata', {})
-            frame_data['metadata']['edges'] = edges
+            # Convert back to BGR for visualization
+            edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+            
+            # Create new frame with edges
+            edge_frame = Frame(
+                data=edges_bgr,
+                timestamp=time.time(),
+                frame_number=frame.frame_number,
+                metadata={
+                    'type': 'edge_detection',
+                    'original_frame': frame.frame_number
+                }
+            )
+            
+            # Get stream manager instance and publish processed frame
+            from .stream_manager import StreamManager
+            stream_manager = StreamManager()
+            stream_manager.publish_frame(edge_frame)
             
         except Exception as e:
             self.logger.error(f"Edge detection error: {e}")
 
-class MotionDetectionSubscriber(FrameProcessor):
+class MotionDetectionSubscriber(StreamSubscriber):
     """Subscriber for motion detection processing"""
     
     def __init__(self, min_area: int = 500):
-        super().__init__()
         self.min_area = min_area
         self.prev_frame = None
         self.enabled = True
+        self.logger = logging.getLogger(__name__)
         
-    def process_frame(self, frame_data: Dict[str, Any]):
+    def on_frame(self, frame: Frame) -> None:
         if not self.enabled:
             return
             
         try:
-            frame = frame_data['frame']
-            if frame is None:
-                return
-                
             # Convert to grayscale
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray = cv2.cvtColor(frame.data, cv2.COLOR_BGR2GRAY)
             gray = cv2.GaussianBlur(gray, (21, 21), 0)
             
             if self.prev_frame is None:
@@ -136,15 +139,36 @@ class MotionDetectionSubscriber(FrameProcessor):
                     'area': cv2.contourArea(contour)
                 })
                 
-            # Update frame metadata
-            frame_data['metadata'] = frame_data.get('metadata', {})
-            frame_data['metadata']['motion'] = {
-                'regions': motion_regions,
-                'threshold': thresh
-            }
+            # Create visualization
+            motion_frame = frame.data.copy()
+            for region in motion_regions:
+                x1, y1, x2, y2 = region['bbox']
+                cv2.rectangle(motion_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            
+            # Create new frame with motion detection
+            motion_result = Frame(
+                data=motion_frame,
+                timestamp=time.time(),
+                frame_number=frame.frame_number,
+                metadata={
+                    'type': 'motion_detection',
+                    'original_frame': frame.frame_number,
+                    'motion_regions': motion_regions
+                }
+            )
+            
+            # Get stream manager instance and publish processed frame
+            from .stream_manager import StreamManager
+            stream_manager = StreamManager()
+            stream_manager.publish_frame(motion_result)
             
             # Update previous frame
             self.prev_frame = gray
             
         except Exception as e:
             self.logger.error(f"Motion detection error: {e}")
+            
+    def cleanup(self) -> None:
+        """Clean up resources"""
+        self.prev_frame = None
+        self.enabled = False
