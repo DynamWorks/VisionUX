@@ -1,42 +1,87 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
+import { websocketService } from '../services/websocket';
+import useStore from '../store';
 
 const useChat = () => {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const { currentVideo, setAnalysisResults } = useStore();
+
+    const addMessage = useCallback((role, content) => {
+        setMessages(prev => [...prev, { role, content }]);
+    }, []);
+
+    const handleSceneAnalysis = useCallback(async (analysisData) => {
+        if (!analysisData?.scene_analysis?.description) {
+            console.warn('No scene analysis description in response');
+            return;
+        }
+
+        const description = analysisData.scene_analysis.description;
+        addMessage('system', `Scene Analysis:\n${description}`);
+
+        if (analysisData.results) {
+            setAnalysisResults(analysisData.results);
+        }
+    }, [addMessage, setAnalysisResults]);
 
     const sendMessage = useCallback(async (message) => {
         setIsLoading(true);
         try {
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}${process.env.REACT_APP_API_VERSION}/chat`, {
-                message,
-                context: messages
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: message,
+                    video_path: currentVideo?.name || 'current',
+                    use_swarm: true
+                })
             });
-            
-            const newMessages = [
-                ...messages,
-                { role: 'user', content: message },
-                { role: 'assistant', content: response.data.response }
-            ];
-            setMessages(newMessages);
-            return response.data.response;
+
+            if (!response.ok) {
+                throw new Error(`Chat request failed: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Add user message
+            addMessage('user', message);
+
+            // Add RAG response if available
+            if (data.rag_response) {
+                addMessage('assistant', data.rag_response);
+            }
+
+            // Add analysis results if available
+            if (data.results && Object.keys(data.results).length > 0) {
+                handleSceneAnalysis(data);
+            }
+
+            return data;
+
         } catch (error) {
             console.error('Chat error:', error);
+            addMessage('error', `Error: ${error.message}`);
             throw error;
         } finally {
             setIsLoading(false);
         }
-    }, [messages]);
+    }, [currentVideo, addMessage, handleSceneAnalysis, setAnalysisResults]);
 
     const clearChat = useCallback(() => {
         setMessages([]);
-    }, []);
+        setAnalysisResults(null);
+    }, [setAnalysisResults]);
 
     return {
         messages,
         isLoading,
         sendMessage,
-        clearChat
+        handleSceneAnalysis,
+        clearChat,
+        addMessage
     };
 };
 
