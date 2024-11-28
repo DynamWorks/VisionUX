@@ -49,7 +49,17 @@ const FileList = () => {
             if (listData.error) {
                 throw new Error(listData.error);
             }
-            setUploadedFiles(listData.files || []);
+            const files = listData.files || [];
+            setUploadedFiles(files);
+            
+            // Automatically select the newly uploaded file
+            if (files.length > 0) {
+                const uploadedFile = files.find(f => f.name === file.name);
+                if (uploadedFile) {
+                    handleVideoSelect(uploadedFile);
+                }
+            }
+            
             setUploadProgress(100);
 
         } catch (error) {
