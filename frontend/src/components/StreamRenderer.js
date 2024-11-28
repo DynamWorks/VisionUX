@@ -8,7 +8,7 @@ const StreamRenderer = ({ source, isStreaming }) => {
     const containerRef = useRef(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const { setStreamMetrics } = useStore();
+    const { setStreamMetrics, isEdgeDetectionEnabled } = useStore();
     const isFirstRender = useRef(true);
 
 
@@ -124,6 +124,7 @@ const StreamRenderer = ({ source, isStreaming }) => {
 
         // Add event listeners
         websocketService.on('frame', handleFrame);
+        websocketService.on('edge_frame', handleFrame);
         websocketService.on('stream_started', handleStreamStarted);
         websocketService.on('error', handleStreamError);
 

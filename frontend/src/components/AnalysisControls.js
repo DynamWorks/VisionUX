@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button } from '@mui/material';
+import { Box, Button, ToggleButton } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -7,7 +7,7 @@ import useStore from '../store';
 
 const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const { currentVideo } = useStore();
+    const { currentVideo, isEdgeDetectionEnabled, setEdgeDetectionEnabled } = useStore();
 
     const handleSceneAnalysis = async () => {
         try {
@@ -35,15 +35,28 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 {isAnalyzing ? 'Analyzing...' : 'Scene Analysis'}
             </Button>
-            <Button
-                variant="contained"
-                startIcon={<TimelineIcon />}
-                onClick={onEdgeDetection}
+            <ToggleButton
+                value="edge"
+                selected={isEdgeDetectionEnabled}
+                onChange={() => {
+                    setEdgeDetectionEnabled(!isEdgeDetectionEnabled);
+                    onEdgeDetection(!isEdgeDetectionEnabled);
+                }}
                 disabled={!currentVideo}
-                sx={{ flex: 1 }}
+                sx={{ 
+                    flex: 1,
+                    bgcolor: isEdgeDetectionEnabled ? 'primary.main' : 'inherit',
+                    '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        '&:hover': {
+                            bgcolor: 'primary.dark'
+                        }
+                    }
+                }}
             >
+                <TimelineIcon sx={{ mr: 1 }} />
                 Edge Detection
-            </Button>
+            </ToggleButton>
         </Box>
     );
 };

@@ -83,26 +83,17 @@ function App() {
         }
     }, [addMessage, chatHandleAnalysis]);
 
-    const handleEdgeDetection = useCallback(async () => {
+    const handleEdgeDetection = useCallback(async (enabled) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/edge_detection`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    stream_type: inputMode === 'camera' ? 'camera' : 'video'
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Edge detection failed: ${response.statusText}`);
+            if (enabled) {
+                websocketService.emit('start_edge_detection');
+                addMessage('system', 'Edge detection started');
+            } else {
+                websocketService.emit('stop_edge_detection');
+                addMessage('system', 'Edge detection stopped');
             }
-
-            const data = await response.json();
-            console.log('Edge detection result:', data);
         } catch (error) {
-            console.error('Error in edge detection:', error);
+            console.error('Error toggling edge detection:', error);
             addMessage('error', `Edge detection error: ${error.message}`);
         }
     }, [inputMode, addMessage]);

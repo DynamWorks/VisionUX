@@ -109,6 +109,10 @@ class WebSocketService {
         this.socket.on('frame', (frameData) => {
             this.handleFrame(frameData);
         });
+        
+        this.socket.on('edge_frame', (frameData) => {
+            this.handleFrame(frameData);
+        });
 
         this.socket.on('stream_started', (data) => {
             console.log('Stream started:', data);
