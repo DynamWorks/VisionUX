@@ -18,7 +18,10 @@ const useChat = () => {
         }
 
         const description = analysisData.scene_analysis.description;
-        addMessage('system', `Scene Analysis:\n${description}`);
+        const videoFile = analysisData.storage?.video_file || 'unknown video';
+        const timestamp = new Date(analysisData.storage?.timestamp * 1000).toLocaleString();
+        
+        addMessage('system', `Scene Analysis for ${videoFile} at ${timestamp}:\n${description}`);
 
         if (analysisData.results) {
             setAnalysisResults(analysisData.results);

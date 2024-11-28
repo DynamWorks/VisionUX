@@ -50,22 +50,10 @@ class ContentManager:
 
     def save_analysis(self, analysis_data: Dict, source_id: str) -> str:
         """Save analysis results with reference to source"""
-        filename = f"{source_id}.json"
+        # Always create timestamped version to preserve history
+        timestamp = int(time.time())
+        filename = f"{source_id}_{timestamp}.json"
         file_path = self.analysis_dir / filename
-        
-        # If file exists and content is different, create timestamped version
-        if file_path.exists():
-            try:
-                with open(file_path) as f:
-                    existing_data = json.load(f)
-                if existing_data != analysis_data:
-                    # Content is different, create timestamped version
-                    timestamp = int(time.time())
-                    filename = f"{source_id}_{timestamp}.json"
-                    file_path = self.analysis_dir / filename
-            except json.JSONDecodeError:
-                # Existing file is invalid JSON, overwrite it
-                pass
         
         with open(file_path, "w") as f:
             json.dump(analysis_data, f, indent=2)

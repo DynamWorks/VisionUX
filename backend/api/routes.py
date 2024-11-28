@@ -207,10 +207,16 @@ def analyze_scene():
                 }
             }
 
-            # Save analysis results
-            analysis_id = f"scene_analysis_{int(time.time())}"
+            # Save analysis results with video filename
+            video_file = data.get('video_file', 'unknown')
+            analysis_id = f"{video_file}_analysis_{int(time.time())}"
             saved_path = content_manager.save_analysis(response_data, analysis_id)
-            response_data['storage'] = {'path': str(saved_path), 'id': analysis_id}
+            response_data['storage'] = {
+                'path': str(saved_path), 
+                'id': analysis_id,
+                'video_file': video_file,
+                'timestamp': time.time()
+            }
 
             return jsonify(response_data)
 
