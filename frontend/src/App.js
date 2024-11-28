@@ -98,39 +98,36 @@ function App() {
         }
     }, [inputMode, addMessage]);
 
-    // Fetch uploaded files
-    useEffect(() => {
-        const fetchFiles = async () => {
-            try {
-                setIsLoading(true);
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch files: ${response.statusText}`);
-                }
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                setUploadedFiles(data.files || []);
-                setError(null);
-            } catch (error) {
-                console.error('Error fetching files:', error);
-                setError(error.message);
-                setUploadedFiles([]);
-            } finally {
-                setIsLoading(false);
+    const fetchFiles = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch files: ${response.statusText}`);
             }
-        };
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            setUploadedFiles(data.files || []);
+            setError(null);
+        } catch (error) {
+            console.error('Error fetching files:', error);
+            setError(error.message);
+            setUploadedFiles([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    // Fetch files on mount and mode change
+    useEffect(() => {
         if (inputMode === 'upload') {
             fetchFiles();
-            // Poll for new files every 5 seconds
-            const interval = setInterval(fetchFiles, 5000);
-            return () => clearInterval(interval);
         } else {
             setUploadedFiles([]);
         }
-    }, [setUploadedFiles, inputMode]);
+    }, [inputMode]);
 
     return (
         <ThemeProvider theme={theme}>

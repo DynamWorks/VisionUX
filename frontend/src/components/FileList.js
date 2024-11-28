@@ -40,9 +40,7 @@ const FileList = () => {
             }
 
             // Refresh file list
-            const listResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
-            const data = await listResponse.json();
-            setUploadedFiles(data.files || []);
+            await fetchFiles();
             setUploadProgress(100);
 
         } catch (error) {
