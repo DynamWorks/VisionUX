@@ -3,7 +3,7 @@ import { create } from 'zustand';
 const useStore = create((set) => ({
     // Input mode
     inputMode: 'upload', // 'upload' or 'camera'
-    setInputMode: (mode) => set({ 
+    setInputMode: (mode) => set({
         inputMode: mode,
         // Reset video state when switching modes
         currentVideo: null,
@@ -21,11 +21,21 @@ const useStore = create((set) => ({
         timestamp: null
     },
 
+    // Analysis state
+    analysisResults: null,
+    isAnalyzing: false,
+    analysisError: null,
+
     // Video actions
     setUploadedFiles: (files) => set({ uploadedFiles: Array.isArray(files) ? files : [] }),
     setCurrentVideo: (video) => set({ currentVideo: video }),
     setIsStreaming: (isStreaming) => set({ isStreaming }),
     setStreamMetrics: (metrics) => set({ streamMetrics: metrics }),
+
+    // Analysis actions
+    setAnalysisResults: (results) => set({ analysisResults: results }),
+    setIsAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
+    setAnalysisError: (error) => set({ analysisError: error }),
 
     // Reset state
     resetVideoState: () => set({
@@ -71,6 +81,9 @@ const useStore = create((set) => ({
             resolution: '',
             timestamp: null
         },
+        analysisResults: null,
+        isAnalyzing: false,
+        analysisError: null,
         chatHistory: [],
         isChatLoading: false,
         chatError: null

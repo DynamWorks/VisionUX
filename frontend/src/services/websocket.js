@@ -54,13 +54,14 @@ class WebSocketService {
     setupEventHandlers() {
         if (!this.socket) return;
 
+        // Connection events
         this.socket.on('connect', () => {
             console.log('WebSocket Connected');
             this._connected = true;
             this.reconnectAttempts = 0;
             this.startPingInterval();
 
-            // Send initial connection data
+            // Send initial client info
             this.socket.emit('client_info', {
                 timestamp: Date.now(),
                 userAgent: navigator.userAgent,
@@ -94,34 +95,21 @@ class WebSocketService {
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
-            let errorMessage;
-            
-            if (typeof error === 'object') {
-                // Handle various error object formats
-                errorMessage = error.message || error.error || JSON.stringify(error);
-            } else {
-                errorMessage = String(error);
-            }
-            
-            this.notifyListeners('error', { 
-                message: errorMessage,
-                timestamp: Date.now(),
-                type: 'socket_error'
-            });
-            
-            // Check connection state and attempt reconnect if needed
-            if (!this.socket?.connected) {
+            if (!this.socket.connected) {
                 this._connected = false;
                 this.handleReconnect();
             }
+            this.notifyListeners('error', {
+                message: error.message || 'Socket error',
+                timestamp: Date.now()
+            });
         });
 
-        // Handle incoming frames
+        // Stream events
         this.socket.on('frame', (frameData) => {
             this.handleFrame(frameData);
         });
 
-        // Handle stream control events
         this.socket.on('stream_started', (data) => {
             console.log('Stream started:', data);
             this.notifyListeners('stream_started', data);
@@ -137,7 +125,6 @@ class WebSocketService {
             this.notifyListeners('stream_error', error);
         });
 
-        // Handle frame metadata
         this.socket.on('frame_metadata', (metadata) => {
             this.updateStreamMetrics(metadata);
             this.notifyListeners('frame_metadata', metadata);
@@ -158,16 +145,13 @@ class WebSocketService {
             }
 
             let frame;
-            // Handle array buffer or Uint8Array
-            if (frameData instanceof ArrayBuffer || frameData instanceof Uint8Array) {
+            // Handle different frame data formats
+            if (frameData instanceof ArrayBuffer) {
                 frame = new Blob([frameData], { type: 'image/jpeg' });
-            } else if (typeof frameData === 'string' && frameData.startsWith('data:')) {
-                frame = frameData;
+            } else if (frameData instanceof Uint8Array) {
+                frame = new Blob([frameData.buffer], { type: 'image/jpeg' });
             } else if (frameData instanceof Blob) {
                 frame = frameData;
-            } else if (Array.isArray(frameData)) {
-                // Handle array data by converting to Uint8Array
-                frame = new Blob([new Uint8Array(frameData)], { type: 'image/jpeg' });
             } else {
                 console.warn('Invalid frame data format:', typeof frameData);
                 return;
@@ -177,26 +161,8 @@ class WebSocketService {
             this.frameCount++;
             this.updateFps();
 
-            // Add to buffer with metadata
-            const frameObject = {
-                data: frame,
-                timestamp: Date.now(),
-                frameNumber: this.frameCount,
-                objectUrl: frame instanceof Blob ? URL.createObjectURL(frame) : null
-            };
-
-            this.frameBuffer.push(frameObject);
-
-            // Maintain buffer size
-            while (this.frameBuffer.length > this.maxBufferSize) {
-                const oldFrame = this.frameBuffer.shift();
-                if (oldFrame.data instanceof Blob) {
-                    URL.revokeObjectURL(URL.createObjectURL(oldFrame.data));
-                }
-            }
-
             // Notify listeners
-            this.notifyListeners('frame', frameObject);
+            this.notifyListeners('frame', frame);
 
         } catch (error) {
             console.error('Frame handling error:', error);
@@ -204,30 +170,22 @@ class WebSocketService {
         }
     }
 
-    updateFps() {
-        const now = Date.now();
-        const elapsed = now - this.fpsCalculator.lastCheck;
+    handleReconnect() {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+            console.log(`Reconnecting... Attempt ${this.reconnectAttempts} in ${delay}ms`);
 
-        this.fpsCalculator.frames++;
-
-        if (elapsed >= 1000) {
-            this.fpsCalculator.currentFps = Math.round((this.fpsCalculator.frames * 1000) / elapsed);
-            this.fpsCalculator.frames = 0;
-            this.fpsCalculator.lastCheck = now;
-
-            this.notifyListeners('fps_update', this.fpsCalculator.currentFps);
+            setTimeout(() => {
+                if (this.socket) {
+                    this.socket.connect();
+                }
+            }, delay);
+        } else {
+            console.error('Max reconnection attempts reached');
+            this.notifyListeners('max_reconnects_reached');
+            this.cleanup();
         }
-    }
-
-    updateStreamMetrics(metadata) {
-        const metrics = {
-            fps: this.fpsCalculator.currentFps,
-            frameCount: this.frameCount,
-            timestamp: Date.now(),
-            ...metadata
-        };
-
-        this.notifyListeners('stream_metrics', metrics);
     }
 
     startConnectionCheck() {
@@ -275,24 +233,33 @@ class WebSocketService {
         }
     }
 
-    handleReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
-            console.log(`Reconnecting... Attempt ${this.reconnectAttempts} in ${delay}ms`);
+    updateFps() {
+        const now = Date.now();
+        const elapsed = now - this.fpsCalculator.lastCheck;
 
-            setTimeout(() => {
-                if (this.socket) {
-                    this.socket.connect();
-                }
-            }, delay);
-        } else {
-            console.error('Max reconnection attempts reached');
-            this.notifyListeners('max_reconnects_reached');
-            this.cleanup();
+        this.fpsCalculator.frames++;
+
+        if (elapsed >= 1000) {
+            this.fpsCalculator.currentFps = Math.round((this.fpsCalculator.frames * 1000) / elapsed);
+            this.fpsCalculator.frames = 0;
+            this.fpsCalculator.lastCheck = now;
+
+            this.notifyListeners('fps_update', this.fpsCalculator.currentFps);
         }
     }
 
+    updateStreamMetrics(metadata) {
+        const metrics = {
+            fps: this.fpsCalculator.currentFps,
+            frameCount: this.frameCount,
+            timestamp: Date.now(),
+            ...metadata
+        };
+
+        this.notifyListeners('stream_metrics', metrics);
+    }
+
+    // Event handling methods
     on(event, callback) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, new Set());
@@ -307,11 +274,16 @@ class WebSocketService {
     }
 
     emit(event, data) {
-        if (this.socket?.connected) {
+        if (!this.socket?.connected) {
+            console.warn('Socket not connected, cannot emit:', event);
+            return false;
+        }
+
+        try {
             this.socket.emit(event, data);
             return true;
-        } else {
-            console.warn('Socket not connected, cannot emit:', event);
+        } catch (error) {
+            console.error('Error emitting event:', error);
             return false;
         }
     }
@@ -328,28 +300,12 @@ class WebSocketService {
         }
     }
 
-    disconnect() {
-        this.cleanup();
-        if (this.socket) {
-            this._connected = false;
-            this.socket.disconnect();
-            this.socket = null;
-        }
-    }
-
+    // Cleanup and status methods
     cleanup() {
         this.clearPingInterval();
         this.clearConnectionCheck();
 
-        // Clean up frame buffer
-        this.frameBuffer.forEach(frame => {
-            if (frame.data instanceof Blob) {
-                // Only revoke if we have an existing object URL
-                if (frame.objectUrl) {
-                    URL.revokeObjectURL(frame.objectUrl);
-                }
-            }
-        });
+        // Clear frame buffer
         this.frameBuffer = [];
 
         // Reset metrics
@@ -359,6 +315,15 @@ class WebSocketService {
             lastCheck: Date.now(),
             currentFps: 0
         };
+    }
+
+    disconnect() {
+        this.cleanup();
+        if (this.socket) {
+            this._connected = false;
+            this.socket.disconnect();
+            this.socket = null;
+        }
     }
 
     isConnected() {
