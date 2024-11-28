@@ -52,11 +52,21 @@ const FileList = () => {
             const files = listData.files || [];
             setUploadedFiles(files);
             
-            // Automatically select the newly uploaded file
-            if (files.length > 0) {
+            // Auto-select logic:
+            // 1. If there's only one file, select it
+            // 2. If this is a new upload, select the uploaded file
+            // 3. If there's a current video, maintain that selection
+            if (files.length === 1) {
+                handleVideoSelect(files[0]);
+            } else if (file && files.length > 0) {
                 const uploadedFile = files.find(f => f.name === file.name);
                 if (uploadedFile) {
                     handleVideoSelect(uploadedFile);
+                }
+            } else if (currentVideo) {
+                const existingFile = files.find(f => f.name === currentVideo.name);
+                if (existingFile) {
+                    handleVideoSelect(existingFile);
                 }
             }
             

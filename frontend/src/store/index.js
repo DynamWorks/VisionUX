@@ -1,6 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-const useStore = create((set) => ({
+const useStore = create(
+    persist(
+        (set) => ({
     // Input mode
     inputMode: 'upload', // 'upload' or 'camera'
     setInputMode: (mode) => set({
@@ -89,6 +92,12 @@ const useStore = create((set) => ({
         chatHistory: [],
         isChatLoading: false,
         chatError: null
+    })
+}), {
+    name: 'video-analytics-storage',
+    partialize: (state) => ({
+        currentVideo: state.currentVideo,
+        uploadedFiles: state.uploadedFiles
     })
 }));
 

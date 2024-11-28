@@ -6,10 +6,28 @@ const useChat = () => {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const { currentVideo, setAnalysisResults } = useStore();
+    
+    // Load chat history for current video
+    useEffect(() => {
+        if (currentVideo) {
+            const savedMessages = localStorage.getItem(`chat_${currentVideo.name}`);
+            if (savedMessages) {
+                setMessages(JSON.parse(savedMessages));
+            } else {
+                setMessages([]);
+            }
+        }
+    }, [currentVideo]);
 
     const addMessage = useCallback((role, content) => {
-        setMessages(prev => [...prev, { role, content }]);
-    }, []);
+        setMessages(prev => {
+            const newMessages = [...prev, { role, content }];
+            if (currentVideo) {
+                localStorage.setItem(`chat_${currentVideo.name}`, JSON.stringify(newMessages));
+            }
+            return newMessages;
+        });
+    }, [currentVideo]);
 
     const handleSceneAnalysis = useCallback(async (analysisData) => {
         if (!analysisData?.scene_analysis?.description) {
