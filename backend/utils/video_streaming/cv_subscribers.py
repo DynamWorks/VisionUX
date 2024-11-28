@@ -76,21 +76,32 @@ class EdgeDetectionSubscriber(StreamSubscriber):
             # Convert back to BGR for visualization
             edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
             
-            # Create new frame with edges
+            # Convert edges to JPEG bytes
+            success, buffer = cv2.imencode('.jpg', edges_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if not success:
+                raise ValueError("Failed to encode edge frame")
+
+            # Get stream manager instance and emit edge frame
+            from .stream_manager import StreamManager
+            stream_manager = StreamManager()
+            
+            # Create frame with edge detection data
             edge_frame = Frame(
-                data=edges_bgr,
+                data=buffer.tobytes(),
                 timestamp=time.time(),
                 frame_number=frame.frame_number,
                 metadata={
                     'type': 'edge_detection',
-                    'original_frame': frame.frame_number
+                    'original_frame': frame.frame_number,
+                    'edge_params': {
+                        'low_threshold': self.low_threshold,
+                        'high_threshold': self.high_threshold
+                    }
                 }
             )
             
-            # Get stream manager instance and publish processed frame
-            from .stream_manager import StreamManager
-            stream_manager = StreamManager()
-            stream_manager.publish_frame(edge_frame)
+            # Publish edge frame
+            stream_manager.publish_frame(edge_frame, frame_type='edge_frame')
             
         except Exception as e:
             self.logger.error(f"Edge detection error: {e}")

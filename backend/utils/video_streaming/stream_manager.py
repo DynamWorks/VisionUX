@@ -122,7 +122,7 @@ class StreamManager:
             self.logger.error(f"Error capturing frames: {e}")
             raise
 
-    def publish_frame(self, frame: Frame) -> bool:
+    def publish_frame(self, frame: Frame, frame_type: str = 'frame') -> bool:
         """Publish frame to subscribers - independent of analysis"""
         if not self.is_streaming or self.is_paused:
             return False
@@ -263,10 +263,13 @@ class StreamManager:
                     raise ValueError("Failed to encode frame")
                 frame.data = buffer.tobytes()
 
-            # Publish processed frame
+            # Publish processed frame with type
             for publisher in self.publishers:
                 try:
-                    publisher.publish_frame(frame)
+                    if hasattr(publisher, 'publish_frame_with_type'):
+                        publisher.publish_frame_with_type(frame, frame_type)
+                    else:
+                        publisher.publish_frame(frame)
                 except Exception as e:
                     self.logger.error(f"Error in publisher {publisher.__class__.__name__}: {e}")
                     self.metrics['dropped_frames'] += 1

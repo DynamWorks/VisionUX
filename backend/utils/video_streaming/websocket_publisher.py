@@ -16,7 +16,7 @@ class WebSocketPublisher(StreamPublisher):
         self.frame_buffer = []
         self.jpeg_quality = 85
 
-    def _publish_impl(self, frame: Frame) -> None:
+    def _publish_impl(self, frame: Frame, frame_type: str = 'frame') -> None:
         """Publish frame to all connected clients"""
         try:
             if not self.clients:
@@ -58,7 +58,7 @@ class WebSocketPublisher(StreamPublisher):
             # Emit frame data to all clients - without broadcast parameter
             for client_id in self.clients:
                 try:
-                    self.socketio.emit('frame', frame_data, to=client_id)
+                    self.socketio.emit(frame_type, frame_data, to=client_id)
                 except Exception as e:
                     self.logger.error(f"Error sending frame to client {client_id}: {e}")
 
