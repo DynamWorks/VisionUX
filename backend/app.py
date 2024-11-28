@@ -86,6 +86,12 @@ class BackendApp:
             manage_session=True
         )
         
+        # Clear tmp_content directory on startup
+        tmp_content = Path('tmp_content')
+        if tmp_content.exists():
+            shutil.rmtree(tmp_content)
+            self.logger.info("Cleared tmp_content directory")
+        
         # Initialize core services
         self.init_services()
         
