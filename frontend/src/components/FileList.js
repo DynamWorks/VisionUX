@@ -39,16 +39,16 @@ const FileList = () => {
                 throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
             }
 
-            // Refresh file list
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch files: ${response.statusText}`);
+            // Refresh file list after successful upload
+            const listResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/files/list`);
+            if (!listResponse.ok) {
+                throw new Error(`Failed to fetch files: ${listResponse.statusText}`);
             }
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(data.error);
+            const listData = await listResponse.json();
+            if (listData.error) {
+                throw new Error(listData.error);
             }
-            setUploadedFiles(data.files || []);
+            setUploadedFiles(listData.files || []);
             setUploadProgress(100);
 
         } catch (error) {
