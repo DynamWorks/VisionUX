@@ -62,6 +62,11 @@ const useChat = () => {
                 handleSceneAnalysis(data);
             }
 
+            // Add scene analysis chat message if available
+            if (data.chat_message) {
+                addMessage(data.chat_message.role, data.chat_message.content);
+            }
+
             return data;
 
         } catch (error) {

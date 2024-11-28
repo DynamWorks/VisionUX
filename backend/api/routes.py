@@ -218,6 +218,12 @@ def analyze_scene():
                 'timestamp': time.time()
             }
 
+            # Add chat message to response
+            response_data['chat_message'] = {
+                'role': 'system',
+                'content': f"Scene Analysis for {video_file}:\n{response_data['scene_analysis']['description']}"
+            }
+
             return jsonify(response_data)
 
         except ValueError as ve:
