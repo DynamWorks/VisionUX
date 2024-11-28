@@ -80,7 +80,8 @@ class SocketHandler:
                 'connected_at': time.time(),
                 'last_ping': time.time(),
                 'streaming': False,
-                'analyzing': False
+                'analyzing': False,
+                'edge_detection': False
             }
             emit('connection_established', {'status': 'success'})
 
@@ -247,6 +248,22 @@ class SocketHandler:
                 self.clients[client_id]['last_ping'] = time.time()
             emit('pong')
 
+        @self.socketio.on('start_edge_detection')
+        def handle_start_edge_detection():
+            """Handle edge detection start request"""
+            client_id = request.sid
+            if client_id in self.clients:
+                self.clients[client_id]['edge_detection'] = True
+                emit('edge_detection_started')
+
+        @self.socketio.on('stop_edge_detection')
+        def handle_stop_edge_detection():
+            """Handle edge detection stop request"""
+            client_id = request.sid
+            if client_id in self.clients:
+                self.clients[client_id]['edge_detection'] = False
+                emit('edge_detection_stopped')
+
         @self.socketio.on('frame')
         def handle_frame(frame_data):
             """Handle incoming frame data"""
@@ -295,6 +312,31 @@ class SocketHandler:
                     }
                 )
                 
+                # Apply edge detection if enabled
+                if self.clients[client_id].get('edge_detection', False):
+                    # Convert to grayscale
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    # Apply Gaussian blur
+                    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+                    # Apply Canny edge detection
+                    edges = cv2.Canny(blurred, 100, 200)
+                    # Convert back to BGR for visualization
+                    frame = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+
+                # Create frame object with processed frame
+                frame_obj = Frame(
+                    data=frame,
+                    timestamp=time.time(),
+                    frame_number=self.stream_manager.frame_count,
+                    metadata={
+                        'source': 'camera',
+                        'client_id': client_id,
+                        'edge_detection': self.clients[client_id].get('edge_detection', False),
+                        'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
+                        'channels': frame.shape[2] if len(frame.shape) > 2 else 1
+                    }
+                )
+
                 # Publish frame
                 if self.stream_manager.publish_frame(frame_obj):
                     self.logger.debug(f"Published frame from {client_id}")
