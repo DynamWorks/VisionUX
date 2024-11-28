@@ -216,8 +216,14 @@ class StreamManager:
         return True
 
 
-    def publish_frame(self, frame: Frame) -> bool:
-        """Process and publish a frame"""
+    def publish_frame(self, frame: Frame, frame_type: str = 'frame') -> bool:
+        """
+        Process and publish a frame
+        
+        Args:
+            frame: Frame object to publish
+            frame_type: Type of frame ('frame' or 'edge_frame')
+        """
         if not self.is_streaming or self.is_paused:
             return False
 
@@ -269,6 +275,7 @@ class StreamManager:
                     if hasattr(publisher, 'publish_frame_with_type'):
                         publisher.publish_frame_with_type(frame, frame_type)
                     else:
+                        # Fallback to standard publish for publishers that don't support types
                         publisher.publish_frame(frame)
                 except Exception as e:
                     self.logger.error(f"Error in publisher {publisher.__class__.__name__}: {e}")
