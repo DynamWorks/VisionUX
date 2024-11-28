@@ -1,133 +1,163 @@
+import os
 import logging
-import json
+import time
+from typing import Any, Dict, Optional
 from pathlib import Path
-import asyncio
-from .base_handler import BaseMessageHandler
+from werkzeug.utils import secure_filename
+from .base_handler import BaseHandler
+from .progress_handler import ProgressHandler
 
-class VideoUploadHandler(BaseMessageHandler):
-    def __init__(self, uploads_path: Path):
-        super().__init__()
-        self.uploads_path = uploads_path
-        self.current_upload = None
-        
-    async def handle(self, websocket, message_data):
-        """Handle video upload messages"""
+class VideoUploadHandler(BaseHandler):
+    """Handler for video file uploads"""
+    
+    def __init__(self, upload_path: str = "tmp_content/uploads", progress_handler: Optional[ProgressHandler] = None):
+        super().__init__("video_upload", "file")
+        self.upload_path = Path(upload_path)
+        self.progress_handler = progress_handler
+        self.allowed_extensions = {'.mp4', '.avi', '.mov', '.webm'}
+        self.max_file_size = 100 * 1024 * 1024  # 100MB
+        self.upload_path.mkdir(parents=True, exist_ok=True)
+        self.logger.info(f"Initialized VideoUploadHandler with upload path: {self.upload_path}")
+
+    def _handle_impl(self, data: Any) -> Dict:
+        """Handle file upload"""
         try:
-            if isinstance(message_data, dict):
-                if message_data.get('type') == 'video_upload_start':
-                    await self.handle_upload_start(websocket, message_data)
-                elif message_data.get('type') == 'video_upload_complete':
-                    await self.handle_upload_complete(websocket)
-            elif isinstance(message_data, bytes):
-                await self.handle_upload_chunk(websocket, message_data)
-        except Exception as e:
-            self.logger.error(f"Error handling video upload: {e}")
-            await self.send_error(websocket, str(e))
+            if not isinstance(data, dict):
+                raise ValueError("Invalid upload data format")
 
-    async def handle_upload_start(self, websocket, data):
-        """Handle the start of a video upload"""
-        try:
-            filename = data.get('filename')
-            size = data.get('size')
-            file_path = self.uploads_path / filename
+            file = data.get('file')
+            if not file:
+                raise ValueError("No file provided")
 
-            # Check if file already exists
-            if file_path.exists():
-                self.logger.warning(f"File already exists: {filename}")
-                await self.send_error(websocket, 'File already exists')
-                return
+            # Create operation in progress handler
+            operation_id = f"upload_{int(time.time())}"
+            if self.progress_handler:
+                self.progress_handler.start_operation(operation_id, "file_upload")
 
-            # Validate file size (e.g., max 500MB)
-            max_size = 500 * 1024 * 1024  # 500MB in bytes
-            if size > max_size:
-                self.logger.warning(f"File too large: {size} bytes")
-                await self.send_error(websocket, 
-                    f'File size exceeds maximum allowed size of {max_size/1024/1024}MB')
-                return
+            # Validate file
+            filename = secure_filename(file.filename)
+            if not self._is_allowed_file(filename):
+                raise ValueError(f"File type not allowed: {filename}")
 
-            self.current_upload = {
+            if file.content_length > self.max_file_size:
+                raise ValueError(f"File too large: {file.content_length} bytes")
+
+            # Save file with progress tracking
+            file_path = self.upload_path / filename
+            bytes_written = 0
+            file_size = file.content_length
+
+            with open(file_path, 'wb') as f:
+                while True:
+                    chunk = file.read(8192)  # 8KB chunks
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    bytes_written += len(chunk)
+                    
+                    if self.progress_handler:
+                        progress = (bytes_written / file_size) * 100
+                        self.progress_handler.update_operation(
+                            operation_id,
+                            progress,
+                            f"Uploading {filename}: {bytes_written}/{file_size} bytes"
+                        )
+
+            # Complete operation
+            if self.progress_handler:
+                self.progress_handler.complete_operation(
+                    operation_id,
+                    f"Upload completed: {filename}"
+                )
+
+            return {
+                'status': 'success',
                 'filename': filename,
-                'size': size,
-                'file_handle': open(file_path, 'wb'),
-                'bytes_received': 0
+                'path': str(file_path.relative_to(self.upload_path)),
+                'size': file_path.stat().st_size,
+                'operation_id': operation_id,
+                'timestamp': time.time()
             }
-            self.logger.info(f"Starting video upload: {filename} ({size} bytes)")
-            await self.send_response(websocket, {'type': 'upload_start_ack'})
-            
+
         except Exception as e:
-            self.logger.error(f"Error starting upload: {e}")
-            await self.send_error(websocket, str(e))
+            self._log_error(e, "Error handling file upload")
+            if self.progress_handler:
+                self.progress_handler.fail_operation(operation_id, str(e))
+            raise
 
-    async def handle_upload_chunk(self, websocket, chunk):
-        """Handle an incoming chunk of video data"""
-        if not self.current_upload:
-            raise ValueError("No active upload session")
-            
-        self.current_upload['file_handle'].write(chunk)
-        self.current_upload['bytes_received'] += len(chunk)
-        
-        # Calculate and send progress
-        progress = (self.current_upload['bytes_received'] / self.current_upload['size']) * 100
-        await self.send_response(websocket, {
-            'type': 'upload_progress',
-            'progress': round(progress, 2),
-            'bytes_received': self.current_upload['bytes_received'],
-            'total_bytes': self.current_upload['size']
-        })
-        
-        self.logger.debug(f"Upload progress: {progress:.1f}%")
+    def validate(self, data: Any) -> bool:
+        """Validate upload data"""
+        if not isinstance(data, dict):
+            return False
+        if 'file' not in data:
+            return False
+        return True
 
-    async def handle_upload_complete(self, websocket):
-        """Handle upload completion"""
-        if not self.current_upload:
-            return
-            
+    def _is_allowed_file(self, filename: str) -> bool:
+        """Check if file extension is allowed"""
+        return Path(filename).suffix.lower() in self.allowed_extensions
+
+    def get_file_path(self, filename: str) -> Path:
+        """Get full path for a file"""
+        return self.upload_path / secure_filename(filename)
+
+    def cleanup(self) -> None:
+        """Cleanup handler resources"""
+        super().cleanup()
+        # Optionally clean up old uploads
+        self._cleanup_old_files()
+
+    def _cleanup_old_files(self, max_age_days: int = 7) -> None:
+        """Clean up files older than max_age_days"""
         try:
-            self.current_upload['file_handle'].flush()
-            self.current_upload['file_handle'].close()
-            file_path = self.uploads_path / self.current_upload['filename']
-            
-            if file_path.exists():
-                file_size = file_path.stat().st_size
-                self.logger.info(f"Upload completed successfully: {self.current_upload['filename']}")
-                
-                # Get updated file list
-                files = []
-                for f_path in self.uploads_path.glob('*.mp4'):
-                    try:
-                        stat = f_path.stat()
-                        files.append({
-                            'name': f_path.name,
-                            'size': stat.st_size,
-                            'modified': stat.st_mtime,
-                            'path': str(f_path)
-                        })
-                    except OSError as e:
-                        self.logger.error(f"Error accessing file {f_path}: {e}")
-                        continue
-                
-                # Send both completion acknowledgment and updated file list
-                await self.send_response(websocket, {
-                    'type': 'upload_complete_ack',
-                    'filename': self.current_upload['filename'],
-                    'size': file_size
-                })
-
-                # Start streaming the uploaded video
-                await self.send_response(websocket, {
-                    'type': 'start_video_stream',
-                    'filename': self.current_upload['filename']
-                })
-                
-                await self.send_response(websocket, {
-                    'type': 'uploaded_files',
-                    'files': sorted(files, key=lambda x: x['modified'], reverse=True)
-                })
-            else:
-                raise FileNotFoundError(f"Uploaded file not found: {file_path}")
-                
+            current_time = time.time()
+            for file_path in self.upload_path.iterdir():
+                if file_path.is_file():
+                    file_age = current_time - file_path.stat().st_mtime
+                    if file_age > (max_age_days * 24 * 60 * 60):
+                        file_path.unlink()
+                        self.logger.info(f"Cleaned up old file: {file_path}")
         except Exception as e:
-            self.logger.error(f"Error finalizing upload: {str(e)}")
-            await self.send_error(websocket, f"Failed to finalize upload: {str(e)}")
-        finally:
-            self.current_upload = None
+            self.logger.error(f"Error cleaning up old files: {e}")
+
+    def get_upload_stats(self) -> Dict:
+        """Get upload statistics"""
+        total_size = 0
+        file_count = 0
+        file_types = {}
+
+        try:
+            for file_path in self.upload_path.iterdir():
+                if file_path.is_file():
+                    total_size += file_path.stat().st_size
+                    file_count += 1
+                    ext = file_path.suffix.lower()
+                    file_types[ext] = file_types.get(ext, 0) + 1
+        except Exception as e:
+            self.logger.error(f"Error getting upload stats: {e}")
+
+        return {
+            'total_size': total_size,
+            'file_count': file_count,
+            'file_types': file_types,
+            'timestamp': time.time()
+        }
+
+    def check_upload_space(self) -> Dict:
+        """Check available upload space"""
+        try:
+            total, used, free = os.statvfs(self.upload_path).f_blocks, \
+                               os.statvfs(self.upload_path).f_bsize * os.statvfs(self.upload_path).f_bfree, \
+                               os.statvfs(self.upload_path).f_bavail * os.statvfs(self.upload_path).f_bsize
+            return {
+                'total': total,
+                'used': used,
+                'free': free,
+                'timestamp': time.time()
+            }
+        except Exception as e:
+            self.logger.error(f"Error checking upload space: {e}")
+            return {
+                'error': str(e),
+                'timestamp': time.time()
+            }
