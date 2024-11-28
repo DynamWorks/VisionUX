@@ -227,6 +227,7 @@ const VideoPlayer = ({ file }) => {
                 style={{ display: 'none' }}
                 playsInline
                 muted
+                loop
             />
             <canvas
                 ref={canvasRef}
