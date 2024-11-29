@@ -36,6 +36,9 @@ function App() {
             // Add loading message to chat
             addMessage('system', 'Analyzing scene...');
 
+            // Add initial loading message
+            addMessage('system', 'Analyzing scene...');
+
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                 method: 'POST',
                 headers: {
@@ -55,16 +58,15 @@ function App() {
 
             const data = await response.json();
 
-            // Add loading message to chat
-            addMessage('system', 'Analyzing scene...');
-
             if (data.scene_analysis?.description) {
-                // Add scene analysis description to chat
+                // Update chat with analysis results
                 addMessage('system', `Scene Analysis:\n${data.scene_analysis.description}`);
             }
 
-            // Handle the analysis results
-            await chatHandleAnalysis(data);
+            // Update analysis results in store
+            if (data.results) {
+                setAnalysisResults(data.results);
+            }
 
             // Notify WebSocket about analysis completion
             if (websocketService.isConnected()) {

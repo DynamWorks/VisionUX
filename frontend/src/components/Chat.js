@@ -46,7 +46,7 @@ const Chat = () => {
             case 'assistant':
                 return { ...baseStyle, bgcolor: '#4a5568' };
             case 'system':
-                return { ...baseStyle, bgcolor: '#38a169', width: '100%' };
+                return { ...baseStyle, bgcolor: '#4a5568', width: '100%' };
             case 'error':
                 return { ...baseStyle, bgcolor: '#e53e3e' };
             default:
