@@ -50,9 +50,10 @@ class RAGService:
         if self.gemini_api_key:
             try:
                 genai.configure(api_key=self.gemini_api_key)
-                self.gemini_model = GenerativeModel('gemini-1.5-flash')
+                model_name = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
+                self.gemini_model = GenerativeModel(model_name)
                 self.gemini_enabled = True
-                self.logger.info("Gemini API initialized successfully")
+                self.logger.info(f"Gemini API initialized successfully with model: {model_name}")
             except Exception as e:
                 self.gemini_enabled = False
                 self.gemini_model = None
