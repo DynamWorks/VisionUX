@@ -98,22 +98,31 @@ class RAGService:
             with open(results_path) as f:
                 data = json.load(f)
                 
-            # Use Gemini to get detailed text representation
-            prompt = """Analyze this JSON data and provide a detailed text representation that:
-            1. Describes the content in natural language
-            2. Preserves all important information and relationships
-            3. Maintains hierarchical structure
-            4. Includes technical details and metadata
-            5. Uses clear section headings and organization
-            
-            JSON data:
-            {data}
-            """
-            
-            response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
-            
-            if not response.text:
-                raise ValueError("Failed to get text representation from Gemini")
+            # Use Gemini to get detailed text representation if available
+            if self.gemini_enabled and self.gemini_model:
+                prompt = """Analyze this JSON data and provide a detailed text representation that:
+                1. Describes the content in natural language
+                2. Preserves all important information and relationships
+                3. Maintains hierarchical structure
+                4. Includes technical details and metadata
+                5. Uses clear section headings and organization
+                
+                JSON data:
+                {data}
+                """
+                
+                try:
+                    response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
+                    if response and response.text:
+                        text_representation = response.text
+                    else:
+                        text_representation = json.dumps(data, indent=2)
+                except Exception as e:
+                    self.logger.error(f"Gemini processing failed: {e}")
+                    text_representation = json.dumps(data, indent=2)
+            else:
+                # Fallback to raw JSON if Gemini not available
+                text_representation = json.dumps(data, indent=2)
                 
             # Save processed text to knowledgebase
             kb_path = Path("tmp_content/knowledgebase")
