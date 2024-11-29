@@ -148,12 +148,20 @@ Focus on providing detailed, actionable insights that would be useful for comput
                 }
             }
 
-            # Save analysis to disk
+            # Save analysis to disk with video filename and timestamp
             timestamp = int(time.time())
+            video_name = context.get('video_file', 'unknown') if isinstance(context, dict) else 'unknown'
+            analysis_id = f"{video_name}_analysis_{timestamp}"
             analysis_path = self.content_manager.save_analysis(
                 structured_response,
-                f"scene_analysis_{timestamp}"
+                analysis_id
             )
+            structured_response['storage'] = {
+                'path': str(analysis_path),
+                'id': analysis_id,
+                'video_file': video_name,
+                'timestamp': timestamp
+            }
 
             self.logger.info(f"Scene analysis completed and saved to {analysis_path}")
             return structured_response
