@@ -65,23 +65,28 @@ class StreamManager:
         """
         try:
             captured_frames = []
-            
-            # If streaming is active, capture from frame buffer
-            if self.is_streaming and self.frame_buffer:
-                with self.buffer_lock:
-                    # Get evenly spaced frames from buffer
-                    buffer_frames = list(self.frame_buffer)
-                    step = max(1, len(buffer_frames) // num_frames)
-                    for frame in buffer_frames[::step][:num_frames]:
-                        captured_frames.append((
-                            frame.data if isinstance(frame.data, np.ndarray) else cv2.imdecode(
-                                np.frombuffer(frame.data, np.uint8), 
-                                cv2.IMREAD_COLOR
-                            ),
-                            frame.timestamp,
-                            frame.frame_number
-                        ))
-                return captured_frames
+            video_path = self.get_video_path()
+
+            if not video_path:
+                # If no video file but streaming is active, capture from buffer
+                if self.is_streaming and self.frame_buffer:
+                    with self.buffer_lock:
+                        buffer_frames = list(self.frame_buffer)
+                        step = max(1, len(buffer_frames) // num_frames)
+                        for frame in buffer_frames[::step][:num_frames]:
+                            frame_data = frame.data
+                            if not isinstance(frame_data, np.ndarray):
+                                frame_data = cv2.imdecode(
+                                    np.frombuffer(frame_data, np.uint8), 
+                                    cv2.IMREAD_COLOR
+                                )
+                            captured_frames.append((
+                                frame_data.copy(),  # Make a copy to avoid reference issues
+                                frame.timestamp,
+                                frame.frame_number
+                            ))
+                    return captured_frames
+                raise ValueError("No video file or active stream available")
                 
             # Otherwise try to capture from video file
             video_path = self.get_video_path()

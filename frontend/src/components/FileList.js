@@ -106,6 +106,12 @@ const FileList = () => {
                 console.log('Triggering auto-analysis for:', file.name);
                 addMessage('system', 'Auto-analyzing scene...');
                 
+                // Stop any existing stream first
+                await fetch(`${process.env.REACT_APP_API_URL}/api/v1/stream/stop`, {
+                    method: 'POST'
+                });
+
+                // Then trigger scene analysis
                 const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                     method: 'POST',
                     headers: {
