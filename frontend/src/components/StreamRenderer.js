@@ -50,30 +50,9 @@ const StreamRenderer = ({ source, isStreaming }) => {
                         canvas.style.height = `${img.height * scale}px`;
                     }
 
-                    // Create blob URL and get metadata
-                    const url = URL.createObjectURL(blob);
-                    const frameMetadata = blob.metadata || {};
-
-                    // Draw frame based on type
+                    // Draw frame
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    if (frameMetadata.type === 'edge_detection') {
-                        // For edge detection frames, draw directly
-                        ctx.drawImage(img, 0, 0);
-                    } else if (frameMetadata.overlay_edges) {
-                        // For regular frames with edge overlay
-                        ctx.drawImage(img, 0, 0);
-                        if (frameMetadata.edge_frame) {
-                            ctx.globalAlpha = 0.5;
-                            ctx.drawImage(frameMetadata.edge_frame, 0, 0);
-                            ctx.globalAlpha = 1.0;
-                        }
-                    } else {
-                        // Regular frame
-                        ctx.drawImage(img, 0, 0);
-                    }
-
-                    // Clean up blob URL
-                    URL.revokeObjectURL(url);
+                    ctx.drawImage(img, 0, 0);
 
                     URL.revokeObjectURL(url);
                     resolve();
