@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Box, TextField, IconButton, Paper, Typography, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import useChat from '../hooks/useChat';
@@ -6,15 +6,22 @@ import useStore from '../store';
 
 const Chat = () => {
     const [message, setMessage] = useState('');
-    const { messages, isLoading, sendMessage, handleSceneAnalysis } = useChat();
+    const { messages, isLoading, sendMessage } = useChat();
     const { isStreaming } = useStore();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+    const chatBoxRef = useRef(null);
+
+    // Auto-scroll to bottom when new messages arrive
+    useEffect(() => {
+        if (chatBoxRef.current) {
+            chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     const handleSend = async () => {
         if (!message.trim()) return;
-
         try {
             await sendMessage(message);
             setMessage('');
@@ -23,63 +30,51 @@ const Chat = () => {
         }
     };
 
-    const handleAnalysis = async () => {
-        if (!isStreaming) {
-            console.warn('No active stream to analyze');
-            return;
-        }
+    const getMessageStyle = (role) => {
+        const baseStyle = {
+            display: 'inline-block',
+            p: isMobile ? 1 : 2,
+            borderRadius: 1,
+            maxWidth: '100%',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word'
+        };
 
-        try {
-            setMessage('');  // Clear current message
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    stream_type: 'camera'
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Scene analysis failed: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.scene_analysis?.description) {
-                // Add system message with analysis results
-                messages.push({
-                    role: 'system',
-                    content: `Scene Analysis:\n${data.scene_analysis.description}`
-                });
-            } else {
-                console.warn('No scene analysis description in response:', data);
-                messages.push({
-                    role: 'system',
-                    content: 'Scene analysis completed but no description available.'
-                });
-            }
-
-        } catch (error) {
-            console.error('Error handling scene analysis:', error);
-            messages.push({
-                role: 'system',
-                content: `Error during scene analysis: ${error.message}`
-            });
+        switch (role) {
+            case 'user':
+                return { ...baseStyle, bgcolor: '#2c5282' };
+            case 'assistant':
+                return { ...baseStyle, bgcolor: '#4a5568' };
+            case 'system':
+                return { ...baseStyle, bgcolor: '#38a169', width: '100%' };
+            case 'error':
+                return { ...baseStyle, bgcolor: '#e53e3e' };
+            default:
+                return { ...baseStyle, bgcolor: '#4a5568' };
         }
     };
 
     return (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Paper
+                ref={chatBoxRef}
                 sx={{
                     p: 2,
                     height: isMobile ? '200px' : isTablet ? '300px' : 'calc(100vh - 900px)',
                     minHeight: '200px',
                     overflowY: 'auto',
                     bgcolor: '#1a1a1a',
-                    color: 'white'
+                    color: 'white',
+                    '&::-webkit-scrollbar': {
+                        width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: '4px',
+                    },
                 }}
             >
                 {messages.map((msg, idx) => (
@@ -87,33 +82,24 @@ const Chat = () => {
                         key={idx}
                         sx={{
                             mb: 1,
-                            textAlign: msg.role === 'user' ? 'right' : 'left',
-                            maxWidth: isMobile ? '100%' : '80%',
+                            textAlign: msg.role === 'system' ? 'left' : msg.role === 'user' ? 'right' : 'left',
+                            maxWidth: msg.role === 'system' ? '100%' : isMobile ? '100%' : '80%',
                             marginLeft: msg.role === 'user' ? 'auto' : 0,
                             marginRight: msg.role === 'user' ? 0 : 'auto'
                         }}
                     >
                         <Typography
                             variant={isMobile ? 'body2' : 'body1'}
-                            sx={{
-                                display: 'inline-block',
-                                bgcolor: msg.role === 'user' ? '#2c5282' : 
-                                        msg.role === 'assistant' ? '#4a5568' :
-                                        msg.role === 'system' ? '#38a169' : '#e53e3e',
-                                p: isMobile ? 1 : 2,
-                                borderRadius: 1,
-                                maxWidth: '100%',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word'
-                            }}
+                            sx={getMessageStyle(msg.role)}
                         >
                             {msg.content}
                         </Typography>
                     </Box>
                 ))}
             </Paper>
-            <Box sx={{ 
-                display: 'flex', 
+
+            <Box sx={{
+                display: 'flex',
                 gap: 1,
                 flexDirection: 'row',
                 alignItems: 'flex-start'
