@@ -101,6 +101,7 @@ const FileList = () => {
         // If auto analysis is enabled, trigger scene analysis
         if (autoAnalysisEnabled) {
             try {
+                addMessage('system', 'Analyzing scene...');
                 const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                     method: 'POST',
                     headers: {
