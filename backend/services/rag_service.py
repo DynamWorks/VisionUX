@@ -36,6 +36,11 @@ class RAGService:
         openai_api_key = os.getenv('OPENAI_API_KEY')
         if not openai_api_key:
             openai_api_key = self.config.get('services', 'openai', 'api_key')
+
+        openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')        
+        if not openai_api_base:                                                            
+             openai_api_base = self.config.get('services', 'openai', 'api_base',            
+ default='https://api.openai.com/v1')                        
             
         # Initialize Gemini
         gemini_api_key = os.getenv('GEMINI_API_KEY')
@@ -43,7 +48,7 @@ class RAGService:
             raise ValueError("GEMINI_API_KEY environment variable is required")
             
         genai.configure(api_key=gemini_api_key)
-        self.gemini_model = GenerativeModel('gemini-pro')
+        self.gemini_model = GenerativeModel('gemini-1.5-flash')
         
         # Initialize embeddings with API key and base URL
         self.embeddings = OpenAIEmbeddings(
