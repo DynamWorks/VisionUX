@@ -92,7 +92,7 @@ const Chat = () => {
                             variant={isMobile ? 'body2' : 'body1'}
                             sx={getMessageStyle(msg.role)}
                         >
-                            {msg.content}
+                            {typeof msg.content === 'object' ? msg.content.answer || msg.content.error : msg.content}
                         </Typography>
                     </Box>
                 ))}
