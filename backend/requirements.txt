@@ -31,7 +31,7 @@ langchain-community>=0.3,<0.4
 langchain-core>=0.3,<0.4
 langchain-openai>=0.2,<0.3
 openai<2.0.0
-chromadb==0.5.18
+faiss-cpu>=1.7.4
 sentence-transformers==3.3.0
 
 # Visualization

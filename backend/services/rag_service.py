@@ -3,8 +3,10 @@ from pathlib import Path
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from backend.utils.config import Config
-from langchain_community.vectorstores import Chroma
-from langchain_community.vectorstores.utils import filter_complex_metadata
+from langchain.vectorstores.faiss import FAISS
+from langchain.docstore.in_memory import InMemoryDocstore
+from langchain.schema import Document
+import faiss
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.prompts import PromptTemplate
@@ -109,57 +111,61 @@ class RAGService:
             self.logger.error(f"Error loading results: {str(e)}")
             return []
             
-    def create_knowledge_base(self, results_path: Path) -> Optional[Chroma]:
+    def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
         """
-        Create or load vector store from analysis results
+        Create in-memory vector store from analysis results
         
         Args:
             results_path: Path to JSON results file
             
         Returns:
-            Chroma vector store instance or None if creation fails
+            FAISS vector store instance or None if creation fails
             
         Notes:
-            - Creates a new vector store if one doesn't exist for the results
-            - Loads existing vector store if available and up to date
-            - Updates vector store if results file has changed
+            - Creates a new in-memory vector store for each session
+            - Handles complex data types by flattening them to strings
+            - More efficient for temporary session-based RAG
         """
         try:
             documents = self._load_and_chunk_results(results_path)
             if not documents:
                 return None
                 
-            # Create documents with text and metadata
-            documents = [
-                {"page_content": doc["text"], "metadata": filter_complex_metadata(doc.get("metadata", {}))}
-                for doc in documents
-            ]
+            # Create documents with flattened complex data
+            documents = []
+            for doc in documents:
+                # Convert any complex metadata to string representation
+                metadata = {}
+                for k, v in doc.get("metadata", {}).items():
+                    if isinstance(v, (list, dict)):
+                        metadata[k] = str(v)
+                    else:
+                        metadata[k] = v
+                
+                # Create Document object
+                documents.append(
+                    Document(
+                        page_content=doc["text"],
+                        metadata=metadata
+                    )
+                )
             
             # Split into chunks
             chunks = self.text_splitter.split_documents(documents)
             
-            # Create vector store
-            # Generate unique ID for these results
-            results_hash = self._hash_results(results_path)
-            store_path = self.persist_dir / results_hash
+            # Create FAISS index
+            embedding_size = 1536  # OpenAI embedding dimension
+            index = faiss.IndexFlatL2(embedding_size)
             
-            # Check if vector store exists and is current
-            if self._is_store_current(store_path, results_hash):
-                self.logger.info(f"Loading existing vector store from {store_path}")
-                vectordb = Chroma(
-                    persist_directory=str(store_path),
-                    embedding_function=self.embeddings
-                )
-            else:
-                self.logger.info("Creating new vector store")
-                vectordb = Chroma.from_documents(
-                    documents=chunks,
-                    embedding=self.embeddings,
-                    persist_directory=str(store_path)
-                )
-                vectordb.persist()
-                # Save metadata about the store
-                self._save_store_metadata(store_path, results_hash)
+            # Create in-memory vector store
+            vectordb = FAISS(
+                self.embeddings.embed_query,
+                index,
+                InMemoryDocstore({}),
+                {})
+            
+            # Add documents to store
+            vectordb.add_documents(chunks)
             
             return vectordb
             
