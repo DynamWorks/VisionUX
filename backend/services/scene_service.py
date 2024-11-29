@@ -155,10 +155,11 @@ Focus on providing detailed, actionable insights that would be useful for comput
                 }
             }
 
-            # Save analysis to disk with video filename and timestamp
+            # Save analysis to disk with video filename, source type and timestamp
             timestamp = int(time.time())
-            video_name = context.get('video_file', 'unknown') if isinstance(context, dict) else 'unknown'
-            analysis_id = f"{video_name}_analysis_{timestamp}"
+            video_name = context['video_file'] if isinstance(context, dict) and 'video_file' in context else 'unknown'
+            source_type = context.get('source_type', 'video') if isinstance(context, dict) else 'video'
+            analysis_id = f"{video_name}_{source_type}_analysis_{timestamp}"
             analysis_path = self.content_manager.save_analysis(
                 structured_response,
                 analysis_id

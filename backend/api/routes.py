@@ -158,6 +158,7 @@ def analyze_scene():
             # Build context information
             context = {
                 'video_file': video_file,
+                'source_type': stream_type,
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
                 'frame_count': len(frames),
                 'total_frames': total_frames,
