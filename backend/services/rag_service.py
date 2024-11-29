@@ -154,16 +154,11 @@ class RAGService:
             # Split into chunks
             chunks = self.text_splitter.split_documents(documents)
             
-            # Create FAISS index
-            embedding_size = 1536  # OpenAI embedding dimension
-            index = faiss.IndexFlatL2(embedding_size)
-            
-            # Create in-memory vector store
-            vectordb = FAISS(
-                self.embeddings.embed_query,
-                index,
-                InMemoryDocstore({}),
-                {})
+            # Create FAISS vector store from documents
+            vectordb = FAISS.from_documents(
+                chunks,
+                self.embeddings
+            )
             
             # Add documents to store
             vectordb.add_documents(chunks)
