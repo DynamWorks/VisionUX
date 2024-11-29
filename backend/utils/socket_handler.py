@@ -118,7 +118,8 @@ class SocketHandler:
                 try:
                     # Get frames from stream manager
                     # Get frames based on source type
-                    if metadata.get('source_type') == 'stream':
+                    source_type = data.get('source_type') if data else None
+                    if source_type == 'stream':
                         # For streaming, capture consecutive frames
                         frames = self.stream_manager.capture_frames_for_analysis(
                             num_frames=8,
