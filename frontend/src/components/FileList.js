@@ -59,22 +59,24 @@ const FileList = () => {
                 localStorage.clear();
             }
             
-            // Auto-select logic:
-            // 1. If there's only one file, select it (new upload case)
-            // 2. If this is a new upload, select the uploaded file
-            // 3. Otherwise maintain current selection if it still exists
+            // Auto-select and analyze logic:
+            let fileToSelect = null;
+            
+            // 1. If there's only one file, select it
             if (files.length === 1) {
-                handleVideoSelect(files[0]);
-            } else if (file && files.length > 0) {
-                const uploadedFile = files.find(f => f.name === file.name);
-                if (uploadedFile) {
-                    handleVideoSelect(uploadedFile);
-                }
-            } else if (currentVideo) {
-                const existingFile = files.find(f => f.name === currentVideo.name);
-                if (existingFile) {
-                    handleVideoSelect(existingFile);
-                }
+                fileToSelect = files[0];
+            } 
+            // 2. If this is a new upload, select the uploaded file
+            else if (file && files.length > 0) {
+                fileToSelect = files.find(f => f.name === file.name);
+            }
+            // 3. Otherwise maintain current selection if it still exists
+            else if (currentVideo) {
+                fileToSelect = files.find(f => f.name === currentVideo.name);
+            }
+
+            if (fileToSelect) {
+                handleVideoSelect(fileToSelect, true); // Pass true to indicate this is from upload
             }
             
             setUploadProgress(100);
@@ -95,13 +97,15 @@ const FileList = () => {
         maxFiles: 1
     });
 
-    const handleVideoSelect = async (file) => {
+    const handleVideoSelect = async (file, isFromUpload = false) => {
         setCurrentVideo(file);
 
-        // If auto analysis is enabled, trigger scene analysis
-        if (autoAnalysisEnabled) {
+        // Only trigger auto-analysis if enabled and this is from an upload
+        if (autoAnalysisEnabled && isFromUpload) {
             try {
-                addMessage('system', 'Analyzing scene...');
+                console.log('Triggering auto-analysis for:', file.name);
+                addMessage('system', 'Auto-analyzing scene...');
+                
                 const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                     method: 'POST',
                     headers: {
@@ -115,12 +119,18 @@ const FileList = () => {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Scene analysis failed');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Scene analysis failed');
                 }
 
                 const data = await response.json();
                 if (data.scene_analysis?.description) {
                     addMessage('system', `Auto Scene Analysis:\n${data.scene_analysis.description}`);
+                    
+                    // Also update analysis results in store if available
+                    if (data.results) {
+                        setAnalysisResults(data.results);
+                    }
                 }
             } catch (error) {
                 console.error('Auto analysis error:', error);
