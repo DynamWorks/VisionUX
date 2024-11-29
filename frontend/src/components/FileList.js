@@ -5,9 +5,11 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useDropzone } from 'react-dropzone';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import useStore from '../store';
+import useChat from '../hooks/useChat';
 
 const FileList = () => {
-    const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles } = useStore();
+    const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles, autoAnalysisEnabled } = useStore();
+    const { addMessage } = useChat();
 
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -93,8 +95,37 @@ const FileList = () => {
         maxFiles: 1
     });
 
-    const handleVideoSelect = (file) => {
+    const handleVideoSelect = async (file) => {
         setCurrentVideo(file);
+
+        // If auto analysis is enabled, trigger scene analysis
+        if (autoAnalysisEnabled) {
+            try {
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        stream_type: 'video',
+                        video_file: file.name,
+                        num_frames: 8
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Scene analysis failed');
+                }
+
+                const data = await response.json();
+                if (data.scene_analysis?.description) {
+                    addMessage('system', `Auto Scene Analysis:\n${data.scene_analysis.description}`);
+                }
+            } catch (error) {
+                console.error('Auto analysis error:', error);
+                addMessage('error', `Auto analysis failed: ${error.message}`);
+            }
+        }
     };
 
     return (

@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { Box, Button, ToggleButton } from '@mui/material';
+import { Box, Button, ToggleButton, Switch, FormControlLabel } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TimelineIcon from '@mui/icons-material/Timeline';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CircularProgress from '@mui/material/CircularProgress';
 import useStore from '../store';
 
 const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const { currentVideo, isEdgeDetectionEnabled, setEdgeDetectionEnabled } = useStore();
+    const { 
+        currentVideo, 
+        isEdgeDetectionEnabled, 
+        setEdgeDetectionEnabled,
+        autoAnalysisEnabled,
+        setAutoAnalysisEnabled
+    } = useStore();
 
     const handleSceneAnalysis = async () => {
         try {
@@ -25,7 +32,20 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={autoAnalysisEnabled}
+                            onChange={(e) => setAutoAnalysisEnabled(e.target.checked)}
+                            icon={<AutoFixHighIcon />}
+                        />
+                    }
+                    label="Auto Analysis"
+                />
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
                 variant="contained"
                 startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <VisibilityIcon />}

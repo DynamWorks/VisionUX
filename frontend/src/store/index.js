@@ -29,6 +29,7 @@ const useStore = create(
     isAnalyzing: false,
     analysisError: null,
     isEdgeDetectionEnabled: false,
+    autoAnalysisEnabled: false,
 
     // Video actions
     setUploadedFiles: (files) => set({ uploadedFiles: Array.isArray(files) ? files : [] }),
@@ -41,6 +42,7 @@ const useStore = create(
     setIsAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
     setAnalysisError: (error) => set({ analysisError: error }),
     setEdgeDetectionEnabled: (enabled) => set({ isEdgeDetectionEnabled: enabled }),
+    setAutoAnalysisEnabled: (enabled) => set({ autoAnalysisEnabled: enabled }),
 
     // Reset state
     resetVideoState: () => set({
