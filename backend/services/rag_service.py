@@ -191,24 +191,28 @@ class RAGService:
 
         # Custom prompt template
         prompt_template = """Use the following pieces of context from video analysis results to answer the question.
-        Each analysis result contains information specific to when that analysis was performed, including:
-        - Scene descriptions
-        - Object detections
-        - Motion analysis
-        - Technical details
-        - Timestamps and frame numbers
+        Each analysis result contains important metadata including:
+        - Frame numbers and timestamps
+        - Scene descriptions and analysis
+        - Object detections and locations
+        - Motion patterns and changes
+        - Technical details (resolution, quality, etc.)
+        - Source identifiers and analysis timestamps
         
         Context: {summaries}
         
         Question: {question}
         
         Guidelines for your response:
-        1. Only use information from the provided analysis results
-        2. Cite specific frame numbers and timestamps when referencing observations
-        3. Note which analysis result/timestamp you're drawing information from
-        4. Express confidence levels for any claims (high/medium/low)
-        5. If the context doesn't contain relevant information, clearly state that
-        6. Never make up information beyond what's in the analysis results unless the relavant information in the context requires more valid information
+        1. Only use information from the provided context
+        2. ALWAYS cite specific metadata when making claims:
+           - Reference frame numbers (e.g. "In frame 127...")
+           - Include timestamps (e.g. "At 3.5 seconds...")
+           - Note source identifiers (e.g. "From analysis_123...")
+        3. Express confidence levels for claims (high/medium/low)
+        4. If metadata conflicts between sources, acknowledge the discrepancy
+        5. If relevant metadata is missing, explicitly state what's lacking
+        6. Never make up information beyond what's in the context and its metadata
         """
 
         PROMPT = PromptTemplate(
