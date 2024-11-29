@@ -48,7 +48,7 @@ class RAGService:
             raise ValueError("GEMINI_API_KEY environment variable is required")
             
         genai.configure(api_key=gemini_api_key)
-        self.gemini_model = GenerativeModel('gemini-pro')
+        self.gemini_model = GenerativeModel('gemini-1.5-flash')
         
         # Initialize embeddings with API key and base URL
         self.embeddings = OpenAIEmbeddings(
@@ -68,7 +68,7 @@ class RAGService:
         # Get model settings with fallbacks
         model_name = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         if self.config._config:  # Only try to get from config if it exists
-            model_name = self.config.get('services', 'rag', 'model', default='gpt-4-turbo-preview')
+            model_name = self.config.get('services', 'rag', 'model', default='gpt-4o-mini')
             
         self.llm = ChatOpenAI(
             model_name=model_name,
