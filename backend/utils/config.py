@@ -15,7 +15,7 @@ class Config:
             config_path: Optional path to YAML config file
         """
         self._config = {}
-        self._env_prefix = 'VIDEO_ANALYTICS_'
+        self._env_prefix = 'DXV_'
         
         # Try to find config file in standard locations
         if not config_path:
