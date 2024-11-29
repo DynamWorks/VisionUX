@@ -185,15 +185,25 @@ class RAGService:
         )
 
         # Custom prompt template
-        prompt_template = """Use the following pieces of context to answer the question. 
-        If you don't know the answer, just say that you don't know. Don't try to make up an answer until the context is relavant and you just a little more than what is present in the context. Remember that the content within each json file are tied and related.
+        prompt_template = """Use the following pieces of context from video analysis results to answer the question.
+        Each analysis result contains information specific to when that analysis was performed, including:
+        - Scene descriptions
+        - Object detections
+        - Motion analysis
+        - Technical details
+        - Timestamps and frame numbers
         
         Context: {summaries}
         
         Question: {question}
         
-        Answer with specific references to frame numbers and timestamps when possible.
-        Include confidence levels for any claims you make.
+        Guidelines for your response:
+        1. Only use information from the provided analysis results
+        2. Cite specific frame numbers and timestamps when referencing observations
+        3. Note which analysis result/timestamp you're drawing information from
+        4. Express confidence levels for any claims (high/medium/low)
+        5. If the context doesn't contain relevant information, clearly state that
+        6. Never make up information beyond what's in the analysis results
         """
 
         PROMPT = PromptTemplate(
