@@ -22,15 +22,20 @@ class WebSocketPublisher(StreamPublisher):
             if not self.clients:
                 return
 
-            # Convert frame data to JPEG if it's a numpy array
+            # Always ensure frame data is in proper JPEG format
             if isinstance(frame.data, np.ndarray):
                 success, buffer = cv2.imencode('.jpg', frame.data, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
                 if not success:
                     raise ValueError("Failed to encode frame")
                 frame_data = buffer.tobytes()
-            else:
-                # If already in bytes format, use directly
+            elif isinstance(frame.data, bytes):
                 frame_data = frame.data
+            else:
+                raise ValueError(f"Unsupported frame data type: {type(frame.data)}")
+
+            # Convert to base64 for WebSocket transmission
+            import base64
+            frame_data = base64.b64encode(frame_data).decode('utf-8')
 
             # Prepare metadata
             metadata = {

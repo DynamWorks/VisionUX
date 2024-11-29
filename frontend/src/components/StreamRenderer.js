@@ -23,22 +23,9 @@ const StreamRenderer = ({ source, isStreaming }) => {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
 
-            // Convert frame data to blob
-            let blob;
-            if (frameData instanceof ArrayBuffer) {
-                blob = new Blob([frameData], { type: 'image/jpeg' });
-            } else if (frameData instanceof Blob) {
-                blob = frameData;
-            } else if (frameData instanceof Uint8Array) {
-                blob = new Blob([frameData.buffer], { type: 'image/jpeg' });
-            } else {
-                console.error('Invalid frame data type:', typeof frameData);
-                throw new Error('Invalid frame data type');
-            }
-
-            // Create and load image
+            // Handle base64 encoded JPEG data
             const img = new Image();
-            const url = URL.createObjectURL(blob);
+            const url = `data:image/jpeg;base64,${frameData}`;
 
             await new Promise((resolve, reject) => {
                 img.onerror = () => {
