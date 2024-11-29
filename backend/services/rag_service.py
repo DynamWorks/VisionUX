@@ -143,13 +143,28 @@ class RAGService:
                             
                 return metadata
 
-            # Convert entire JSON to text document
-            full_text = json_to_text(data)
+            # Process data with Gemini
+            prompt = """Analyze this JSON data and provide a detailed text representation that:
+            1. Describes the content in natural language
+            2. Preserves all important information and relationships
+            3. Maintains hierarchical structure
+            4. Includes technical details and metadata
+            5. Uses clear section headings and organization
             
-            # Split into chunks with context
-            chunks = self.text_splitter.split_text(full_text)
+            JSON data:
+            {data}
+            """
             
-            # Create documents with metadata
+            response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
+            
+            if not response.text:
+                raise ValueError("Failed to get text representation from Gemini")
+                
+            # Split into chunks
+            chunks = self.text_splitter.split_text(response.text)
+            
+            # Create documents list
+            processed_documents = []
             for i, chunk in enumerate(chunks):
                 metadata = {
                     'chunk_id': i,
@@ -158,16 +173,16 @@ class RAGService:
                     'timestamp': time.time()
                 }
                 
-                # Extract metadata from the chunk's content
+                # Extract metadata from the data
                 chunk_metadata = extract_metadata(data)
                 metadata.update(chunk_metadata)
                 
-                documents.append({
+                processed_documents.append({
                     "text": chunk,
                     "metadata": metadata
                 })
                 
-            return documents
+            return processed_documents
             
         except Exception as e:
             self.logger.error(f"Error loading results: {str(e)}")
