@@ -130,7 +130,7 @@ class RAGService:
             
             kb_file = kb_path / f"analysis_{int(time.time())}.txt"
             with open(kb_file, 'w') as f:
-                f.write(response.text)
+                f.write(text_representation)
                 
             # Create document with metadata
             metadata = {
@@ -141,7 +141,7 @@ class RAGService:
             }
             
             return [{
-                "text": response.text,
+                "text": text_representation,
                 "metadata": metadata
             }]
 
