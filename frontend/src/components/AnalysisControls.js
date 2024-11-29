@@ -82,6 +82,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                 Edge Detection
             </ToggleButton>
         </Box>
+    </Box>
     );
 };
 
