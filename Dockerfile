@@ -20,6 +20,9 @@ RUN pip install supervision
 
 # Downdload sam weights
 RUN wget -q https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+
+RUN git clone https://github.com/facebookresearch/sam2.git && cd sam2
+RUN pip install -e .
 # Try with a smaller model for testing.
 
 # RUN curl -fsSL https://ollama.com/install.sh | sh
