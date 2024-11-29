@@ -8,7 +8,7 @@ import useStore from '../store';
 import useChat from '../hooks/useChat';
 
 const FileList = () => {
-    const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles, autoAnalysisEnabled } = useStore();
+    const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles, autoAnalysisEnabled, setAnalysisResults } = useStore();
     const { addMessage } = useChat();
 
     const [uploadProgress, setUploadProgress] = useState(0);
