@@ -84,24 +84,32 @@ class RAGService:
                 text_parts = []
                 
                 if isinstance(obj, dict):
+                    text_parts.append(f"{indent}This section contains:")
                     for key, value in obj.items():
                         current_path = f"{path}.{key}" if path else key
                         if isinstance(value, (dict, list)):
-                            text_parts.append(f"{indent}{key}:")
+                            text_parts.append(f"{indent}{key} contains:")
                             text_parts.append(json_to_text(value, depth + 1, current_path))
                         else:
-                            text_parts.append(f"{indent}{key}: {value}")
+                            text_parts.append(f"{indent}The {key} is {value}")
                             
                 elif isinstance(obj, list):
+                    text_parts.append(f"{indent}This list contains {len(obj)} items:")
                     for i, item in enumerate(obj):
                         current_path = f"{path}[{i}]"
                         if isinstance(item, (dict, list)):
-                            text_parts.append(f"{indent}Item {i}:")
+                            text_parts.append(f"{indent}Item {i + 1}:")
                             text_parts.append(json_to_text(item, depth + 1, current_path))
                         else:
-                            text_parts.append(f"{indent}- {item}")
+                            text_parts.append(f"{indent}- Item {i + 1} is {item}")
+                elif isinstance(obj, bool):
+                    text_parts.append(f"{indent}The value is {'true' if obj else 'false'}")
+                elif isinstance(obj, (int, float)):
+                    text_parts.append(f"{indent}The numeric value is {obj}")
+                elif obj is None:
+                    text_parts.append(f"{indent}This value is empty or null")
                 else:
-                    text_parts.append(f"{indent}{obj}")
+                    text_parts.append(f"{indent}The text value is: {obj}")
                     
                 return "\n".join(text_parts)
 
