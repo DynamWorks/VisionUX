@@ -129,12 +129,16 @@ class RAGService:
             if not documents:
                 return None
                 
-            # Split documents into chunks
-            texts = [doc["text"] for doc in documents]
-            metadatas = [doc["metadata"] for doc in documents]
-            # Filter complex metadata before creating documents
-            filtered_metadatas = [filter_complex_metadata(m) for m in metadatas]
-            chunks = self.text_splitter.create_documents(texts, metadatas=filtered_metadatas)
+            # Split documents into chunks and prepare metadata
+            texts = []
+            metadatas = []
+            for doc in documents:
+                texts.append(doc["text"])
+                # Filter complex metadata before adding
+                filtered_metadata = filter_complex_metadata(doc.get("metadata", {}))
+                metadatas.append(filtered_metadata)
+                
+            chunks = self.text_splitter.create_documents(texts, metadatas=metadatas)
             
             # Create vector store
             # Generate unique ID for these results
