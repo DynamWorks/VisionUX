@@ -3,6 +3,7 @@ import { Box, Button, ToggleButton, Switch, FormControlLabel } from '@mui/materi
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import ChatIcon from '@mui/icons-material/Chat';
 import CircularProgress from '@mui/material/CircularProgress';
 import useStore from '../store';
 
@@ -13,7 +14,9 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
         isEdgeDetectionEnabled, 
         setEdgeDetectionEnabled,
         autoAnalysisEnabled,
-        setAutoAnalysisEnabled
+        setAutoAnalysisEnabled,
+        isRagEnabled,
+        setRagEnabled
     } = useStore();
 
     const handleSceneAnalysis = async () => {
@@ -49,7 +52,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     }
                 />
             </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button
                 variant="contained"
                 startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <VisibilityIcon />}
@@ -80,6 +83,25 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 <TimelineIcon sx={{ mr: 1 }} />
                 Edge Detection
+            </ToggleButton>
+            <ToggleButton
+                value="rag"
+                selected={isRagEnabled}
+                onChange={() => setRagEnabled(!isRagEnabled)}
+                disabled={!currentVideo}
+                sx={{ 
+                    flex: 1,
+                    bgcolor: isRagEnabled ? 'primary.main' : 'inherit',
+                    '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        '&:hover': {
+                            bgcolor: 'primary.dark'
+                        }
+                    }
+                }}
+            >
+                <ChatIcon sx={{ mr: 1 }} />
+                RAG Chat
             </ToggleButton>
         </Box>
     </Box>

@@ -5,7 +5,7 @@ import useStore from '../store';
 const useChat = () => {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const { currentVideo, setAnalysisResults } = useStore();
+    const { currentVideo, setAnalysisResults, isRagEnabled } = useStore();
     
     // Load chat history for current video
     useEffect(() => {
@@ -57,7 +57,8 @@ const useChat = () => {
                 body: JSON.stringify({
                     prompt: message,
                     video_path: currentVideo?.name || 'current',
-                    use_swarm: true
+                    use_swarm: true,
+                    use_rag: isRagEnabled
                 })
             });
 
