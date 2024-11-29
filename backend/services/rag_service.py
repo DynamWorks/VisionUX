@@ -2,6 +2,8 @@ import os
 import time
 from pathlib import Path
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from google.generativeai import GenerativeModel
+import google.generativeai as genai
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from backend.utils.config import Config
 from langchain.vectorstores.faiss import FAISS
@@ -27,17 +29,21 @@ class RAGService:
     def __init__(self, user_id: str = None, project_id: str = None):
         # Load config
         self.config = Config()
-        if not self.config._config:  # If config is empty, load defaults
+        if not self.config._config:
             self.config.reset()
         
-        # Get OpenAI settings with fallbacks
+        # Initialize OpenAI
         openai_api_key = os.getenv('OPENAI_API_KEY')
         if not openai_api_key:
             openai_api_key = self.config.get('services', 'openai', 'api_key')
             
-        openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        if not openai_api_base:
-            openai_api_base = self.config.get('services', 'openai', 'api_base', default='https://api.openai.com/v1')
+        # Initialize Gemini
+        gemini_api_key = os.getenv('GEMINI_API_KEY')
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is required")
+            
+        genai.configure(api_key=gemini_api_key)
+        self.gemini_model = GenerativeModel('gemini-pro')
         
         # Initialize embeddings with API key and base URL
         self.embeddings = OpenAIEmbeddings(
@@ -69,49 +75,48 @@ class RAGService:
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
     def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
-        """
-        Load analysis results and convert to documents with parsed metadata
-        """
+        """Load analysis results and convert to documents with parsed metadata"""
         try:
             with open(results_path) as f:
                 data = json.load(f)
                 
-            documents = []
+            # Use Gemini to get detailed text representation
+            prompt = """Analyze this JSON data and provide a detailed text representation that:
+            1. Describes the content in natural language
+            2. Preserves all important information and relationships
+            3. Maintains hierarchical structure
+            4. Includes technical details and metadata
+            5. Uses clear section headings and organization
             
-            def json_to_text(obj: Any, depth: int = 0, path: str = "") -> str:
-                """Convert any JSON object to readable text with context"""
-                indent = "  " * depth
-                text_parts = []
+            JSON data:
+            {data}
+            """
+            
+            response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
+            
+            if not response.text:
+                raise ValueError("Failed to get text representation from Gemini")
                 
-                if isinstance(obj, dict):
-                    text_parts.append(f"{indent}This section contains:")
-                    for key, value in obj.items():
-                        current_path = f"{path}.{key}" if path else key
-                        if isinstance(value, (dict, list)):
-                            text_parts.append(f"{indent}{key} contains:")
-                            text_parts.append(json_to_text(value, depth + 1, current_path))
-                        else:
-                            text_parts.append(f"{indent}The {key} is {value}")
-                            
-                elif isinstance(obj, list):
-                    text_parts.append(f"{indent}This list contains {len(obj)} items:")
-                    for i, item in enumerate(obj):
-                        current_path = f"{path}[{i}]"
-                        if isinstance(item, (dict, list)):
-                            text_parts.append(f"{indent}Item {i + 1}:")
-                            text_parts.append(json_to_text(item, depth + 1, current_path))
-                        else:
-                            text_parts.append(f"{indent}- Item {i + 1} is {item}")
-                elif isinstance(obj, bool):
-                    text_parts.append(f"{indent}The value is {'true' if obj else 'false'}")
-                elif isinstance(obj, (int, float)):
-                    text_parts.append(f"{indent}The numeric value is {obj}")
-                elif obj is None:
-                    text_parts.append(f"{indent}This value is empty or null")
-                else:
-                    text_parts.append(f"{indent}The text value is: {obj}")
-                    
-                return "\n".join(text_parts)
+            # Save processed text to knowledgebase
+            kb_path = Path("tmp_content/knowledgebase")
+            kb_path.mkdir(parents=True, exist_ok=True)
+            
+            kb_file = kb_path / f"analysis_{int(time.time())}.txt"
+            with open(kb_file, 'w') as f:
+                f.write(response.text)
+                
+            # Create document with metadata
+            metadata = {
+                'source': str(results_path),
+                'timestamp': time.time(),
+                'type': 'analysis',
+                'kb_path': str(kb_file)
+            }
+            
+            return [{
+                "text": response.text,
+                "metadata": metadata
+            }]
 
             def extract_metadata(obj: Any, prefix: str = "") -> Dict:
                 """Extract metadata from JSON object with path context"""
@@ -164,20 +169,7 @@ class RAGService:
             return []
             
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
-        """
-        Create in-memory vector store from analysis results
-        
-        Args:
-            results_path: Path to JSON results file
-            
-        Returns:
-            FAISS vector store instance or None if creation fails
-            
-        Notes:
-            - Creates a new in-memory vector store for each session
-            - Handles complex data types by flattening them to strings
-            - More efficient for temporary session-based RAG
-        """
+        """Create vector store from analysis results and chat history"""
         try:
             documents = self._load_and_chunk_results(results_path)
             if not documents:
@@ -225,15 +217,42 @@ class RAGService:
                 
             chunks = self.text_splitter.split_documents(processed_documents)
             
-            # Create FAISS vector store from documents
-            vectordb = FAISS.from_documents(
-                chunks,
-                self.embeddings
-            )
+            # Get recent chat history
+            chat_dir = Path("tmp_content/chat_history")
+            if chat_dir.exists():
+                chat_files = sorted(chat_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:3]
+                
+                for chat_file in chat_files:
+                    with open(chat_file) as f:
+                        chat_data = json.load(f)
+                        
+                    # Get text representation of chat
+                    chat_prompt = """Convert this chat history to a natural text summary that:
+                    1. Captures the key points of discussion
+                    2. Maintains conversation flow and context
+                    3. Highlights important questions and answers
+                    
+                    Chat history:
+                    {chat}
+                    """
+                    
+                    chat_response = self.gemini_model.generate_content(
+                        chat_prompt.format(chat=json.dumps(chat_data, indent=2))
+                    )
+                    
+                    if chat_response.text:
+                        # Add chat summary as document
+                        chunks.append(Document(
+                            page_content=chat_response.text,
+                            metadata={
+                                'source': str(chat_file),
+                                'type': 'chat_history',
+                                'timestamp': chat_file.stat().st_mtime
+                            }
+                        ))
             
-            # Add documents to store
-            vectordb.add_documents(chunks)
-            
+            # Create vector store from all documents
+            vectordb = FAISS.from_documents(chunks, self.embeddings)
             return vectordb
             
         except Exception as e:
