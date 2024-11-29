@@ -143,7 +143,8 @@ class RAGService:
                     else:
                         metadata[k] = v
                 
-                # Create Document object
+                # Create Document object with source metadata
+                metadata['source'] = f"frame_{metadata.get('frame_number', 'unknown')}"
                 processed_documents.append(
                     Document(
                         page_content=doc["text"],
