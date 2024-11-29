@@ -36,9 +36,6 @@ function App() {
             // Add loading message to chat
             addMessage('system', 'Analyzing scene...');
 
-            // Add initial loading message
-            addMessage('system', 'Analyzing scene...');
-
             const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
                 method: 'POST',
                 headers: {
@@ -52,8 +49,8 @@ function App() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `Scene analysis failed: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Scene analysis failed (${response.status}): ${response.statusText}`);
             }
 
             const data = await response.json();
