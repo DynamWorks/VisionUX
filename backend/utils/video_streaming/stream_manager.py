@@ -59,7 +59,7 @@ class StreamManager:
             return str(Path("tmp_content/uploads") / self.current_file)
         return None
 
-    def capture_frames_for_analysis(self, num_frames: int = 8) -> List[Tuple[np.ndarray, float, int]]:
+    def capture_frames_for_analysis(self, num_frames: int = 8, consecutive: bool = False, interval_frames: int = 4) -> List[Tuple[np.ndarray, float, int]]:
         """
         Capture frames for analysis from either live stream or video file
         """
@@ -102,9 +102,16 @@ class StreamManager:
                 if total_frames < num_frames:
                     num_frames = total_frames
                     
-                # Calculate evenly spaced frame positions
-                interval = total_frames // num_frames
-                frame_positions = [i * interval for i in range(num_frames)]
+                if consecutive:
+                    # For streaming, capture consecutive frames from current position
+                    frame_positions = list(range(
+                        int(cap.get(cv2.CAP_PROP_POS_FRAMES)),
+                        min(int(cap.get(cv2.CAP_PROP_POS_FRAMES)) + num_frames, total_frames)
+                    ))
+                else:
+                    # For video files, use evenly spaced positions
+                    interval = total_frames // num_frames
+                    frame_positions = [i * interval for i in range(num_frames)]
                 
                 captured_frames = []
                 for pos in frame_positions:

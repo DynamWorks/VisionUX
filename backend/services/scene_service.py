@@ -132,6 +132,12 @@ Focus on providing detailed, actionable insights that would be useful for comput
             # Process and structure the response
             analysis = response.choices[0].message.content
             
+            # Determine if frames are consecutive
+            is_consecutive = all(
+                frame_numbers[i+1] - frame_numbers[i] == 1 
+                for i in range(len(frame_numbers)-1)
+            ) if frame_numbers else False
+            
             # Parse response into structured format
             structured_response = {
                 'scene_analysis': {
@@ -139,7 +145,8 @@ Focus on providing detailed, actionable insights that would be useful for comput
                     'timestamp': time.time(),
                     'frames_analyzed': len(frames),
                     'frame_numbers': frame_numbers if frame_numbers else list(range(len(frames))),
-                    'context': context
+                    'context': context,
+                    'frame_pattern': 'consecutive' if is_consecutive else 'interval'
                 },
                 'technical_details': {
                     'resolution': f"{frames[0].shape[1]}x{frames[0].shape[0]}",

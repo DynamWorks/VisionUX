@@ -117,10 +117,19 @@ class SocketHandler:
 
                 try:
                     # Get frames from stream manager
-                    frames = self.stream_manager.capture_frames_for_analysis(
-                        num_frames=8,
-                        interval_frames=4
-                    )
+                    # Get frames based on source type
+                    if metadata.get('source_type') == 'stream':
+                        # For streaming, capture consecutive frames
+                        frames = self.stream_manager.capture_frames_for_analysis(
+                            num_frames=8,
+                            consecutive=True
+                        )
+                    else:
+                        # For video files, use interval sampling
+                        frames = self.stream_manager.capture_frames_for_analysis(
+                            num_frames=8,
+                            interval_frames=4
+                        )
 
                     if not frames:
                         raise ValueError('Failed to capture frames for analysis')
