@@ -133,7 +133,7 @@ class RAGService:
                 return None
                 
             # Create documents with flattened complex data
-            documents = []
+            processed_documents = []
             for doc in documents:
                 # Convert any complex metadata to string representation
                 metadata = {}
@@ -144,15 +144,19 @@ class RAGService:
                         metadata[k] = v
                 
                 # Create Document object
-                documents.append(
+                processed_documents.append(
                     Document(
                         page_content=doc["text"],
                         metadata=metadata
                     )
                 )
             
-            # Split into chunks
-            chunks = self.text_splitter.split_documents(documents)
+            # Split into chunks if we have documents
+            if not processed_documents:
+                self.logger.warning("No documents to process")
+                return None
+                
+            chunks = self.text_splitter.split_documents(processed_documents)
             
             # Create FAISS vector store from documents
             vectordb = FAISS.from_documents(
