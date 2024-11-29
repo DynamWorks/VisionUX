@@ -4,6 +4,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from backend.utils.config import Config
 from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.prompts import PromptTemplate
@@ -131,7 +132,9 @@ class RAGService:
             # Split documents into chunks
             texts = [doc["text"] for doc in documents]
             metadatas = [doc["metadata"] for doc in documents]
-            chunks = self.text_splitter.create_documents(texts, metadatas=metadatas)
+            # Filter complex metadata before creating documents
+            filtered_metadatas = [filter_complex_metadata(m) for m in metadatas]
+            chunks = self.text_splitter.create_documents(texts, metadatas=filtered_metadatas)
             
             # Create vector store
             # Generate unique ID for these results
