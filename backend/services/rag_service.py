@@ -203,7 +203,7 @@ class RAGService:
         3. Note which analysis result/timestamp you're drawing information from
         4. Express confidence levels for any claims (high/medium/low)
         5. If the context doesn't contain relevant information, clearly state that
-        6. Never make up information beyond what's in the analysis results
+        6. Never make up information beyond what's in the analysis results unless the relavant information in the context requires more valid information
         """
 
         PROMPT = PromptTemplate(
