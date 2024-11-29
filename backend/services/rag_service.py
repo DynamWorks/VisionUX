@@ -6,6 +6,7 @@ from backend.utils.config import Config
 from langchain.vectorstores.faiss import FAISS
 from langchain.docstore.in_memory import InMemoryDocstore
 from langchain.schema import Document
+from langchain.chains import RetrievalQAWithSourcesChain
 import faiss
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.chains import RetrievalQAWithSourcesChain
@@ -173,7 +174,7 @@ class RAGService:
             self.logger.error(f"Error creating knowledge base: {str(e)}")
             return None
             
-    def get_retrieval_chain(self, vectordb: Chroma) -> RetrievalQAWithSourcesChain:
+    def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQAWithSourcesChain:
         """Create retrieval chain with custom prompt"""
         retriever = vectordb.as_retriever(
             search_type="similarity_score_threshold",
