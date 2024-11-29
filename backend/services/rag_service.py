@@ -48,7 +48,7 @@ class RAGService:
             raise ValueError("GEMINI_API_KEY environment variable is required")
             
         genai.configure(api_key=gemini_api_key)
-        self.gemini_model = GenerativeModel('gemini-1.5-flash')
+        self.gemini_model = GenerativeModel('gemini-pro')
         
         # Initialize embeddings with API key and base URL
         self.embeddings = OpenAIEmbeddings(
