@@ -186,7 +186,7 @@ class RAGService:
 
         # Custom prompt template
         prompt_template = """Use the following pieces of context to answer the question. 
-        If you don't know the answer, just say that you don't know. Don't try to make up an answer.
+        If you don't know the answer, just say that you don't know. Don't try to make up an answer until the context is relavant and you just a little more than what is present in the context. Remember that the content within each json file are tied and related.
         
         Context: {summaries}
         
