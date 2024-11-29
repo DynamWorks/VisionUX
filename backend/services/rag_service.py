@@ -78,60 +78,55 @@ class RAGService:
                 
             documents = []
             
-            # Parse metadata from context
-            context_metadata = {}
-            if 'context' in data:
-                try:
-                    if isinstance(data['context'], str):
-                        context_metadata = eval(data['context'])  # Safely parse string dict
-                    elif isinstance(data['context'], dict):
-                        context_metadata = data['context']
-                except:
-                    pass
+            def dict_to_text(d: Dict, prefix: str = "") -> str:
+                """Convert dictionary to readable text recursively"""
+                text_parts = []
+                for key, value in d.items():
+                    if isinstance(value, dict):
+                        text_parts.append(f"{prefix}{key}:")
+                        text_parts.append(dict_to_text(value, prefix + "  "))
+                    elif isinstance(value, list):
+                        text_parts.append(f"{prefix}{key}: {', '.join(map(str, value))}")
+                    else:
+                        text_parts.append(f"{prefix}{key}: {value}")
+                return "\n".join(text_parts)
 
-            # Handle frame results
-            if 'results' in data:
-                for frame in data['results']:
-                    # Convert metadata to readable text
-                    metadata_text = "\n".join([
-                        f"Frame {frame.get('frame_number', 'unknown')}",
-                        f"Timestamp: {frame.get('timestamp', 'unknown')}",
-                        f"Analysis ID: {frame.get('analysis_id', 'unknown')}",
-                        f"Confidence: {frame.get('confidence', 0.0)}",
-                        f"Processing Type: {frame.get('processing_type', 'unknown')}"
-                    ])
+            def parse_metadata(value: Any) -> Any:
+                """Parse metadata values, handling strings that might be dicts/lists"""
+                if isinstance(value, str):
+                    try:
+                        # Try to safely evaluate string that might be dict/list
+                        return eval(value) if ('{'  in value or '[' in value) else value
+                    except:
+                        return value
+                return value
+
+            # Process each top-level key as a potential document
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    # Convert dict content to readable text
+                    content_text = dict_to_text(value)
                     
-                    # Combine metadata with content
-                    frame_text = f"""
-                    {metadata_text}
+                    # Parse metadata, handling nested structures
+                    metadata = {}
+                    for meta_key, meta_value in value.items():
+                        parsed_value = parse_metadata(meta_value)
+                        metadata[meta_key] = parsed_value
                     
-                    Detections: {frame.get('detections', {})}
-                    Scene Analysis: {frame.get('scene_analysis', {})}
-                    """
-                    documents.append({"text": frame_text, "metadata": frame})
-                    
-            # Handle scene analysis with metadata
-            if 'scene_analysis' in data:
-                metadata_text = "\n".join([
-                    f"Video: {context_metadata.get('video_file', 'unknown')}",
-                    f"Total Frames: {context_metadata.get('total_frames', 'unknown')}",
-                    f"Duration: {context_metadata.get('duration', 'unknown')} seconds",
-                    f"FPS: {context_metadata.get('fps', 'unknown')}",
-                    f"Frames Analyzed: {context_metadata.get('frames_analyzed', [])}",
-                    f"Analysis ID: {data.get('analysis_id', 'unknown')}",
-                    f"Confidence: {data.get('confidence', 0.0)}"
-                ])
-                
-                scene_text = f"""
-                {metadata_text}
-                
-                Scene Analysis:
-                {data['scene_analysis'].get('description', '')}
-                """
-                documents.append({"text": scene_text, "metadata": {
-                    **data.get('scene_analysis', {}),
-                    **context_metadata
-                }})
+                    documents.append({
+                        "text": f"{key}:\n{content_text}",
+                        "metadata": metadata
+                    })
+                elif isinstance(value, list):
+                    # Handle list of dictionaries (e.g., frame results)
+                    for item in value:
+                        if isinstance(item, dict):
+                            content_text = dict_to_text(item)
+                            metadata = {k: parse_metadata(v) for k, v in item.items()}
+                            documents.append({
+                                "text": f"{key} item:\n{content_text}",
+                                "metadata": metadata
+                            })
                 
             return documents
             
