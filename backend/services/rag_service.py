@@ -78,55 +78,76 @@ class RAGService:
                 
             documents = []
             
-            def dict_to_text(d: Dict, prefix: str = "") -> str:
-                """Convert dictionary to readable text recursively"""
+            def json_to_text(obj: Any, depth: int = 0, path: str = "") -> str:
+                """Convert any JSON object to readable text with context"""
+                indent = "  " * depth
                 text_parts = []
-                for key, value in d.items():
-                    if isinstance(value, dict):
-                        text_parts.append(f"{prefix}{key}:")
-                        text_parts.append(dict_to_text(value, prefix + "  "))
-                    elif isinstance(value, list):
-                        text_parts.append(f"{prefix}{key}: {', '.join(map(str, value))}")
-                    else:
-                        text_parts.append(f"{prefix}{key}: {value}")
+                
+                if isinstance(obj, dict):
+                    for key, value in obj.items():
+                        current_path = f"{path}.{key}" if path else key
+                        if isinstance(value, (dict, list)):
+                            text_parts.append(f"{indent}{key}:")
+                            text_parts.append(json_to_text(value, depth + 1, current_path))
+                        else:
+                            text_parts.append(f"{indent}{key}: {value}")
+                            
+                elif isinstance(obj, list):
+                    for i, item in enumerate(obj):
+                        current_path = f"{path}[{i}]"
+                        if isinstance(item, (dict, list)):
+                            text_parts.append(f"{indent}Item {i}:")
+                            text_parts.append(json_to_text(item, depth + 1, current_path))
+                        else:
+                            text_parts.append(f"{indent}- {item}")
+                else:
+                    text_parts.append(f"{indent}{obj}")
+                    
                 return "\n".join(text_parts)
 
-            def parse_metadata(value: Any) -> Any:
-                """Parse metadata values, handling strings that might be dicts/lists"""
-                if isinstance(value, str):
-                    try:
-                        # Try to safely evaluate string that might be dict/list
-                        return eval(value) if ('{'  in value or '[' in value) else value
-                    except:
-                        return value
-                return value
+            def extract_metadata(obj: Any, prefix: str = "") -> Dict:
+                """Extract metadata from JSON object with path context"""
+                metadata = {}
+                
+                if isinstance(obj, dict):
+                    for key, value in obj.items():
+                        current_prefix = f"{prefix}.{key}" if prefix else key
+                        if isinstance(value, (dict, list)):
+                            metadata.update(extract_metadata(value, current_prefix))
+                        else:
+                            metadata[current_prefix] = value
+                            
+                elif isinstance(obj, list):
+                    for i, item in enumerate(obj):
+                        current_prefix = f"{prefix}[{i}]"
+                        if isinstance(item, (dict, list)):
+                            metadata.update(extract_metadata(item, current_prefix))
+                            
+                return metadata
 
-            # Process each top-level key as a potential document
-            for key, value in data.items():
-                if isinstance(value, dict):
-                    # Convert dict content to readable text
-                    content_text = dict_to_text(value)
-                    
-                    # Parse metadata, handling nested structures
-                    metadata = {}
-                    for meta_key, meta_value in value.items():
-                        parsed_value = parse_metadata(meta_value)
-                        metadata[meta_key] = parsed_value
-                    
-                    documents.append({
-                        "text": f"{key}:\n{content_text}",
-                        "metadata": metadata
-                    })
-                elif isinstance(value, list):
-                    # Handle list of dictionaries (e.g., frame results)
-                    for item in value:
-                        if isinstance(item, dict):
-                            content_text = dict_to_text(item)
-                            metadata = {k: parse_metadata(v) for k, v in item.items()}
-                            documents.append({
-                                "text": f"{key} item:\n{content_text}",
-                                "metadata": metadata
-                            })
+            # Convert entire JSON to text document
+            full_text = json_to_text(data)
+            
+            # Split into chunks with context
+            chunks = self.text_splitter.split_text(full_text)
+            
+            # Create documents with metadata
+            for i, chunk in enumerate(chunks):
+                metadata = {
+                    'chunk_id': i,
+                    'total_chunks': len(chunks),
+                    'source': str(results_path),
+                    'timestamp': time.time()
+                }
+                
+                # Extract metadata from the chunk's content
+                chunk_metadata = extract_metadata(data)
+                metadata.update(chunk_metadata)
+                
+                documents.append({
+                    "text": chunk,
+                    "metadata": metadata
+                })
                 
             return documents
             
