@@ -70,42 +70,68 @@ class RAGService:
         
     def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
         """
-        Load analysis results and split into chunks
-        
-        Args:
-            results_path: Path to JSON results file
-            
-        Returns:
-            List of document dictionaries with text and metadata
-            
-        Raises:
-            ValueError: If results file is invalid or empty
+        Load analysis results and convert to documents with parsed metadata
         """
         try:
             with open(results_path) as f:
                 data = json.load(f)
                 
-            # Convert analysis results to documents
             documents = []
             
+            # Parse metadata from context
+            context_metadata = {}
+            if 'context' in data:
+                try:
+                    if isinstance(data['context'], str):
+                        context_metadata = eval(data['context'])  # Safely parse string dict
+                    elif isinstance(data['context'], dict):
+                        context_metadata = data['context']
+                except:
+                    pass
+
             # Handle frame results
             if 'results' in data:
                 for frame in data['results']:
+                    # Convert metadata to readable text
+                    metadata_text = "\n".join([
+                        f"Frame {frame.get('frame_number', 'unknown')}",
+                        f"Timestamp: {frame.get('timestamp', 'unknown')}",
+                        f"Analysis ID: {frame.get('analysis_id', 'unknown')}",
+                        f"Confidence: {frame.get('confidence', 0.0)}",
+                        f"Processing Type: {frame.get('processing_type', 'unknown')}"
+                    ])
+                    
+                    # Combine metadata with content
                     frame_text = f"""
-                    Frame {frame.get('frame_number', 0)} at {frame.get('timestamp', 0)}s:
+                    {metadata_text}
+                    
                     Detections: {frame.get('detections', {})}
                     Scene Analysis: {frame.get('scene_analysis', {})}
                     """
                     documents.append({"text": frame_text, "metadata": frame})
                     
-            # Handle scene analysis
+            # Handle scene analysis with metadata
             if 'scene_analysis' in data:
+                metadata_text = "\n".join([
+                    f"Video: {context_metadata.get('video_file', 'unknown')}",
+                    f"Total Frames: {context_metadata.get('total_frames', 'unknown')}",
+                    f"Duration: {context_metadata.get('duration', 'unknown')} seconds",
+                    f"FPS: {context_metadata.get('fps', 'unknown')}",
+                    f"Frames Analyzed: {context_metadata.get('frames_analyzed', [])}",
+                    f"Analysis ID: {data.get('analysis_id', 'unknown')}",
+                    f"Confidence: {data.get('confidence', 0.0)}"
+                ])
+                
                 scene_text = f"""
+                {metadata_text}
+                
                 Scene Analysis:
-                Description: {data['scene_analysis'].get('description', '')}
-                Suggested Pipeline: {data['scene_analysis'].get('suggested_pipeline', [])}
+                {data['scene_analysis'].get('description', '')}
                 """
-                documents.append({"text": scene_text, "metadata": data['scene_analysis']})
+                documents.append({"text": scene_text, "metadata": {
+                    **data.get('scene_analysis', {}),
+                    **context_metadata
+                }})
                 
             return documents
             
@@ -133,27 +159,37 @@ class RAGService:
             if not documents:
                 return None
                 
-            # Create documents with flattened complex data
+            # Create documents with parsed metadata
             processed_documents = []
             for doc in documents:
-                # Convert any complex metadata to string representation
+                # Parse and structure metadata
                 metadata = {}
                 for k, v in doc.get("metadata", {}).items():
                     if isinstance(v, (list, dict)):
-                        metadata[k] = str(v)
+                        # Convert complex types to formatted strings
+                        if k == 'frame_numbers':
+                            metadata[k] = [int(x) for x in eval(str(v))] if isinstance(v, str) else v
+                        elif k == 'context' and isinstance(v, str):
+                            try:
+                                metadata[k] = eval(v)
+                            except:
+                                metadata[k] = v
+                        else:
+                            metadata[k] = str(v)
                     else:
                         metadata[k] = v
-                
-                # Create Document object with comprehensive metadata
+
+                # Add required metadata fields
                 metadata['source'] = f"frame_{metadata.get('frame_number', 'unknown')}"
                 metadata['timestamp'] = metadata.get('timestamp', time.time())
                 metadata['analysis_id'] = metadata.get('analysis_id', f"analysis_{int(time.time())}")
-                metadata['confidence'] = metadata.get('confidence', 0.8)  # Default confidence
+                metadata['confidence'] = float(metadata.get('confidence', 0.8))
                 metadata['processing_type'] = metadata.get('processing_type', 'scene_analysis')
-            
+                
+                # Create document with parsed content and metadata
                 processed_documents.append(
                     Document(
-                        page_content=doc["text"],
+                        page_content=doc["text"].strip(),
                         metadata=metadata
                     )
                 )
