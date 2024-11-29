@@ -143,8 +143,13 @@ class RAGService:
                     else:
                         metadata[k] = v
                 
-                # Create Document object with source metadata
+                # Create Document object with comprehensive metadata
                 metadata['source'] = f"frame_{metadata.get('frame_number', 'unknown')}"
+                metadata['timestamp'] = metadata.get('timestamp', time.time())
+                metadata['analysis_id'] = metadata.get('analysis_id', f"analysis_{int(time.time())}")
+                metadata['confidence'] = metadata.get('confidence', 0.8)  # Default confidence
+                metadata['processing_type'] = metadata.get('processing_type', 'scene_analysis')
+            
                 processed_documents.append(
                     Document(
                         page_content=doc["text"],
