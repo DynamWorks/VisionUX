@@ -39,10 +39,14 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         <Switch
                             checked={autoAnalysisEnabled}
                             onChange={(e) => setAutoAnalysisEnabled(e.target.checked)}
-                            icon={<AutoFixHighIcon />}
                         />
                     }
-                    label="Auto Analysis"
+                    label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AutoFixHighIcon />
+                            <span>Auto Analysis</span>
+                        </Box>
+                    }
                 />
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
