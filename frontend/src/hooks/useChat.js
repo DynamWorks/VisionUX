@@ -99,7 +99,11 @@ const useChat = () => {
     const clearChat = useCallback(() => {
         setMessages([]);
         setAnalysisResults(null);
-    }, [setAnalysisResults]);
+        // Clear local storage
+        if (currentVideo) {
+            localStorage.removeItem(`chat_${currentVideo.name}`);
+        }
+    }, [setAnalysisResults, currentVideo]);
 
     return {
         messages,
