@@ -218,7 +218,7 @@ class StreamManager:
 
     def publish_frame(self, frame: Frame, frame_type: str = 'frame') -> bool:
         """
-        Process and publish a frame
+        Process and publish a frame independently
         
         Args:
             frame: Frame object to publish
@@ -228,58 +228,83 @@ class StreamManager:
             return False
 
         try:
+            # Update metrics in a thread-safe way
             current_time = time.time()
-            
-            # Calculate FPS
-            time_diff = current_time - self.metrics['last_frame_time']
-            if time_diff >= 1.0:
-                self.metrics['fps'] = round(self.frame_count / time_diff)
-                self.frame_count = 0
-                self.metrics['last_frame_time'] = current_time
-            
-            self.frame_count += 1
-            self.metrics['frame_count'] += 1
-
-            # Add metadata
-            if not frame.metadata:
-                frame.metadata = {}
-                
-            frame.metadata.update({
-                'fps': self.metrics['fps'],
-                'frame_number': self.metrics['frame_count'],
-                'timestamp': current_time
-            })
-
-            # Add to frame buffer
             with self.buffer_lock:
+                time_diff = current_time - self.metrics['last_frame_time']
+                if time_diff >= 1.0:
+                    self.metrics['fps'] = round(self.frame_count / time_diff)
+                    self.frame_count = 0
+                    self.metrics['last_frame_time'] = current_time
+                
+                self.frame_count += 1
+                self.metrics['frame_count'] += 1
+
+                # Add metadata
+                if not frame.metadata:
+                    frame.metadata = {}
+                    
+                frame.metadata.update({
+                    'fps': self.metrics['fps'],
+                    'frame_number': self.metrics['frame_count'],
+                    'timestamp': current_time
+                })
+
+                # Add to frame buffer
                 self.frame_buffer.append(frame)
 
-            # Process frame through subscribers
-            for subscriber in self.subscribers:
-                try:
-                    subscriber.process_frame(frame)
-                except Exception as e:
-                    self.logger.error(f"Error in subscriber {subscriber.__class__.__name__}: {e}")
-                    self.metrics['dropped_frames'] += 1
+            # Process frame through subscribers asynchronously
+            def process_subscribers():
+                for subscriber in self.subscribers:
+                    try:
+                        subscriber.process_frame(frame)
+                    except Exception as e:
+                        self.logger.error(f"Error in subscriber {subscriber.__class__.__name__}: {e}")
+                        with self.buffer_lock:
+                            self.metrics['dropped_frames'] += 1
 
-            # Ensure frame data is in correct format for publishers
-            if isinstance(frame.data, np.ndarray):
-                success, buffer = cv2.imencode('.jpg', frame.data, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            import threading
+            subscriber_thread = threading.Thread(target=process_subscribers)
+            subscriber_thread.daemon = True
+            subscriber_thread.start()
+
+            # Prepare frame data for publishing
+            publish_data = frame.data
+            if isinstance(publish_data, np.ndarray):
+                success, buffer = cv2.imencode('.jpg', publish_data, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 if not success:
                     raise ValueError("Failed to encode frame")
-                frame.data = buffer.tobytes()
+                publish_data = buffer.tobytes()
 
-            # Publish processed frame with type
-            for publisher in self.publishers:
+            # Publish to each publisher independently
+            def publish_to_publisher(publisher):
                 try:
                     if hasattr(publisher, 'publish_frame_with_type'):
-                        publisher.publish_frame_with_type(frame, frame_type)
+                        publisher.publish_frame_with_type(Frame(
+                            data=publish_data,
+                            timestamp=frame.timestamp,
+                            frame_number=frame.frame_number,
+                            metadata=frame.metadata.copy()
+                        ), frame_type)
                     else:
-                        # Fallback to standard publish for publishers that don't support types
-                        publisher.publish_frame(frame)
+                        publisher.publish_frame(Frame(
+                            data=publish_data,
+                            timestamp=frame.timestamp,
+                            frame_number=frame.frame_number,
+                            metadata=frame.metadata.copy()
+                        ))
                 except Exception as e:
                     self.logger.error(f"Error in publisher {publisher.__class__.__name__}: {e}")
-                    self.metrics['dropped_frames'] += 1
+                    with self.buffer_lock:
+                        self.metrics['dropped_frames'] += 1
+
+            # Start a thread for each publisher
+            publisher_threads = []
+            for publisher in self.publishers:
+                thread = threading.Thread(target=publish_to_publisher, args=(publisher,))
+                thread.daemon = True
+                thread.start()
+                publisher_threads.append(thread)
 
             return True
 
