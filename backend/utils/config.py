@@ -154,29 +154,34 @@ class Config:
     def reset(self) -> None:
         """Reset configuration to defaults"""
         self._config = {
-            'models': {
-                'clip': {
-                    'name': 'openai/clip-vit-base-patch32',
-                    'local_path': 'video_analytics/models/clip'
-                },
-                'yolo': {
-                    'name': 'yolov8x.pt',
-                    'local_path': 'video_analytics/models/yolo'
-                },
-                'traffic_signs': {
-                    'name': 'yolov8n.pt',
-                    'local_path': 'video_analytics/models/traffic_signs'
+            'api': {
+                'host': '127.0.0.1',
+                'port': 8000,
+                'debug': False,
+                'cors_origins': '*'
+            },
+            'websocket': {
+                'host': '127.0.0.1',
+                'port': 8000,
+                'debug': False,
+                'max_buffer_size': 104857600,
+                'ssl_enabled': False,
+                'ping_interval': 25,
+                'ping_timeout': 60,
+                'max_connections': 100,
+                'reconnection': {
+                    'attempts': 10,
+                    'delay': 1000,
+                    'max_delay': 5000
                 }
             },
-            'processing': {
-                'sample_rate': 1,
-                'max_workers': 4,
-                'confidence_threshold': 0.5
+            'storage': {
+                'base_path': 'tmp_content',
+                'subdirs': ['uploads', 'analysis', 'chat_history', 'visualizations']
             },
-            'api': {
-                'host': '0.0.0.0',
-                'port': 5000,
-                'debug': False
+            'logging': {
+                'level': 'INFO',
+                'file': 'video_analytics.log',
+                'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             }
         }
-        

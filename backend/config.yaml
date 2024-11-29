@@ -67,3 +67,4 @@ storage:
     - "analysis"
     - "chat_history"
     - "visualizations"
+    - "knowledgebase"
