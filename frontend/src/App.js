@@ -15,7 +15,7 @@ import { websocketService } from './services/websocket';
 function App() {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { setUploadedFiles, inputMode, isStreaming } = useStore();
+    const { setUploadedFiles, inputMode, isStreaming, setAnalysisResults } = useStore();
     const { handleSceneAnalysis: chatHandleAnalysis, addMessage } = useChat();
 
     // Initialize WebSocket connection
