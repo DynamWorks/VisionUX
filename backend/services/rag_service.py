@@ -43,17 +43,23 @@ class RAGService:
  default='https://api.openai.com/v1')                        
             
         # Initialize Gemini
-        gemini_api_key = os.getenv('GEMINI_API_KEY')
-        if not gemini_api_key:
-            gemini_api_key = self.config.get('services', 'gemini', 'api_key')
+        self.gemini_api_key = os.getenv('GEMINI_API_KEY')
+        if not self.gemini_api_key:
+            self.gemini_api_key = self.config.get('services', 'gemini', 'api_key')
             
-        if gemini_api_key:
-            genai.configure(api_key=gemini_api_key)
-            self.gemini_model = GenerativeModel('gemini-1.5-flash')
-            self.gemini_enabled = True
-            self.logger.info("Gemini API initialized")
+        if self.gemini_api_key:
+            try:
+                genai.configure(api_key=self.gemini_api_key)
+                self.gemini_model = GenerativeModel('gemini-1.5-flash')
+                self.gemini_enabled = True
+                self.logger.info("Gemini API initialized successfully")
+            except Exception as e:
+                self.gemini_enabled = False
+                self.gemini_model = None
+                self.logger.error(f"Failed to initialize Gemini API: {e}")
         else:
             self.gemini_enabled = False
+            self.gemini_model = None
             self.logger.warning("No Gemini API key found - Gemini features will be disabled")
         
         # Initialize embeddings with API key and base URL
