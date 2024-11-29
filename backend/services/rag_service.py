@@ -192,34 +192,28 @@ class RAGService:
 
         # Custom prompt template
         prompt_template = """Use the following pieces of context from video analysis results to answer the question.
-        Each analysis result contains important metadata including:
-        - Frame numbers and timestamps
-        - Scene descriptions and analysis
-        - Object detections and locations
-        - Motion patterns and changes
-        - Technical details (resolution, quality, etc.)
-        - Source identifiers and analysis timestamps
+        Each analysis result contains important metadata that MUST be referenced in your response:
+        - Frame numbers: metadata['frame_numbers'] shows which frames were analyzed
+        - Total frames: metadata['context'] contains total_frames and duration
+        - Analysis details: metadata['analysis_id'] and metadata['confidence']
+        - Technical info: metadata['context'] has fps and other details
+        - Processing info: metadata['frame_pattern'] and metadata['processing_type']
 
         Context: {summaries}
         
         Question: {question}
         
         Guidelines for your response:
-        1. Only use information from the provided context
-        2. ALWAYS cite specific metadata when making claims:
-           - Reference frame numbers from metadata['frame_numbers'] 
-           - Include timestamps from metadata['timestamp']
-           - Note analysis IDs from metadata['analysis_id']
-           - Reference total frames from metadata['context']
-           - Include FPS and duration from metadata['context']
-        3. Express confidence levels using metadata['confidence'] values
-        4. If metadata conflicts between sources, acknowledge the discrepancy
-        5. If relevant metadata is missing, explicitly state what's lacking
-        6. Never make up information beyond what's in the context and its metadata
-        7. Structure your response to clearly separate:
-           - Metadata-supported observations (with specific citations)
-           - Technical details from metadata['context']
-           - Confidence levels based on metadata['confidence']
+        1. Start with a metadata summary showing:
+           - Number of frames analyzed
+           - Which frame numbers were processed
+           - Total video frames and duration
+           - Analysis timestamp and confidence
+        2. Then provide the scene description and analysis
+        3. Always cite specific metadata values in your response
+        4. Express confidence levels based on metadata['confidence']
+        5. If any metadata is missing or conflicts, explicitly note it
+        6. Never make up information beyond what's in the context and metadata
         """
 
         PROMPT = PromptTemplate(
