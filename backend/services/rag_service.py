@@ -199,7 +199,7 @@ class RAGService:
         - Motion patterns and changes
         - Technical details (resolution, quality, etc.)
         - Source identifiers and analysis timestamps
-        
+
         Context: {summaries}
         
         Question: {question}
@@ -207,13 +207,19 @@ class RAGService:
         Guidelines for your response:
         1. Only use information from the provided context
         2. ALWAYS cite specific metadata when making claims:
-           - Reference frame numbers (e.g. "In frame 127...")
-           - Include timestamps (e.g. "At 3.5 seconds...")
-           - Note source identifiers (e.g. "From analysis_123...")
-        3. Express confidence levels for claims (high/medium/low)
+           - Reference frame numbers from metadata['frame_numbers'] 
+           - Include timestamps from metadata['timestamp']
+           - Note analysis IDs from metadata['analysis_id']
+           - Reference total frames from metadata['context']
+           - Include FPS and duration from metadata['context']
+        3. Express confidence levels using metadata['confidence'] values
         4. If metadata conflicts between sources, acknowledge the discrepancy
         5. If relevant metadata is missing, explicitly state what's lacking
         6. Never make up information beyond what's in the context and its metadata
+        7. Structure your response to clearly separate:
+           - Metadata-supported observations (with specific citations)
+           - Technical details from metadata['context']
+           - Confidence levels based on metadata['confidence']
         """
 
         PROMPT = PromptTemplate(
