@@ -34,10 +34,24 @@ class Config:
         env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
         if os.path.exists(env_path):
             load_dotenv(env_path)
+            
+        # Check for API keys in environment
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+        self.gemini_api_key = os.getenv('GEMINI_API_KEY')
                     
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
             self._config_path = config_path
+            
+            # Override with config values if present
+            if not self.openai_api_key:
+                self.openai_api_key = self.get('services', 'openai', 'api_key')
+            if not self.openai_api_base:
+                self.openai_api_base = self.get('services', 'openai', 'api_base', 
+                    default='https://api.openai.com/v1')
+            if not self.gemini_api_key:
+                self.gemini_api_key = self.get('services', 'gemini', 'api_key')
             
     def load_config(self, config_path: Union[str, Path]) -> None:
         """
