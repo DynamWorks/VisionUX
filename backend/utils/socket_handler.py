@@ -355,18 +355,22 @@ class SocketHandler:
                         raise ValueError("Invalid frame dimensions")
 
                 # Create frame object with metadata
-                frame_obj = Frame(
-                    data=frame,
-                    timestamp=time.time(),
-                    frame_number=self.stream_manager.frame_count,
-                    metadata={
-                        'source': 'camera',
-                        'client_id': client_id,
-                        'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
-                        'channels': frame.shape[2] if len(frame.shape) > 2 else 1,
-                        'frame_type': 'camera'
-                    }
-                )
+                try:
+                    frame_obj = Frame(
+                        data=frame,
+                        timestamp=time.time(),
+                        frame_number=self.stream_manager.frame_count,
+                        metadata={
+                            'source': 'camera',
+                            'client_id': client_id,
+                            'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
+                            'channels': frame.shape[2] if len(frame.shape) > 2 else 1,
+                            'frame_type': 'camera'
+                        }
+                    )
+                except Exception as e:
+                    self.logger.error(f"Error creating Frame object: {e}")
+                    raise
                 
                 # Apply edge detection if enabled
                 if self.clients[client_id].get('edge_detection', False):
