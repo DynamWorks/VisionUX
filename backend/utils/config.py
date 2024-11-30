@@ -8,16 +8,10 @@ class Config:
     """Configuration management for video analytics"""
     
     def __init__(self, config_path: Optional[str] = None):
-        """
-        Initialize configuration with environment variable support
-        
-        Args:
-            config_path: Optional path to YAML config file
-        """
+        """Initialize configuration with environment variable support"""
         self._config = {}
-        self._env_prefix = 'DW'
         
-        # Try to find config file in standard locations
+        # Find config file
         if not config_path:
             possible_paths = [
                 os.path.join(os.path.dirname(__file__), '..', 'config.yaml'),
@@ -31,27 +25,39 @@ class Config:
                     
         # Load .env file if present
         from dotenv import load_dotenv
-        env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-        if os.path.exists(env_path):
-            load_dotenv(env_path)
-            
-        # Check for API keys in environment
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
-        self.openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        self.gemini_api_key = os.getenv('GEMINI_API_KEY')
+        env_paths = [
+            os.path.join(os.path.dirname(__file__), '..', '..', '.env'),
+            os.path.join(os.path.dirname(__file__), '..', '.env'),
+            '.env'
+        ]
+        for env_path in env_paths:
+            if os.path.exists(env_path):
+                load_dotenv(env_path)
+                break
+                
+        # Load API keys from environment
+        self.api_keys = {
+            'openai': {
+                'key': os.getenv('OPENAI_API_KEY'),
+                'base': os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+            },
+            'gemini': {
+                'key': os.getenv('GEMINI_API_KEY')
+            }
+        }
                     
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
             self._config_path = config_path
             
             # Override with config values if present
-            if not self.openai_api_key:
-                self.openai_api_key = self.get('services', 'openai', 'api_key')
-            if not self.openai_api_base:
-                self.openai_api_base = self.get('services', 'openai', 'api_base', 
+            if not self.api_keys['openai']['key']:
+                self.api_keys['openai']['key'] = self.get('services', 'openai', 'api_key')
+            if not self.api_keys['openai']['base']:
+                self.api_keys['openai']['base'] = self.get('services', 'openai', 'api_base', 
                     default='https://api.openai.com/v1')
-            if not self.gemini_api_key:
-                self.gemini_api_key = self.get('services', 'gemini', 'api_key')
+            if not self.api_keys['gemini']['key']:
+                self.api_keys['gemini']['key'] = self.get('services', 'gemini', 'api_key')
             
     def load_config(self, config_path: Union[str, Path]) -> None:
         """

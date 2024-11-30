@@ -1,15 +1,12 @@
-# DXV Video Analytics Configuration
+# Video Analytics Configuration
 api:
-  debug: true
+  debug: false  # Set to true only in development
   port: 8000
   cors_origins: "*"
   rate_limits:
     default: "1000 per day"
-    uploads: "100 per hour"
+    uploads: "100 per hour" 
     files_list: "200 per hour"
-  branding:
-    name: "DW"
-    description: "Deep Experience Vision"
 
 websocket:
   port: 8000
