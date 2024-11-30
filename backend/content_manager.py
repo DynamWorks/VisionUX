@@ -61,12 +61,28 @@ class ContentManager:
         self.logger.info(f"Saved analysis to: {file_path}")
         return str(file_path)
 
-    def save_chat_history(self, chat_data: List[Dict], session_id: str):
-        """Save chat history for a session"""
-        file_path = self.chat_dir / f"chat_{session_id}.json"
+    def save_chat_history(self, chat_data: List[Dict], video_name: str):
+        """Save chat history for a video"""
+        if not video_name:
+            raise ValueError("Video name is required")
+            
+        file_path = self.chat_dir / f"{video_name}_chat.json"
         
+        # Load existing history if it exists
+        existing_history = []
+        if file_path.exists():
+            try:
+                with open(file_path) as f:
+                    existing_history = json.load(f)
+            except Exception as e:
+                self.logger.error(f"Error loading existing chat history: {e}")
+        
+        # Append new messages
+        existing_history.extend(chat_data)
+        
+        # Save updated history
         with open(file_path, "w") as f:
-            json.dump(chat_data, f, indent=2)
+            json.dump(existing_history, f, indent=2)
 
     def get_recent_analysis(self, source_id: str, limit: int = 5) -> List[Dict]:
         """Get recent analysis results for a source"""
@@ -80,13 +96,25 @@ class ContentManager:
                 
         return results
 
-    def get_chat_history(self, session_id: str) -> List[Dict]:
-        """Get chat history for a session"""
-        file_path = self.chat_dir / f"chat_{session_id}.json"
+    def get_chat_history(self, video_name: str) -> List[Dict]:
+        """Get chat history for a video"""
+        if not video_name:
+            raise ValueError("Video name is required")
+            
+        file_path = self.chat_dir / f"{video_name}_chat.json"
         if file_path.exists():
             with open(file_path) as f:
                 return json.load(f)
         return []
+        
+    def clear_chat_history(self, video_name: str) -> None:
+        """Clear chat history for a video"""
+        if not video_name:
+            raise ValueError("Video name is required")
+            
+        file_path = self.chat_dir / f"{video_name}_chat.json"
+        if file_path.exists():
+            file_path.unlink()
 
     def cleanup_old_files(self, max_age_hours: int = 24):
         """Remove files older than specified hours"""

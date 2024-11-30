@@ -215,6 +215,7 @@ def analyze_scene():
 @api.route('/chat', methods=['POST'])
 def chat_analysis():
     """Chat-based video analysis with RAG"""
+    video_name = None
     try:
         data = request.get_json()
         if not data or 'video_path' not in data or 'prompt' not in data:
@@ -226,13 +227,34 @@ def chat_analysis():
             use_swarm=data.get('use_swarm', False)
         )
 
+        video_name = data.get('video_path')
         content_manager.save_chat_history(
             [{'role': 'user', 'content': data['prompt']},
              {'role': 'assistant', 'content': response.get('rag_response', '')}],
-            f"chat_{int(time.time())}"
+            video_name if video_name else f"chat_{int(time.time())}"
         )
 
         return jsonify(response)
+
+@api.route('/chat/history/<video_name>', methods=['GET'])
+def get_chat_history(video_name):
+    """Get chat history for a specific video"""
+    try:
+        chat_history = content_manager.get_chat_history(video_name)
+        return jsonify({"messages": chat_history})
+    except Exception as e:
+        logger.error(f"Error getting chat history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/chat/clear/<video_name>', methods=['POST']) 
+def clear_chat_history(video_name):
+    """Clear chat history for a specific video"""
+    try:
+        content_manager.clear_chat_history(video_name)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"Error clearing chat history: {e}")
+        return jsonify({"error": str(e)}), 500
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
