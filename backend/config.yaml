@@ -8,7 +8,7 @@ api:
     uploads: "100 per hour"
     files_list: "200 per hour"
   branding:
-    name: "DXV"
+    name: "DW"
     description: "Deep Experience Vision"
 
 websocket:
