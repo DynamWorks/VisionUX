@@ -56,7 +56,6 @@ const FileList = () => {
             
             // Clear chat history for new uploads
             if (file) {
-                setMessages([]);
                 addMessage('system', 'New file uploaded - chat history cleared');
             }
             
