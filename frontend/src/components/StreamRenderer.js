@@ -29,10 +29,27 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 console.debug('Blob size:', frameData.size);
             }
 
-            // Convert binary frame data to Blob
-            const blob = new Blob([frameData], { type: 'image/jpeg' });
+            // Validate frame data
+            if (!frameData || frameData.size === 0) {
+                console.warn('Empty frame data received');
+                return;
+            }
+
+            // Convert binary frame data to Blob with validation
+            let blob;
+            try {
+                blob = new Blob([frameData], { type: 'image/jpeg' });
+                if (blob.size === 0) {
+                    console.warn('Empty blob created from frame data');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error creating blob:', error);
+                return;
+            }
+
             const url = URL.createObjectURL(blob);
-            console.debug('Created URL from binary frame data:', url);
+            console.debug('Created URL from binary frame data:', url, 'blob size:', blob.size);
 
             // Create new image
             let img = new Image();
