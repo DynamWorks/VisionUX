@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Box, TextField, IconButton, Paper, Typography, CircularProgress, useMediaQuery, useTheme, Button } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import useChat from '../hooks/useChat';
 import useStore from '../store';
 
@@ -59,21 +60,51 @@ const Chat = () => {
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Chat</Typography>
-                <Button
-                    startIcon={<DeleteIcon />}
-                    onClick={clearChat}
-                    disabled={messages.length === 0}
-                    size="small"
-                    sx={{
-                        color: 'error.main',
-                        '&:hover': {
-                            bgcolor: 'error.dark',
-                            color: 'white'
-                        }
-                    }}
-                >
-                    Clear Chat
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        startIcon={<RefreshIcon />}
+                        onClick={() => {
+                            const { currentVideo } = useStore.getState();
+                            if (currentVideo) {
+                                fetch(`${process.env.REACT_APP_API_URL}/api/v1/chat/history/${currentVideo.name}`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.messages) {
+                                            setMessages(data.messages);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error fetching chat history:', error);
+                                    });
+                            }
+                        }}
+                        size="small"
+                        sx={{
+                            color: 'primary.main',
+                            '&:hover': {
+                                bgcolor: 'primary.dark',
+                                color: 'white'
+                            }
+                        }}
+                    >
+                        Refresh
+                    </Button>
+                    <Button
+                        startIcon={<DeleteIcon />}
+                        onClick={clearChat}
+                        disabled={messages.length === 0}
+                        size="small"
+                        sx={{
+                            color: 'error.main',
+                            '&:hover': {
+                                bgcolor: 'error.dark',
+                                color: 'white'
+                            }
+                        }}
+                    >
+                        Clear Chat
+                    </Button>
+                </Box>
             </Box>
             <Paper
                 ref={chatBoxRef}
