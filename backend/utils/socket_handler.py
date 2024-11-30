@@ -384,18 +384,22 @@ class SocketHandler:
                     frame = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
 
                 # Create frame object with processed frame
-                frame_obj = Frame(
-                    data=frame,
-                    timestamp=time.time(),
-                    frame_number=self.stream_manager.frame_count,
-                    metadata={
-                        'source': 'camera',
-                        'client_id': client_id,
-                        'edge_detection': self.clients[client_id].get('edge_detection', False),
-                        'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
-                        'channels': frame.shape[2] if len(frame.shape) > 2 else 1
-                    }
-                )
+                try:
+                    frame_obj = Frame(
+                        data=frame,
+                        timestamp=time.time(),
+                        frame_number=self.stream_manager.frame_count,
+                        metadata={
+                            'source': 'camera',
+                            'client_id': client_id,
+                            'edge_detection': self.clients[client_id].get('edge_detection', False),
+                            'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
+                            'channels': frame.shape[2] if len(frame.shape) > 2 else 1
+                        }
+                    )
+                except Exception as e:
+                    self.logger.error(f"Error creating Frame object: {e}")
+                    raise
 
                 # Publish frame
                 if self.stream_manager.publish_frame(frame_obj):
