@@ -145,66 +145,6 @@ class RAGService:
                 "metadata": metadata
             }]
 
-            def extract_metadata(obj: Any, prefix: str = "") -> Dict:
-                """Extract metadata from JSON object with path context"""
-                metadata = {}
-                
-                if isinstance(obj, dict):
-                    for key, value in obj.items():
-                        current_prefix = f"{prefix}.{key}" if prefix else key
-                        if isinstance(value, (dict, list)):
-                            metadata.update(extract_metadata(value, current_prefix))
-                        else:
-                            metadata[current_prefix] = value
-                            
-                elif isinstance(obj, list):
-                    for i, item in enumerate(obj):
-                        current_prefix = f"{prefix}[{i}]"
-                        if isinstance(item, (dict, list)):
-                            metadata.update(extract_metadata(item, current_prefix))
-                            
-                return metadata
-
-            # Process data with Gemini
-            prompt = """Analyze this JSON data and provide a detailed text representation that:
-            1. Describes the content in natural language
-            2. Preserves all important information and relationships
-            3. Maintains hierarchical structure
-            4. Includes technical details and metadata
-            5. Uses clear section headings and organization
-            
-            JSON data:
-            {data}
-            """
-            
-            response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
-            
-            if not response.text:
-                raise ValueError("Failed to get text representation from Gemini")
-                
-            # Split into chunks
-            chunks = self.text_splitter.split_text(response.text)
-            
-            # Create documents list
-            processed_documents = []
-            for i, chunk in enumerate(chunks):
-                metadata = {
-                    'chunk_id': i,
-                    'total_chunks': len(chunks),
-                    'source': str(results_path),
-                    'timestamp': time.time()
-                }
-                
-                # Extract metadata from the data
-                chunk_metadata = extract_metadata(data)
-                metadata.update(chunk_metadata)
-                
-                processed_documents.append({
-                    "text": chunk,
-                    "metadata": metadata
-                })
-                
-            return processed_documents
             
         except Exception as e:
             self.logger.error(f"Error loading results: {str(e)}")
