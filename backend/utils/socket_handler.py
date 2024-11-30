@@ -327,50 +327,45 @@ class SocketHandler:
                 self.clients[client_id]['last_ping'] = time.time()
 
                 # Handle different frame data formats with validation
-                try:
-                    if isinstance(frame_data, (bytes, bytearray)):
-                        frame_bytes = frame_data
-                    elif isinstance(frame_data, str):
-                        import base64
-                        frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-                    elif isinstance(frame_data, dict) and '_placeholder' in frame_data:
-                        # Handle placeholder frame data
-                        self.logger.warning("Received placeholder frame data, skipping")
-                        return
-                    else:
-                        raise ValueError(f"Unsupported frame data type: {type(frame_data)}")
+                if isinstance(frame_data, (bytes, bytearray)):
+                    frame_bytes = frame_data
+                elif isinstance(frame_data, str):
+                    import base64
+                    frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
+                elif isinstance(frame_data, dict) and '_placeholder' in frame_data:
+                    # Handle placeholder frame data
+                    self.logger.warning("Received placeholder frame data, skipping")
+                    return
+                else:
+                    raise ValueError(f"Unsupported frame data type: {type(frame_data)}")
 
-                    if not frame_bytes:
-                        raise ValueError("Empty frame data")
+                if not frame_bytes:
+                    raise ValueError("Empty frame data")
 
-                    # Decode frame
-                    nparr = np.frombuffer(frame_bytes, dtype=np.uint8)
-                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                # Decode frame
+                nparr = np.frombuffer(frame_bytes, dtype=np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+                if frame is None or frame.size == 0:
+                    raise ValueError("Failed to decode frame or empty frame")
                 
-                    if frame is None or frame.size == 0:
-                        raise ValueError("Failed to decode frame or empty frame")
-                    
-                    # Validate frame dimensions
-                    if frame.shape[0] == 0 or frame.shape[1] == 0:
-                        raise ValueError("Invalid frame dimensions")
+                # Validate frame dimensions
+                if frame.shape[0] == 0 or frame.shape[1] == 0:
+                    raise ValueError("Invalid frame dimensions")
 
                 # Create frame object with metadata
-                try:
-                    frame_obj = Frame(
-                        data=frame,
-                        timestamp=time.time(),
-                        frame_number=self.stream_manager.frame_count,
-                        metadata={
-                            'source': 'camera',
-                            'client_id': client_id,
-                            'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
-                            'channels': frame.shape[2] if len(frame.shape) > 2 else 1,
-                            'frame_type': 'camera'
-                        }
-                    )
-                except Exception as e:
-                    self.logger.error(f"Error creating Frame object: {e}")
-                    raise
+                frame_obj = Frame(
+                    data=frame,
+                    timestamp=time.time(),
+                    frame_number=self.stream_manager.frame_count,
+                    metadata={
+                        'source': 'camera',
+                        'client_id': client_id,
+                        'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
+                        'channels': frame.shape[2] if len(frame.shape) > 2 else 1,
+                        'frame_type': 'camera'
+                    }
+                )
                 
                 # Apply edge detection if enabled
                 if self.clients[client_id].get('edge_detection', False):
