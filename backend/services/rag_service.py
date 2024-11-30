@@ -103,8 +103,10 @@ class RAGService:
                 
             # Use Gemini to get detailed text representation if available
             if self.gemini_enabled and self.gemini_model:
-                prompt = ''
-                """Analyze this JSON data and provide a detailed text explanation that:
+                if not self.gemini_enabled or not self.gemini_model:
+                    raise ValueError("Gemini model not initialized")
+
+                prompt = """Analyze this JSON data and provide a detailed text explanation that:
                 1. Describes what was analyzed (video name, timestamp, etc)
                 2. Explains the key findings and observations
                 3. References specific metadata like:
@@ -120,7 +122,7 @@ class RAGService:
                 """
                 
                 try:
-                    response = self.gemini_model.generate_content(data) #prompt.format(data=json.dumps(data, indent=2)))
+                    response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
                     if response and response.text:
                         # Parse the response text
                         text_representation = response.text.strip()
