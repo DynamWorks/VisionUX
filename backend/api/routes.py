@@ -236,6 +236,10 @@ def chat_analysis():
 
         return jsonify(response)
 
+    except Exception as e:
+        logger.error("Chat analysis failed", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @api.route('/chat/history/<video_name>', methods=['GET'])
 def get_chat_history(video_name):
     """Get chat history for a specific video"""
@@ -255,10 +259,6 @@ def clear_chat_history(video_name):
     except Exception as e:
         logger.error(f"Error clearing chat history: {e}")
         return jsonify({"error": str(e)}), 500
-
-    except Exception as e:
-        logger.error("Chat analysis failed", exc_info=True)
-        return jsonify({'error': str(e)}), 500
 
 @api.route('/upload', methods=['POST'])
 def upload_file():
