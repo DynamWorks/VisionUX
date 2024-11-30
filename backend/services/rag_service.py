@@ -46,10 +46,13 @@ class RAGService:
         self.logger = logging.getLogger(__name__)
 
         # Initialize Gemini
-        self.gemini_api_key = self.config.gemini_api_key
-        if self.gemini_api_key:
+        gemini_api_key = os.getenv('GEMINI_API_KEY')
+        if not gemini_api_key:
+            gemini_api_key = self.config.get('services', 'gemini', 'api_key')
+            
+        if gemini_api_key:
             try:
-                genai.configure(api_key=self.gemini_api_key)
+                genai.configure(api_key=gemini_api_key)
                 model_name = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
                 self.gemini_model = GenerativeModel(model_name)
                 self.gemini_enabled = True
