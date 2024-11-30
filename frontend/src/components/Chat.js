@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, TextField, IconButton, Paper, Typography, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
+import { Box, TextField, IconButton, Paper, Typography, CircularProgress, useMediaQuery, useTheme, Button } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import DeleteIcon from '@mui/icons-material/Delete';
 import useChat from '../hooks/useChat';
 import useStore from '../store';
 
 const Chat = () => {
     const [message, setMessage] = useState('');
-    const { messages, isLoading, sendMessage } = useChat();
+    const { messages, isLoading, sendMessage, clearChat } = useChat();
     const { isStreaming } = useStore();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -56,6 +57,24 @@ const Chat = () => {
 
     return (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Chat</Typography>
+                <Button
+                    startIcon={<DeleteIcon />}
+                    onClick={clearChat}
+                    disabled={messages.length === 0}
+                    size="small"
+                    sx={{
+                        color: 'error.main',
+                        '&:hover': {
+                            bgcolor: 'error.dark',
+                            color: 'white'
+                        }
+                    }}
+                >
+                    Clear Chat
+                </Button>
+            </Box>
             <Paper
                 ref={chatBoxRef}
                 sx={{
