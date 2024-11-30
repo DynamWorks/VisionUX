@@ -2,6 +2,13 @@ from flask_socketio import SocketIO, emit
 from flask import request
 import logging
 import json
+import time
+import cv2
+import numpy as np
+from typing import Dict, Any, Optional
+from .video_streaming.stream_manager import StreamManager
+from .video_streaming.websocket_publisher import WebSocketPublisher
+from .video_streaming.stream_publisher import Frame
 from pathlib import Path
 import time
 import cv2
@@ -341,6 +348,7 @@ class SocketHandler:
                         raise ValueError("Invalid frame dimensions")
 
                 # Create frame object
+                # Create frame object with metadata
                 frame_obj = Frame(
                     data=frame,
                     timestamp=time.time(),
@@ -349,7 +357,8 @@ class SocketHandler:
                         'source': 'camera',
                         'client_id': client_id,
                         'resolution': f"{frame.shape[1]}x{frame.shape[0]}",
-                        'channels': frame.shape[2] if len(frame.shape) > 2 else 1
+                        'channels': frame.shape[2] if len(frame.shape) > 2 else 1,
+                        'frame_type': 'camera'
                     }
                 )
                 
