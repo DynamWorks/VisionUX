@@ -7,27 +7,14 @@ const useChat = () => {
     const [isLoading, setIsLoading] = useState(false);
     const { currentVideo, setAnalysisResults, isRagEnabled } = useStore();
     
-    // Load chat history for current video
+    // Reset messages when video changes
     useEffect(() => {
-        if (currentVideo) {
-            const savedMessages = localStorage.getItem(`chat_${currentVideo.name}`);
-            if (savedMessages) {
-                setMessages(JSON.parse(savedMessages));
-            } else {
-                setMessages([]);
-            }
-        }
+        setMessages([]);
     }, [currentVideo]);
 
     const addMessage = useCallback((role, content) => {
-        setMessages(prev => {
-            const newMessages = [...prev, { role, content }];
-            if (currentVideo) {
-                localStorage.setItem(`chat_${currentVideo.name}`, JSON.stringify(newMessages));
-            }
-            return newMessages;
-        });
-    }, [currentVideo]);
+        setMessages(prev => [...prev, { role, content }]);
+    }, []);
 
     const handleSceneAnalysis = useCallback(async (analysisData) => {
         if (!analysisData?.scene_analysis?.description) {
@@ -100,11 +87,7 @@ const useChat = () => {
     const clearChat = useCallback(() => {
         setMessages([]);
         setAnalysisResults(null);
-        // Clear local storage
-        if (currentVideo) {
-            localStorage.removeItem(`chat_${currentVideo.name}`);
-        }
-    }, [setAnalysisResults, currentVideo]);
+    }, [setAnalysisResults]);
 
     return {
         messages,
