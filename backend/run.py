@@ -7,7 +7,11 @@ import argparse
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from backend.app import app
+# Initialize eventlet at the very beginning
+import eventlet
+eventlet.monkey_patch(socket=True, select=True, thread=True)
+
+from backend.app import backend_app
 
 if __name__ == "__main__":
     # Parse command line arguments
@@ -29,8 +33,8 @@ if __name__ == "__main__":
     api_config = config.get("api", {})
     ws_config = config.get("websocket", {})
     
-    # Get host and port with fallback values
-    host = api_config.get("host", "localhost")
+    # Force local IP address
+    host = "127.0.0.1"
     try:
         port = int(api_config.get("port", "8000"))
     except ValueError:
@@ -38,26 +42,9 @@ if __name__ == "__main__":
         
     debug = api_config.get("debug", False)
     
-    
     try:
-        # Initialize eventlet
-        import eventlet
-        eventlet.monkey_patch()
-        
-        # Start WebSocket server
-        from backend.utils.socket_handler import SocketHandler
-        socket_handler = SocketHandler(app)
-        app.socket_handler = socket_handler
-        
-        # Run server with WebSocket support
-        socket_handler.socketio.run(
-            app,
-            host=host,
-            port=port,
-            debug=debug,
-            use_reloader=False,
-            log_output=True
-        )
+        # Run the application
+        backend_app.run(host=host, port=port, debug=debug)
     except Exception as e:
         print(f"Failed to start server: {e}")
         sys.exit(1)
