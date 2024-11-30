@@ -39,8 +39,10 @@ class StreamManager:
             'frame_count': 0,
             'resolution': '',
             'start_time': None,
-            'last_frame_time': None,
-            'dropped_frames': 0
+            'last_frame_time': None,  # Explicitly None until first frame
+            'dropped_frames': 0,
+            'total_frames_received': 0,
+            'last_error': None
         }
 
     def register_publisher(self, publisher: StreamPublisher):
@@ -243,11 +245,15 @@ class StreamManager:
             # Update metrics in a thread-safe way
             current_time = time.time()
             with self.buffer_lock:
-                time_diff = current_time - self.metrics['last_frame_time']
-                if time_diff >= 1.0:
-                    self.metrics['fps'] = round(self.frame_count / time_diff)
-                    self.frame_count = 0
+                if self.metrics['last_frame_time'] is not None:
+                    time_diff = current_time - self.metrics['last_frame_time']
+                    if time_diff >= 1.0:
+                        self.metrics['fps'] = round(self.frame_count / time_diff)
+                        self.frame_count = 0
+                        self.metrics['last_frame_time'] = current_time
+                else:
                     self.metrics['last_frame_time'] = current_time
+                    self.metrics['fps'] = 0
                 
                 self.frame_count += 1
                 self.metrics['frame_count'] += 1
