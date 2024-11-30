@@ -16,20 +16,41 @@ const StreamRenderer = ({ source, isStreaming }) => {
     const fpsCounterRef = useRef({ frames: 0, lastUpdate: Date.now() });
 
     // Update the drawFrame function to include FPS counting and canvas sizing
-    const drawFrame = useCallback(async (frameData) => {
+    const overlayCanvasRef = useRef(null);
+    
+    const drawFrame = useCallback(async (frameData, metadata) => {
         if (!canvasRef.current || !containerRef.current) return;
 
         try {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
+            const overlayCanvas = overlayCanvasRef.current;
+            const overlayCtx = overlayCanvas?.getContext('2d');
 
-            // Debug log frame data type and size
-            console.debug('Frame data type:', typeof frameData, frameData instanceof Blob ? 'Blob' : '');
-            if (frameData instanceof Blob) {
-                console.debug('Blob size:', frameData.size);
+            // Handle different types of frame data
+            if (metadata?.type === 'drawing') {
+                if (!overlayCtx) return;
+                
+                // Clear previous overlay
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                
+                // Draw new overlay
+                const drawingBlob = new Blob([frameData], { type: 'image/png' });
+                const drawingUrl = URL.createObjectURL(drawingBlob);
+                const drawingImg = new Image();
+                
+                await new Promise((resolve, reject) => {
+                    drawingImg.onload = resolve;
+                    drawingImg.onerror = reject;
+                    drawingImg.src = drawingUrl;
+                });
+                
+                overlayCtx.drawImage(drawingImg, 0, 0);
+                URL.revokeObjectURL(drawingUrl);
+                return;
             }
 
-            // Validate frame data
+            // Handle regular video frame
             if (!frameData || frameData.size === 0) {
                 console.warn('Empty frame data received');
                 return;
@@ -194,11 +215,17 @@ const StreamRenderer = ({ source, isStreaming }) => {
         if (!containerRef.current || !canvasRef.current) return;
 
         const canvas = canvasRef.current;
+        const overlayCanvas = overlayCanvasRef.current;
         const container = containerRef.current;
 
-        // Set initial canvas size
-        canvas.width = 1280;  // Default width
-        canvas.height = 720;  // Default height
+        // Set initial canvas sizes
+        canvas.width = 1280;
+        canvas.height = 720;
+        
+        if (overlayCanvas) {
+            overlayCanvas.width = 1280;
+            overlayCanvas.height = 720;
+        }
 
         const resizeObserver = new ResizeObserver(() => {
             // Maintain aspect ratio while fitting container
@@ -234,16 +261,30 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 alignItems: 'center'      // Center horizontally
             }}
         >
-            <canvas
-                ref={canvasRef}
-                style={{
-                    display: isStreaming ? 'block' : 'none',
-                    maxWidth: '100%',     // Constrain to container
-                    maxHeight: '100%',    // Constrain to container
-                    objectFit: 'contain', // Maintain aspect ratio
-                    backgroundColor: '#000000' // Make it visible even when empty
-                }}
-            />
+            <Box sx={{ position: 'relative' }}>
+                <canvas
+                    ref={canvasRef}
+                    style={{
+                        display: isStreaming ? 'block' : 'none',
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        backgroundColor: '#000000'
+                    }}
+                />
+                <canvas
+                    ref={overlayCanvasRef}
+                    style={{
+                        display: isStreaming ? 'block' : 'none',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        pointerEvents: 'none'
+                    }}
+                />
+            </Box>
 
             {loading && (
                 <Box

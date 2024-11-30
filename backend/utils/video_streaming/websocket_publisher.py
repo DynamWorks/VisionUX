@@ -23,28 +23,36 @@ class WebSocketPublisher(StreamPublisher):
             if not self.clients:
                 return
 
-            # Always ensure frame data is in proper JPEG format
-            if isinstance(frame.data, np.ndarray):
-                success, buffer = cv2.imencode('.jpg', frame.data, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
-                if not success:
-                    raise ValueError("Failed to encode frame")
-                frame_data = buffer.tobytes()
-            elif isinstance(frame.data, bytes):
-                frame_data = frame.data
+            # Handle drawing overlay separately
+            if frame_type == 'drawing':
+                # Drawing data should already be in the correct format
+                frame_data = frame.data if isinstance(frame.data, bytes) else bytes(frame.data)
+                metadata = {
+                    'type': 'drawing',
+                    'timestamp': frame.timestamp,
+                    'frame_number': frame.frame_number,
+                    'fps': self.fps
+                }
             else:
-                raise ValueError(f"Unsupported frame data type: {type(frame.data)}")
+                # Process regular video frame
+                if isinstance(frame.data, np.ndarray):
+                    success, buffer = cv2.imencode('.jpg', frame.data, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
+                    if not success:
+                        raise ValueError("Failed to encode frame")
+                    frame_data = buffer.tobytes()
+                elif isinstance(frame.data, bytes):
+                    frame_data = frame.data
+                else:
+                    raise ValueError(f"Unsupported frame data type: {type(frame.data)}")
 
-            # Keep binary data for WebSocket transmission
-            # Modern browsers can handle binary WebSocket frames efficiently
-            frame_data = frame_data if isinstance(frame_data, bytes) else bytes(frame_data)
-
-            # Prepare metadata
-            metadata = {
-                'timestamp': frame.timestamp,
-                'frame_number': frame.frame_number,
-                'fps': self.fps,
-                'quality': self.jpeg_quality
-            }
+                frame_data = frame_data if isinstance(frame_data, bytes) else bytes(frame_data)
+                metadata = {
+                    'type': 'frame',
+                    'timestamp': frame.timestamp,
+                    'frame_number': frame.frame_number,
+                    'fps': self.fps,
+                    'quality': self.jpeg_quality
+                }
 
             # Add any processing results
             if frame.metadata:
