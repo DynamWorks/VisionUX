@@ -27,13 +27,16 @@ class WebSocketService {
             return;
         }
 
-        const wsUrl = process.env.REACT_APP_WS_URL || `http://${process.env.REACT_APP_API_HOST || 'localhost'}:${process.env.REACT_APP_API_PORT || '8000'}`;
-        const streamWsUrl = process.env.REACT_APP_STREAM_WS_URL || `http://${process.env.REACT_APP_API_HOST || 'localhost'}:${process.env.REACT_APP_STREAM_PORT || '8001'}`;
+        // Configure WebSocket URLs with explicit ports
+        const wsUrl = process.env.REACT_APP_WS_URL || 
+            `http://${process.env.REACT_APP_API_HOST || 'localhost'}:8000`;
+        const streamWsUrl = process.env.REACT_APP_STREAM_WS_URL || 
+            `http://${process.env.REACT_APP_API_HOST || 'localhost'}:8001`;
         
-        console.log('Connecting to WebSocket:', wsUrl);
+        console.log('Connecting to Control WebSocket:', wsUrl);
         console.log('Connecting to Stream WebSocket:', streamWsUrl);
 
-        // Main socket for control messages
+        // Control socket for messages and commands
         this.socket = io(wsUrl, {
             transports: ['websocket'],
             reconnection: true,
@@ -47,26 +50,30 @@ class WebSocketService {
             pingTimeout: 60000,
             pingInterval: 25000,
             extraHeaders: {
-                'User-Agent': navigator.userAgent
+                'User-Agent': navigator.userAgent,
+                'Connection-Type': 'control'
             }
         });
 
-        // Separate socket for streaming
+        // Dedicated socket for video streaming
         this.streamSocket = io(streamWsUrl, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 20000,
+            timeout: 30000,  // Longer timeout for streaming
             autoConnect: true,
             path: '/socket.io/',
             withCredentials: true,
-            pingTimeout: 60000,
-            pingInterval: 25000,
+            pingTimeout: 120000,  // Longer ping timeout for streaming
+            pingInterval: 30000,  // Adjusted ping interval
             extraHeaders: {
-                'User-Agent': navigator.userAgent
-            }
+                'User-Agent': navigator.userAgent,
+                'Connection-Type': 'stream'
+            },
+            forceNew: true,  // Force new connection
+            multiplex: false // Disable multiplexing
         });
 
         this.setupEventHandlers();
