@@ -9,6 +9,13 @@ from typing import Dict, Any, Optional
 from .video_streaming.stream_manager import StreamManager
 from .video_streaming.websocket_publisher import WebSocketPublisher
 from .video_streaming.stream_publisher import Frame
+import time
+import cv2
+import numpy as np
+from typing import Dict, Any, Optional
+from .video_streaming.stream_manager import StreamManager
+from .video_streaming.websocket_publisher import WebSocketPublisher
+from .video_streaming.stream_publisher import Frame
 from pathlib import Path
 import time
 import cv2
@@ -347,7 +354,6 @@ class SocketHandler:
                     if frame.shape[0] == 0 or frame.shape[1] == 0:
                         raise ValueError("Invalid frame dimensions")
 
-                # Create frame object
                 # Create frame object with metadata
                 frame_obj = Frame(
                     data=frame,
