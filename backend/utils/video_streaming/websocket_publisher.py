@@ -34,9 +34,9 @@ class WebSocketPublisher(StreamPublisher):
             else:
                 raise ValueError(f"Unsupported frame data type: {type(frame.data)}")
 
-            # Convert to base64 for WebSocket transmission
-            import base64
-            frame_data = base64.b64encode(frame_data).decode('utf-8')
+            # Keep binary data for WebSocket transmission
+            # Modern browsers can handle binary WebSocket frames efficiently
+            frame_data = frame_data if isinstance(frame_data, bytes) else bytes(frame_data)
 
             # Prepare metadata
             metadata = {

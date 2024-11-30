@@ -29,21 +29,13 @@ const StreamRenderer = ({ source, isStreaming }) => {
                 console.debug('Blob size:', frameData.size);
             }
 
-            // Handle frame data
+            // Convert binary frame data to Blob
+            const blob = new Blob([frameData], { type: 'image/jpeg' });
+            const url = URL.createObjectURL(blob);
+            console.debug('Created URL from binary frame data:', url);
+
+            // Create new image
             let img = new Image();
-            let url;
-            
-            if (typeof frameData === 'string') {
-                // Handle base64 string
-                url = frameData.startsWith('data:') ? frameData : `data:image/jpeg;base64,${frameData}`;
-                console.debug('Using base64 data URL');
-            } else if (frameData instanceof Blob) {
-                // Handle Blob data
-                url = URL.createObjectURL(frameData);
-                console.debug('Created URL from Blob:', url);
-            } else {
-                throw new Error(`Unsupported frame data format: ${typeof frameData}`);
-            }
 
             await new Promise((resolve, reject) => {
                 img.onload = () => {
