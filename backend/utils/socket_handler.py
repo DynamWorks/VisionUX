@@ -40,12 +40,15 @@ class SocketHandler:
             async_mode='eventlet',
             logger=True,
             engineio_logger=True,
-            ping_timeout=60,
-            ping_interval=25,
-            max_http_buffer_size=100 * 1024 * 1024,  # Larger buffer for video frames
+            ping_timeout=120,  # Longer timeout for streaming
+            ping_interval=30,
+            max_http_buffer_size=100 * 1024 * 1024,  # 100MB buffer for video frames
             path='/socket.io/',
             always_connect=True,
-            transports=['websocket']
+            transports=['websocket'],
+            manage_session=False,  # Disable session management for better performance
+            async_handlers=True,   # Enable async handlers
+            max_queue_size=50      # Limit queue size to prevent memory issues
         )
         self.logger = logging.getLogger(__name__)
         self.clients = {}  # Store client info with last ping time
