@@ -16,6 +16,7 @@ class SocketHandler:
     """Handles Socket.IO events and manages stream connections"""
     
     def __init__(self, app):
+        # Initialize main Socket.IO for control messages
         self.socketio = SocketIO(
             app,
             cors_allowed_origins="*",
@@ -24,7 +25,24 @@ class SocketHandler:
             engineio_logger=True,
             ping_timeout=60,
             ping_interval=25,
-            max_http_buffer_size=100 * 1024 * 1024,
+            max_http_buffer_size=1024 * 1024,  # Smaller buffer for control messages
+            path='/socket.io/',
+            always_connect=True,
+            transports=['websocket']
+        )
+        
+        # Initialize streaming Socket.IO on separate port
+        from flask import Flask
+        stream_app = Flask('stream_app')
+        self.stream_socketio = SocketIO(
+            stream_app,
+            cors_allowed_origins="*", 
+            async_mode='eventlet',
+            logger=True,
+            engineio_logger=True,
+            ping_timeout=60,
+            ping_interval=25,
+            max_http_buffer_size=100 * 1024 * 1024,  # Larger buffer for video frames
             path='/socket.io/',
             always_connect=True,
             transports=['websocket']
@@ -32,9 +50,9 @@ class SocketHandler:
         self.logger = logging.getLogger(__name__)
         self.clients = {}  # Store client info with last ping time
         
-        # Initialize stream manager and publisher
+        # Initialize stream manager and publisher with both socket instances
         self.stream_manager = StreamManager()
-        self.publisher = WebSocketPublisher(self.socketio)
+        self.publisher = WebSocketPublisher(self.socketio, self.stream_socketio)
         self.stream_manager.register_publisher(self.publisher)
         
         self.setup_handlers()

@@ -7,9 +7,10 @@ from .stream_publisher import StreamPublisher, Frame
 class WebSocketPublisher(StreamPublisher):
     """Publishes frames to WebSocket clients"""
     
-    def __init__(self, socketio):
+    def __init__(self, socketio, stream_socketio):
         super().__init__()
-        self.socketio = socketio
+        self.socketio = socketio  # For control messages
+        self.stream_socketio = stream_socketio  # For frame streaming
         self.clients: Set[str] = set()
         self.logger = logging.getLogger(__name__)
         self.frame_buffer_size = 5
@@ -63,7 +64,7 @@ class WebSocketPublisher(StreamPublisher):
             # Emit frame data to all clients - without broadcast parameter
             for client_id in self.clients:
                 try:
-                    self.socketio.emit(frame_type, frame_data, to=client_id)
+                    self.stream_socketio.emit(frame_type, frame_data, to=client_id)
                 except Exception as e:
                     self.logger.error(f"Error sending frame to client {client_id}: {e}")
 
