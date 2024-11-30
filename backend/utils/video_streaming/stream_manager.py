@@ -26,7 +26,7 @@ class StreamManager:
         self.video_capture = None
         
         # Frame buffer configuration
-        self.frame_buffer = deque(maxlen=30)  # Keep last 30 frames
+        self.frame_buffer = deque(maxlen=10)  # Reduce buffer size for analysis
         self.buffer_lock = Lock()
 
         # Separate video capture for analysis

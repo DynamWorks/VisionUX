@@ -61,12 +61,12 @@ class WebSocketPublisher(StreamPublisher):
                 f"clients: {len(self.clients)}"
             )
 
-            # Emit frame data to all clients - without broadcast parameter
-            for client_id in self.clients:
-                try:
-                    self.stream_socketio.emit(frame_type, frame_data, to=client_id)
-                except Exception as e:
-                    self.logger.error(f"Error sending frame to client {client_id}: {e}")
+            # Use broadcast for efficiency when sending to all clients
+            try:
+                if self.clients:  # Only emit if there are clients
+                    self.stream_socketio.emit(frame_type, frame_data, broadcast=True)
+            except Exception as e:
+                self.logger.error(f"Error broadcasting frame: {e}")
 
         except Exception as e:
             self.logger.error(f"Error publishing frame: {e}", exc_info=True)
