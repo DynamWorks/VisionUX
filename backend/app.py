@@ -263,7 +263,7 @@ class BackendApp:
             stream_thread.daemon = True
             stream_thread.start()
             self.logger.info(f"Dedicated streaming server started on port {stream_port}")
-            self.logger.info("Main server handling control messages on port {port}")
+            self.logger.info(f"Main server handling control messages on port {port}")
 
             # Start main server
             self.socketio.run(
