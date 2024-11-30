@@ -118,71 +118,76 @@ const StreamRenderer = ({ source, isStreaming }) => {
     }, []);
 
 
-    // Setup WebSocket event listeners
+    // Setup camera stream
     useEffect(() => {
-        // Skip first render cleanup
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            return;
-        }
-
         if (!isStreaming || source !== 'camera') {
-            console.log('Stream not active or source not camera');
             return;
         }
 
-        console.log('Setting up WebSocket listeners for', source);
-
-        const handleFrame = async (frameData) => {
-            if (!frameData) return;
-            
+        let videoStream = null;
+        const startCamera = async () => {
             try {
-                // Convert ArrayBuffer to Blob if needed
-                const frame = frameData instanceof ArrayBuffer ? 
-                    new Blob([frameData], { type: 'image/jpeg' }) : 
-                    frameData;
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                videoStream = stream;
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                const captureFrame = () => {
+                    if (!canvasRef.current || !isStreaming) return;
                     
-                await drawFrame(frame);
+                    const canvas = canvasRef.current;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set canvas size if needed
+                    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    }
+
+                    // Draw video frame to canvas
+                    ctx.drawImage(video, 0, 0);
+
+                    // For analysis, periodically send frame to backend
+                    if (Math.random() < 0.1) { // ~10% of frames
+                        canvas.toBlob(blob => {
+                            if (websocketService.isConnected()) {
+                                websocketService.emit('frame', blob);
+                            }
+                        }, 'image/jpeg', 0.85);
+                    }
+
+                    requestAnimationFrame(captureFrame);
+                };
+
+                video.onloadedmetadata = () => {
+                    setLoading(false);
+                    requestAnimationFrame(captureFrame);
+                };
+
             } catch (error) {
-                console.error('Error drawing frame:', error);
+                console.error('Error accessing camera:', error);
+                setError(error.message);
+                setLoading(false);
             }
         };
-
-        const handleStreamStarted = () => {
-            console.log('Stream started event received');
-            setLoading(false);
-        };
-
-        const handleStreamError = (error) => {
-            console.error('Stream error:', error);
-            setError(error.message || 'Stream error occurred');
-            setLoading(false);
-        };
-
-        // Add event listeners
-        websocketService.on('frame', handleFrame);
-        websocketService.on('edge_frame', (frameData) => {
-            if (frameData) {
-                handleFrame(frameData);
-            }
-        });
-        websocketService.on('stream_started', handleStreamStarted);
-        websocketService.on('error', handleStreamError);
 
         setLoading(true);
-        console.log('Stream listeners setup complete');
+        startCamera();
 
         // Cleanup function
         return () => {
-            // Only cleanup if we're actually stopping the stream
-            if (!isStreaming) {
-                console.log('Cleaning up WebSocket listeners');
-                websocketService.off('frame', handleFrame);
-                websocketService.off('stream_started', handleStreamStarted);
-                websocketService.off('error', handleStreamError);
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
             }
         };
-    }, [isStreaming, source, drawFrame]);
+    }, [isStreaming, source]);
 
     // Initialize canvas and handle resizing
     useEffect(() => {
