@@ -103,6 +103,7 @@ const useChat = () => {
 
     return {
         messages,
+        setMessages,
         isLoading,
         sendMessage,
         handleSceneAnalysis,
