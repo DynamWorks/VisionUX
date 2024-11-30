@@ -23,44 +23,50 @@ const StreamRenderer = ({ source, isStreaming }) => {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
 
-            // Handle base64 encoded JPEG data
-            const img = new Image();
-            const url = `data:image/jpeg;base64,${frameData}`;
+            // Handle frame data
+            let img = new Image();
+            let url;
+            
+            if (typeof frameData === 'string') {
+                // Handle base64 string
+                url = `data:image/jpeg;base64,${frameData}`;
+            } else if (frameData instanceof Blob) {
+                // Handle Blob data
+                url = URL.createObjectURL(frameData);
+            } else {
+                throw new Error('Unsupported frame data format');
+            }
 
             await new Promise((resolve, reject) => {
-                img.onerror = () => {
-                    URL.revokeObjectURL(url);
-                    reject(new Error('Failed to load image'));
-                };
                 img.onload = () => {
-                    // Set canvas size to match first frame if needed
-                    if (canvas.width !== img.width || canvas.height !== img.height) {
-                        canvas.width = img.width;
-                        canvas.height = img.height;
+                    try {
+                        // Initialize canvas on first frame
+                        if (!canvas.width || !canvas.height) {
+                            canvas.width = img.width || 1280;
+                            canvas.height = img.height || 720;
+                        }
 
-                        // Adjust canvas style to maintain aspect ratio
-                        const containerWidth = containerRef.current.offsetWidth;
-                        const containerHeight = containerRef.current.offsetHeight;
-                        const scale = Math.min(
-                            containerWidth / img.width,
-                            containerHeight / img.height
-                        );
+                        // Clear and draw new frame
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                        canvas.style.width = `${img.width * scale}px`;
-                        canvas.style.height = `${img.height * scale}px`;
+                        // Cleanup
+                        if (frameData instanceof Blob) {
+                            URL.revokeObjectURL(url);
+                        }
+                        resolve();
+                    } catch (err) {
+                        reject(err);
                     }
-
-                    // Draw frame
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
-
-                    URL.revokeObjectURL(url);
-                    resolve();
                 };
+                
                 img.onerror = () => {
-                    URL.revokeObjectURL(url);
-                    reject(new Error('Failed to load image'));
+                    if (frameData instanceof Blob) {
+                        URL.revokeObjectURL(url);
+                    }
+                    reject(new Error('Failed to load frame'));
                 };
+
                 img.src = url;
             });
 
@@ -90,9 +96,15 @@ const StreamRenderer = ({ source, isStreaming }) => {
         console.log('Setting up WebSocket listeners for', source);
 
         const handleFrame = async (frameData) => {
-            console.log('Received frame data', typeof frameData, frameData instanceof Uint8Array);
+            if (!frameData) return;
+            
             try {
-                await drawFrame(frameData);
+                // Convert ArrayBuffer to Blob if needed
+                const frame = frameData instanceof ArrayBuffer ? 
+                    new Blob([frameData], { type: 'image/jpeg' }) : 
+                    frameData;
+                    
+                await drawFrame(frame);
             } catch (error) {
                 console.error('Error drawing frame:', error);
             }
