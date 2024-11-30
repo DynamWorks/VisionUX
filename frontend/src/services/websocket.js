@@ -27,7 +27,7 @@ class WebSocketService {
             return;
         }
 
-        const wsUrl = process.env.REACT_APP_WS_URL || 'http://localhost:8000';
+        const wsUrl = process.env.REACT_APP_WS_URL || `http://${process.env.REACT_APP_API_HOST || 'localhost'}:${process.env.REACT_APP_API_PORT || '8000'}`;
         console.log('Connecting to WebSocket:', wsUrl);
 
         this.socket = io(wsUrl, {

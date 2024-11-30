@@ -24,11 +24,23 @@ class BackendApp:
         # Create logs directory
         Path('logs').mkdir(exist_ok=True)
         
+        # Validate environment
+        from utils.env_validator import EnvValidator
+        self.env_config = EnvValidator.validate_env()
+        
         # Load config
         config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
         self.config = Config(config_path)
         if not self.config._config:
             self.config.reset()
+            
+        # Override config with environment values
+        self.config._config['api'].update({
+            'host': self.env_config['API_HOST'],
+            'port': int(self.env_config['API_PORT']),
+            'debug': self.env_config['API_DEBUG'].lower() == 'true',
+            'cors_origins': self.env_config['API_CORS_ORIGINS']
+        })
         
         # Set debug mode from config
         self.debug = self.config.get('api', 'debug', default=False)

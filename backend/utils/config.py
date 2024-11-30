@@ -29,13 +29,24 @@ class Config:
 
     def _init_api_keys(self):
         """Initialize API keys from environment"""
+        # Validate required API keys
+        openai_key = os.getenv('OPENAI_API_KEY')
+        if not openai_key:
+            self.logger.warning("OPENAI_API_KEY not found in environment")
+            
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        if not gemini_key:
+            self.logger.warning("GEMINI_API_KEY not found in environment")
+            
         self.api_keys = {
             'openai': {
-                'key': os.getenv('OPENAI_API_KEY'),
-                'base': os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+                'key': openai_key,
+                'base': os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1'),
+                'model': os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
             },
             'gemini': {
-                'key': os.getenv('GEMINI_API_KEY')
+                'key': gemini_key,
+                'model': os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
             }
         }
 

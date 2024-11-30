@@ -33,10 +33,10 @@ if __name__ == "__main__":
     api_config = config.get("api", {})
     ws_config = config.get("websocket", {})
     
-    # Force local IP address
-    host = "127.0.0.1"
+    # Get host/port from environment or config
+    host = os.getenv('API_HOST', "127.0.0.1")
     try:
-        port = int(api_config.get("port", "8000"))
+        port = int(os.getenv('API_PORT', api_config.get("port", "8000")))
     except ValueError:
         port = 8000
         
