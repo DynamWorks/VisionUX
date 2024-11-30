@@ -107,12 +107,12 @@ class RAGService:
                 4. Includes technical details and metadata
                 5. Uses clear section headings and organization
                 
-                JSON data:
-                {data}
+
                 """
                 
                 try:
                     response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
+                    import pdb;pdb.set_trace()
                     if response and response.text:
                         text_representation = response.text
                     else:
