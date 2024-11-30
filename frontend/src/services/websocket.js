@@ -70,14 +70,13 @@ class WebSocketService {
         });
 
         this.setupEventHandlers();
-        this.setupStreamEventHandlers();
         this.startConnectionCheck();
     }
 
     setupEventHandlers() {
-        if (!this.socket) return;
+        if (!this.socket || !this.streamSocket) return;
 
-        // Connection events
+        // Main socket events
         this.socket.on('connect', () => {
             console.log('WebSocket Connected');
             this._connected = true;
@@ -116,6 +115,43 @@ class WebSocketService {
             }
         });
 
+        // Stream socket events
+        this.streamSocket.on('connect', () => {
+            console.log('Stream WebSocket Connected');
+            this._connected = true;
+            this.reconnectAttempts = 0;
+            this.startPingInterval();
+            this.notifyListeners('stream_connect');
+        });
+
+        this.streamSocket.on('disconnect', (reason) => {
+            console.log('Stream WebSocket disconnected:', reason);
+            this._connected = false;
+            this.clearPingInterval();
+            this.notifyListeners('stream_disconnect', reason);
+
+            if (reason === 'io server disconnect') {
+                setTimeout(() => {
+                    this.streamSocket.connect();
+                }, 1000);
+            }
+        });
+
+        this.streamSocket.on('error', (error) => {
+            console.error('Stream socket error:', error);
+            this.notifyListeners('stream_error', error);
+        });
+
+        // Frame handling for stream socket
+        this.streamSocket.on('frame', (frameData) => {
+            this.handleFrame(frameData);
+        });
+
+        this.streamSocket.on('edge_frame', (frameData) => {
+            this.handleFrame(frameData);
+        });
+
+        // Main socket error handling
         this.socket.on('error', (error) => {
             console.error('Socket error:', error);
             if (!this.socket.connected) {
