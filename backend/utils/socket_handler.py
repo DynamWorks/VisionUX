@@ -312,23 +312,22 @@ class SocketHandler:
                 # Update client's last activity
                 self.clients[client_id]['last_ping'] = time.time()
 
-                # Convert frame data to numpy array
+                # Handle different frame data formats
                 if isinstance(frame_data, (bytes, bytearray)):
-                    # Decode JPEG frame
-                    nparr = np.frombuffer(frame_data, dtype=np.uint8)
-                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                    if frame is None:
-                        raise ValueError("Failed to decode frame")
+                    # Already binary data
+                    frame_bytes = frame_data
                 elif isinstance(frame_data, str):
                     # Handle base64 encoded data
                     import base64
-                    frame_data = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-                    nparr = np.frombuffer(frame_data, dtype=np.uint8)
-                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                    if frame is None:
-                        raise ValueError("Failed to decode base64 frame")
+                    frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
                 else:
                     raise ValueError(f"Unsupported frame data type: {type(frame_data)}")
+
+                # Decode frame
+                nparr = np.frombuffer(frame_bytes, dtype=np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if frame is None:
+                    raise ValueError("Failed to decode frame")
 
                 # Create frame object
                 frame_obj = Frame(
