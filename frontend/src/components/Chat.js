@@ -8,7 +8,7 @@ import useStore from '../store';
 
 const Chat = () => {
     const [message, setMessage] = useState('');
-    const { messages, isLoading, sendMessage, clearChat } = useChat();
+    const { messages, isLoading, sendMessage, clearChat, addMessage } = useChat();
     const { isStreaming } = useStore();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
