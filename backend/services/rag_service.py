@@ -100,23 +100,46 @@ class RAGService:
                 
             # Use Gemini to get detailed text representation if available
             if self.gemini_enabled and self.gemini_model:
-                prompt = """Analyze this JSON data and provide a detailed text representation that:
-                1. Describes the content in natural language
-                2. Preserves all important information and relationships
-                3. Maintains hierarchical structure
-                4. Includes technical details and metadata
-                5. Uses clear section headings and organization
+                prompt = """Analyze this JSON data and provide a detailed text explanation that:
+                1. Describes what was analyzed (video name, timestamp, etc)
+                2. Explains the key findings and observations
+                3. References specific metadata like:
+                   - Frame numbers analyzed
+                   - Video duration and FPS
+                   - Technical details
+                4. Uses natural language to explain the analysis process
+                5. Organizes information with clear sections
                 
-
+                The explanation should help users understand how the analysis was derived from the metadata.
+                
+                JSON data to analyze:
                 """
                 
                 try:
                     response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
-                    import pdb;pdb.set_trace()
                     if response and response.text:
-                        text_representation = response.text
+                        # Parse the response text
+                        text_representation = response.text.strip()
+                        
+                        # Add metadata section if not included
+                        if 'Metadata' not in text_representation:
+                            metadata_summary = f"""
+                            
+                            Metadata Summary:
+                            - Analysis timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
+                            - Frames analyzed: {len(data.get('frame_numbers', []))}
+                            - Video duration: {data.get('duration', 'Unknown')} seconds
+                            - Frame rate: {data.get('fps', 'Unknown')} FPS
+                            """
+                            text_representation += metadata_summary
                     else:
-                        text_representation = json.dumps(data, indent=2)
+                        # Fallback to basic text representation
+                        text_representation = f"""
+                        Analysis Results:
+                        - Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
+                        - Number of frames: {len(data.get('frame_numbers', []))}
+                        - Raw data: {json.dumps(data, indent=2)}
+                        """
                 except Exception as e:
                     self.logger.error(f"Gemini processing failed: {e}")
                     text_representation = json.dumps(data, indent=2)
