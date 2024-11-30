@@ -146,20 +146,31 @@ const StreamRenderer = ({ source, isStreaming }) => {
         };
     }, [isStreaming, source, drawFrame]);
 
-    // Handle container resizing
+    // Initialize canvas and handle resizing
     useEffect(() => {
         if (!containerRef.current || !canvasRef.current) return;
 
+        const canvas = canvasRef.current;
+        const container = containerRef.current;
+
+        // Set initial canvas size
+        canvas.width = 1280;  // Default width
+        canvas.height = 720;  // Default height
+
         const resizeObserver = new ResizeObserver(() => {
-            if (canvasRef.current) {
-                const canvas = canvasRef.current;
-                const container = containerRef.current;
-                canvas.style.width = '100%';
-                canvas.style.height = '100%';
-            }
+            // Maintain aspect ratio while fitting container
+            const containerWidth = container.offsetWidth;
+            const containerHeight = container.offsetHeight;
+            const scale = Math.min(
+                containerWidth / canvas.width,
+                containerHeight / canvas.height
+            );
+
+            canvas.style.width = `${canvas.width * scale}px`;
+            canvas.style.height = `${canvas.height * scale}px`;
         });
 
-        resizeObserver.observe(containerRef.current);
+        resizeObserver.observe(container);
         return () => resizeObserver.disconnect();
     }, []);
 
