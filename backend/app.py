@@ -50,6 +50,7 @@ class BackendApp:
         self.logger = logging.getLogger(__name__)
         
         # Get frontend path from config
+        from flask import Flask
         frontend_path = self.config.get('frontend', 'build_path', default='../frontend/build')
         self.flask_app = Flask(__name__, static_folder=frontend_path)
         
