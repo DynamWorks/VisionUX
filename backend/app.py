@@ -100,17 +100,19 @@ class BackendApp:
             manage_session=True
         )
 
-        # Initialize streaming Socket.IO instance on different port
+        # Initialize dedicated streaming Socket.IO instance on port 8001
         from flask import Flask
         self.stream_app = Flask('stream_app')
-        CORS(self.stream_app, resources={
+        stream_cors_config = {
             r"/socket.io/*": {
                 "origins": "*",
                 "allow_headers": ["Content-Type"],
                 "methods": ["GET", "POST", "OPTIONS"],
-                "supports_credentials": True
+                "supports_credentials": True,
+                "expose_headers": ["Content-Length", "Content-Range"]
             }
-        })
+        }
+        CORS(self.stream_app, resources=stream_cors_config)
         
         self.stream_socketio = SocketIO(
             self.stream_app,
@@ -260,7 +262,8 @@ class BackendApp:
             stream_thread = threading.Thread(target=run_stream_server)
             stream_thread.daemon = True
             stream_thread.start()
-            self.logger.info(f"Stream server started on port {stream_port}")
+            self.logger.info(f"Dedicated streaming server started on port {stream_port}")
+            self.logger.info("Main server handling control messages on port {port}")
 
             # Start main server
             self.socketio.run(
