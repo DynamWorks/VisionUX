@@ -23,32 +23,59 @@ const StreamRenderer = ({ source, isStreaming }) => {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
 
+            // Debug log frame data type and size
+            console.debug('Frame data type:', typeof frameData, frameData instanceof Blob ? 'Blob' : '');
+            if (frameData instanceof Blob) {
+                console.debug('Blob size:', frameData.size);
+            }
+
             // Handle frame data
             let img = new Image();
             let url;
             
             if (typeof frameData === 'string') {
                 // Handle base64 string
-                url = `data:image/jpeg;base64,${frameData}`;
+                url = frameData.startsWith('data:') ? frameData : `data:image/jpeg;base64,${frameData}`;
+                console.debug('Using base64 data URL');
             } else if (frameData instanceof Blob) {
                 // Handle Blob data
                 url = URL.createObjectURL(frameData);
+                console.debug('Created URL from Blob:', url);
             } else {
-                throw new Error('Unsupported frame data format');
+                throw new Error(`Unsupported frame data format: ${typeof frameData}`);
             }
 
             await new Promise((resolve, reject) => {
                 img.onload = () => {
                     try {
-                        // Initialize canvas on first frame
-                        if (!canvas.width || !canvas.height) {
-                            canvas.width = img.width || 1280;
-                            canvas.height = img.height || 720;
+                        console.debug('Image loaded:', img.width, 'x', img.height);
+                        
+                        // Set canvas dimensions if needed
+                        if (canvas.width !== 1280 || canvas.height !== 720) {
+                            canvas.width = 1280;
+                            canvas.height = 720;
+                            console.debug('Canvas size set to:', canvas.width, 'x', canvas.height);
                         }
 
-                        // Clear and draw new frame
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        // Clear canvas
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        // Calculate scaling to maintain aspect ratio
+                        const scale = Math.min(
+                            canvas.width / img.width,
+                            canvas.height / img.height
+                        );
+                        const x = (canvas.width - img.width * scale) / 2;
+                        const y = (canvas.height - img.height * scale) / 2;
+
+                        // Draw frame
+                        ctx.drawImage(
+                            img,
+                            x, y,
+                            img.width * scale,
+                            img.height * scale
+                        );
 
                         // Cleanup
                         if (frameData instanceof Blob) {
@@ -56,11 +83,13 @@ const StreamRenderer = ({ source, isStreaming }) => {
                         }
                         resolve();
                     } catch (err) {
+                        console.error('Draw error:', err);
                         reject(err);
                     }
                 };
                 
-                img.onerror = () => {
+                img.onerror = (err) => {
+                    console.error('Image load error:', err);
                     if (frameData instanceof Blob) {
                         URL.revokeObjectURL(url);
                     }
@@ -75,7 +104,7 @@ const StreamRenderer = ({ source, isStreaming }) => {
 
         } catch (err) {
             console.error('Error drawing frame:', err);
-            setError('Error displaying frame');
+            setError(`Error displaying frame: ${err.message}`);
         }
     }, []);
 
