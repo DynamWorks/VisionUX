@@ -83,7 +83,7 @@ class BackendApp:
              },
              supports_credentials=True)
         
-        # Initialize Socket.IO with proper configuration
+        # Initialize main Socket.IO instance
         self.socketio = SocketIO(
             self.flask_app,
             cors_allowed_origins="*",
@@ -97,6 +97,32 @@ class BackendApp:
             always_connect=True,
             transports=['websocket'],
             manage_session=True
+        )
+
+        # Initialize streaming Socket.IO instance on different port
+        from flask import Flask
+        self.stream_app = Flask('stream_app')
+        CORS(self.stream_app, resources={
+            r"/socket.io/*": {
+                "origins": "*",
+                "allow_headers": ["Content-Type"],
+                "methods": ["GET", "POST", "OPTIONS"],
+                "supports_credentials": True
+            }
+        })
+        
+        self.stream_socketio = SocketIO(
+            self.stream_app,
+            cors_allowed_origins="*",
+            async_mode='eventlet',
+            logger=True,
+            engineio_logger=True,
+            ping_timeout=self.config.get('websocket', 'ping_timeout', default=60),
+            ping_interval=self.config.get('websocket', 'ping_interval', default=25),
+            max_http_buffer_size=self.config.get('websocket', 'max_buffer_size', default=100 * 1024 * 1024),
+            path='/socket.io/',
+            always_connect=True,
+            transports=['websocket']
         )
         
         # Clear tmp_content directory on startup
@@ -197,6 +223,7 @@ class BackendApp:
         """Run the Flask application with Socket.IO"""
         try:
             port = self.config.get('api', 'port', default=port)
+            stream_port = self.config.get('websocket', 'stream_port', default=8001)
             debug = self.config.get('api', 'debug', default=debug)
 
             ssl_enabled = self.config.get('websocket', 'ssl_enabled', default=False)
@@ -212,10 +239,29 @@ class BackendApp:
                         'certfile': certfile,
                         'ssl_protocol': 'TLSv1_2'
                     }
-                    self.logger.info("Enabling SSL for WebSocket server")
+                    self.logger.info("Enabling SSL for WebSocket servers")
                 else:
                     self.logger.warning("SSL enabled but key/cert files not configured")
 
+            # Start streaming server in a separate thread
+            import threading
+            def run_stream_server():
+                self.stream_socketio.run(
+                    self.stream_app,
+                    host=host,
+                    port=stream_port,
+                    debug=debug,
+                    use_reloader=False,
+                    log_output=True,
+                    **ssl_args
+                )
+
+            stream_thread = threading.Thread(target=run_stream_server)
+            stream_thread.daemon = True
+            stream_thread.start()
+            self.logger.info(f"Stream server started on port {stream_port}")
+
+            # Start main server
             self.socketio.run(
                 self.flask_app,
                 host=host,

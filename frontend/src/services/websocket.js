@@ -21,15 +21,19 @@ class WebSocketService {
     }
 
     connect() {
-        if (this.socket?.connected) {
-            console.log('WebSocket already connected');
+        if (this.socket?.connected && this.streamSocket?.connected) {
+            console.log('WebSocket connections already established');
             this._connected = true;
             return;
         }
 
         const wsUrl = process.env.REACT_APP_WS_URL || `http://${process.env.REACT_APP_API_HOST || 'localhost'}:${process.env.REACT_APP_API_PORT || '8000'}`;
+        const streamWsUrl = process.env.REACT_APP_STREAM_WS_URL || `http://${process.env.REACT_APP_API_HOST || 'localhost'}:${process.env.REACT_APP_STREAM_PORT || '8001'}`;
+        
         console.log('Connecting to WebSocket:', wsUrl);
+        console.log('Connecting to Stream WebSocket:', streamWsUrl);
 
+        // Main socket for control messages
         this.socket = io(wsUrl, {
             transports: ['websocket'],
             reconnection: true,
@@ -47,7 +51,26 @@ class WebSocketService {
             }
         });
 
+        // Separate socket for streaming
+        this.streamSocket = io(streamWsUrl, {
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: this.maxReconnectAttempts,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            autoConnect: true,
+            path: '/socket.io/',
+            withCredentials: true,
+            pingTimeout: 60000,
+            pingInterval: 25000,
+            extraHeaders: {
+                'User-Agent': navigator.userAgent
+            }
+        });
+
         this.setupEventHandlers();
+        this.setupStreamEventHandlers();
         this.startConnectionCheck();
     }
 
