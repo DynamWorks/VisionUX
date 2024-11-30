@@ -55,8 +55,13 @@ function App() {
 
             const data = await response.json();
 
-            if (data.scene_analysis?.description) {
-                // Update chat with analysis results
+            if (data.chat_messages) {
+                // Add each message from the response
+                data.chat_messages.forEach(msg => {
+                    addMessage(msg.role, msg.content);
+                });
+            } else if (data.scene_analysis?.description) {
+                // Fallback for older response format
                 addMessage('system', `Scene Analysis:\n${data.scene_analysis.description}`);
             }
 
