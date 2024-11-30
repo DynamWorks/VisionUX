@@ -7,9 +7,21 @@ const useChat = () => {
     const [isLoading, setIsLoading] = useState(false);
     const { currentVideo, setAnalysisResults, isRagEnabled } = useStore();
     
-    // Reset messages when video changes
+    // Load chat history from backend when video changes
     useEffect(() => {
-        setMessages([]);
+        if (currentVideo) {
+            // Fetch chat history from backend
+            fetch(`${process.env.REACT_APP_API_URL}/api/v1/chat/history/${currentVideo.name}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.messages) {
+                        setMessages(data.messages);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching chat history:', error);
+                });
+        }
     }, [currentVideo]);
 
     const addMessage = useCallback((role, content) => {

@@ -54,10 +54,10 @@ const FileList = () => {
             const files = listData.files || [];
             setUploadedFiles(files);
             
-            // Clear old session data and chat if this is a new upload
+            // Clear chat history for new uploads
             if (file) {
-                localStorage.clear();
-                addMessage('system', 'Chat history cleared');
+                setMessages([]);
+                addMessage('system', 'New file uploaded - chat history cleared');
             }
             
             // Auto-select and analyze logic:
