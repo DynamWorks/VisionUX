@@ -196,13 +196,26 @@ def analyze_scene():
             response_data['chat_messages'] = [
                 {
                     'role': 'system',
-                    'content': 'Starting scene analysis...'
+                    'content': 'Scene analysis in progress...'
                 },
                 {
                     'role': 'assistant',
-                    'content': f"Scene Analysis for {video_file}:\n{response_data['scene_analysis']['description']}"
+                    'content': f"Scene Analysis Results:\n{response_data['scene_analysis']['description']}"
                 }
             ]
+
+            # Add technical details if available
+            if response_data['technical_details']:
+                response_data['chat_messages'].append({
+                    'role': 'system',
+                    'content': f"Technical Details:\n{json.dumps(response_data['technical_details'], indent=2)}"
+                })
+
+            # Add completion message
+            response_data['chat_messages'].append({
+                'role': 'system',
+                'content': 'Analysis complete.'
+            })
 
             return jsonify(response_data)
 
