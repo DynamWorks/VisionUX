@@ -252,58 +252,7 @@ JSON data to analyze:
                 
             chunks = self.text_splitter.split_documents(processed_documents)
             
-            # Get recent chat history
-            chat_dir = Path("tmp_content/chat_history")
-            if chat_dir.exists():
-                chat_files = sorted(chat_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:3]
-                
-                for chat_file in chat_files:
-                    with open(chat_file) as f:
-                        chat_data = json.load(f)
-                        
-                    # Get text representation of chat with context
-                    chat_prompt = """Convert this chat history into a contextual summary that:
-
-1. Conversation Flow:
-   - Sequence of topics discussed
-   - Questions asked and answers provided
-   - Follow-up questions and clarifications
-   - Unresolved queries or points
-
-2. Key Information:
-   - Important facts and observations mentioned
-   - Specific frame references or timestamps
-   - Technical details discussed
-   - Conclusions reached
-
-3. Context Preservation:
-   - Relationships between questions
-   - References to previous answers
-   - Evolving understanding of the video
-   - Outstanding areas of interest
-
-Format as a narrative that preserves context for future queries.
-Highlight temporal relationships between messages.
-Note any recurring themes or topics.
-
-Chat history to analyze:
-{chat}
-"""
-                    
-                    chat_response = self.gemini_model.generate_content(
-                        chat_prompt.format(chat=json.dumps(chat_data, indent=2))
-                    )
-                    
-                    if chat_response.text:
-                        # Add chat summary as document
-                        chunks.append(Document(
-                            page_content=chat_response.text,
-                            metadata={
-                                'source': str(chat_file),
-                                'type': 'chat_history',
-                                'timestamp': chat_file.stat().st_mtime
-                            }
-                        ))
+            # Chat history is now handled separately in query_knowledge_base
             
             # Create or update vector store
             kb_path = Path("tmp_content/knowledgebase")
@@ -336,31 +285,29 @@ Chat history to analyze:
         )
 
         # Custom prompt template
-        prompt_template = """Use the following context from video analysis and chat history to answer the question.
+        prompt_template = """You are discussing video analysis results with a researcher or colleague. 
+Use the following analysis context to have an informed, natural conversation about the experiments and findings.
 
-Context from Analysis Results:
+Analysis Context:
 {summaries}
-
-Recent Chat History:
-{chat_history}
 
 Question: {question}
 
 Guidelines for your response:
-1. Prioritize information from the most relevant analysis results
-2. Reference specific frames, timestamps, and observations
-3. Build on context from recent chat history
-4. Maintain consistency with previous answers
-5. Be concise but thorough
-6. Express uncertainty when information is incomplete
-7. Only use information present in the provided context
+1. Respond naturally like a knowledgeable colleague discussing research
+2. Reference specific frames, timestamps and observations from the analysis
+3. Be clear and concise while maintaining a conversational tone
+4. Express appropriate uncertainty when information is limited
+5. Only use information from the provided analysis context
+6. Focus on key insights and interesting findings
+7. Feel free to suggest follow-up areas to explore
 
 Format your response to:
-1. Directly answer the question
-2. Cite specific evidence from analysis or chat history
-3. Note any relevant context from previous discussions
-4. Highlight confidence levels and uncertainties
-        """
+1. Directly address the question in a conversational way
+2. Support your points with specific evidence from the analysis
+3. Highlight interesting patterns or unexpected results
+4. Note any limitations or areas needing more investigation
+"""
 
         PROMPT = PromptTemplate(
             template=prompt_template, 
@@ -381,10 +328,26 @@ Format your response to:
         
         return chain
         
-    def query_knowledge_base(self, query: str, chain: RetrievalQAWithSourcesChain) -> Dict:
-        """Query the knowledge base with enhanced source tracking"""
+    def query_knowledge_base(self, query: str, chain: RetrievalQAWithSourcesChain, chat_history: Optional[List[Dict]] = None) -> Dict:
+        """Query the knowledge base with enhanced source tracking and chat context"""
         try:
-            response = chain({"question": query})
+            # Format chat history as context if provided
+            chat_context = ""
+            if chat_history:
+                chat_context = "\nRecent Chat Context:\n"
+                for msg in chat_history[-5:]:  # Use last 5 messages
+                    role = msg.get('role', 'unknown')
+                    content = msg.get('content', '')
+                    chat_context += f"{role}: {content}\n"
+
+            # Combine query with chat context
+            enhanced_query = f"""
+Question: {query}
+
+{chat_context}
+"""
+            # Query the chain
+            response = chain({"question": enhanced_query})
             
             return {
                 "answer": response["answer"],
@@ -396,8 +359,7 @@ Format your response to:
                         "score": getattr(doc, "score", None)
                     }
                     for doc in response["source_documents"]
-                ],
-                "chat_history": self.memory.chat_memory.messages
+                ]
             }
         except Exception as e:
             self.logger.error(f"Error querying knowledge base: {str(e)}")

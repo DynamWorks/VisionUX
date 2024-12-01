@@ -78,8 +78,22 @@ class ChatService:
                     return {"error": "Failed to create knowledge base"}
                 self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
             
-            # Query knowledge base
-            rag_response = self.rag_service.query_knowledge_base(query, self._current_chain)
+            # Get recent chat history
+            chat_history = []
+            chat_file = Path('tmp_content/chat_history') / f"{video_path}_chat.json"
+            if chat_file.exists():
+                try:
+                    with open(chat_file) as f:
+                        chat_history = json.load(f)
+                except Exception as e:
+                    self.logger.warning(f"Failed to load chat history: {e}")
+
+            # Query knowledge base with chat context
+            rag_response = self.rag_service.query_knowledge_base(
+                query, 
+                self._current_chain,
+                chat_history=chat_history[-5:] if chat_history else None  # Pass last 5 messages
+            )
             
             # Initialize response data
             response_data = {
