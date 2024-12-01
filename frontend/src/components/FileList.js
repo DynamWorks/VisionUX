@@ -84,27 +84,35 @@ const FileList = () => {
                     // Wait a short moment for video to load
                     setTimeout(async () => {
                         try {
-                            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    stream_type: 'video',
-                                    video_file: fileToSelect.name,
-                                    num_frames: 8
-                                })
-                            });
-
-                            if (!response.ok) {
-                                throw new Error(`Analysis failed: ${response.statusText}`);
-                            }
-
-                            const data = await response.json();
-                            addMessage('system', 'Auto-analysis complete');
+                            // Update analysis state in store
+                            const { setIsAnalyzing } = useStore.getState();
+                            setIsAnalyzing(true);
                             
-                            if (data.scene_analysis?.description) {
-                                addMessage('assistant', data.scene_analysis.description);
+                            try {
+                                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        stream_type: 'video',
+                                        video_file: fileToSelect.name,
+                                        num_frames: 8
+                                    })
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(`Analysis failed: ${response.statusText}`);
+                                }
+
+                                const data = await response.json();
+                                addMessage('system', 'Auto-analysis complete');
+                                
+                                if (data.scene_analysis?.description) {
+                                    addMessage('assistant', data.scene_analysis.description);
+                                }
+                            } finally {
+                                setIsAnalyzing(false);
                             }
                         } catch (error) {
                             console.error('Auto-analysis error:', error);

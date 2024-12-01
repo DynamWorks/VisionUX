@@ -58,9 +58,17 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                 startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <VisibilityIcon />}
                 onClick={handleSceneAnalysis}
                 disabled={isAnalyzing || !currentVideo}
-                sx={{ flex: 1 }}
+                sx={{ 
+                    flex: 1,
+                    position: 'relative',
+                    '& .MuiCircularProgress-root': {
+                        position: 'absolute',
+                        left: '50%',
+                        transform: 'translateX(-50%)'
+                    }
+                }}
             >
-                {isAnalyzing ? 'Analyzing...' : 'Scene Analysis'}
+                {isAnalyzing ? 'Auto-Analyzing...' : 'Scene Analysis'}
             </Button>
             <ToggleButton
                 value="edge"
