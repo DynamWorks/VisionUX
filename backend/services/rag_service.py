@@ -98,114 +98,48 @@ class RAGService:
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
     def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
-        """Load analysis results and convert to documents with parsed metadata"""
+        """Load analysis results and get text representation via Gemini"""
         try:
             with open(results_path) as f:
                 data = json.load(f)
-                
-            # Use Gemini to get detailed text representation
+
             if not self.gemini_enabled or not self.gemini_model:
                 raise ValueError("Gemini model not initialized")
 
-            prompt = """Analyze this video analysis JSON data and create a detailed text summary that:
+            prompt = """Analyze this video analysis JSON data and create a detailed text summary that includes:
+- Scene descriptions and key observations
+- Objects and activities detected
+- Technical details (resolution, frames, timestamps)
+- Important relationships and patterns
+- Any notable limitations or challenges
 
-1. Overview:
-   - Video name and timestamp
-   - Type of analysis performed
-   - Number of frames analyzed
-   - Video duration and FPS
-
-2. Technical Details:
-   - Frame numbers and timestamps analyzed
-   - Resolution and video quality
-   - Processing parameters used
-   - any other metadata
-   - Any technical challenges or limitations
-
-3. Analysis Results:
-   - Scene descriptions and observations
-   - Objects and activities detected
-   - Changes or patterns observed
-   - Confidence levels and certainty
-
-4. Context and Relationships:
-   - Temporal relationships between frames
-   - Spatial relationships between objects
-   - Cause and effect observations
-   - Environmental and setting details
-
-Format the output with clear sections and bullet points.
-Include specific frame numbers, timestamps, and metrics when available.
-Focus on factual observations that can be referenced in future queries.
-
-JSON data to analyze:
-{data}
-"""
+Focus on clear, factual observations that can be referenced in future queries."""
 
             try:
                 response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
                 if response and response.text:
-                    # Parse the response text
                     text_representation = response.text.strip()
-                    
-                    # # Add metadata section if not included
-                    # if 'Metadata' not in text_representation:
-                    #     metadata_summary = f"""
-                        
-                    #     Metadata Summary:
-                    #     - Analysis timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
-                    #     - Frames analyzed: {len(data.get('frame_numbers', []))}
-                    #     - Video duration: {data.get('duration', 'Unknown')} seconds
-                    #     - Frame rate: {data.get('fps', 'Unknown')} FPS
-                    #     """
-                    #     text_representation += metadata_summary
                 else:
-                    # Fallback to basic text representation
-                    text_representation = f"""
-                    Analysis Results:
-                    - Raw data: {json.dumps(data, indent=2)}
-                    """
-                    # text_representation = f"""
-                    # Analysis Results:
-                    # - Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
-                    # - Number of frames: {len(data.get('frame_numbers', []))}
-                    # - Raw data: {json.dumps(data, indent=2)}
-                    # """
+                    text_representation = json.dumps(data, indent=2)
             except Exception as e:
                 self.logger.error(f"Gemini processing failed: {e}")
                 text_representation = json.dumps(data, indent=2)
-            else:
-                # Fallback to raw JSON if Gemini not available
-                text_representation = json.dumps(data, indent=2)
-                
-            # Save processed text to knowledgebase
-            kb_path = Path("tmp_content/knowledgebase")
-            kb_path.mkdir(parents=True, exist_ok=True)
-            
-            kb_file = kb_path / f"analysis_{int(time.time())}.txt"
-            with open(kb_file, 'w') as f:
-                f.write(text_representation)
-                
-            # Create document with metadata
-            metadata = {
-                'source': str(results_path),
-                'timestamp': time.time(),
-                'type': 'analysis',
-                'kb_path': str(kb_file)
-            }
-            
+
             return [{
                 "text": text_representation,
-                "metadata": metadata
+                "metadata": {
+                    'source': str(results_path),
+                    'timestamp': time.time(),
+                    'type': 'analysis'
+                }
             }]
 
-            
         except Exception as e:
             self.logger.error(f"Error loading results: {str(e)}")
             return []
             
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
-        """Create vector store from all analysis results"""
+        """Create vector store from analysis results"""
         try:
             # Get all analysis files
             analysis_dir = Path("tmp_content/analysis")
@@ -223,64 +157,26 @@ JSON data to analyze:
             if not all_documents:
                 return None
                 
-            # Create documents with parsed metadata
-            processed_documents = []
-            for doc in all_documents:
-                # Parse and structure metadata
-                metadata = {}
-                for k, v in doc.get("metadata", {}).items():
-                    if isinstance(v, (list, dict)):
-                        # Convert complex types to formatted strings
-                        if k == 'frame_numbers':
-                            metadata[k] = [int(x) for x in eval(str(v))] if isinstance(v, str) else v
-                        elif k == 'context' and isinstance(v, str):
-                            try:
-                                metadata[k] = eval(v)
-                            except:
-                                metadata[k] = v
-                        else:
-                            metadata[k] = str(v)
-                    else:
-                        metadata[k] = v
-
-                # Add required metadata fields
-                metadata['source'] = f"frame_{metadata.get('frame_number', 'unknown')}"
-                metadata['timestamp'] = metadata.get('timestamp', time.time())
-                metadata['analysis_id'] = metadata.get('analysis_id', f"analysis_{int(time.time())}")
-                metadata['confidence'] = float(metadata.get('confidence', 0.8))
-                metadata['processing_type'] = metadata.get('processing_type', 'scene_analysis')
-                
-                # Create document with parsed content and metadata
-                processed_documents.append(
-                    Document(
-                        page_content=doc["text"].strip(),
-                        metadata=metadata
-                    )
-                )
+            # Create documents
+            processed_documents = [
+                Document(
+                    page_content=doc["text"].strip(),
+                    metadata=doc["metadata"]
+                ) for doc in all_documents
+            ]
             
-            # Split into chunks if we have documents
-            if not processed_documents:
-                self.logger.warning("No documents to process")
-                return None
-                
+            # Split into chunks
             chunks = self.text_splitter.split_documents(processed_documents)
             
-            # Chat history is now handled separately in query_knowledge_base
+            # Create vector store
+            vectordb = FAISS.from_documents(chunks, self.embeddings)
             
-            # Create or update vector store
+            # Save store
             kb_path = Path("tmp_content/knowledgebase")
             store_path = kb_path / 'vector_store'
-            
-            if store_path.exists():
-                # Load existing store and add new documents
-                vectordb = FAISS.load_local(str(store_path), self.embeddings)
-                vectordb.add_documents(chunks)
-            else:
-                # Create new store
-                vectordb = FAISS.from_documents(chunks, self.embeddings)
-            
-            # Save updated store
+            kb_path.mkdir(parents=True, exist_ok=True)
             vectordb.save_local(str(store_path))
+            
             return vectordb
             
         except Exception as e:
