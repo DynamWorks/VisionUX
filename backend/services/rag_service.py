@@ -374,8 +374,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
             # Calculate knowledge base stats
             kb_stats = {
-                'total_chunks': len(chunks),
-                'avg_chunk_size': sum(len(c['text']) for c in chunks) / len(chunks),
+                'total_chunks': len(all_documents),
+                'avg_chunk_size': sum(len(d['text']) for d in all_documents) / len(all_documents),
                 'embedding_model': 'text-embedding-ada-002',
                 'vector_dimensions': 1536,  # OpenAI embedding size
                 'similarity_metric': 'cosine'
@@ -392,7 +392,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     'version': '1.0'
                 }, f, indent=2)
 
-            self.logger.info(f"Created new knowledge base with {len(chunks)} chunks from {len(analysis_files)} files")
+            self.logger.info(f"Created new knowledge base with {len(all_documents)} chunks from {len(analysis_files)} files")
             return vectordb
             
         except Exception as e:
