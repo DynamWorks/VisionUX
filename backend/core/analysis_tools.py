@@ -5,8 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SceneAnalysisTool(BaseTool):
-    name = "scene_analysis"
-    description = "Analyze the current video scene"
+    name: str = "scene_analysis"
+    description: str = "Analyze the current video scene"
     
     def __init__(self, scene_service):
         super().__init__()
@@ -21,8 +21,8 @@ class SceneAnalysisTool(BaseTool):
             raise
 
 class ObjectDetectionTool(BaseTool):
-    name = "object_detection"
-    description = "Detect objects in the current video"
+    name: str = "object_detection" 
+    description: str = "Detect objects in the current video"
     
     def __init__(self, detection_service):
         super().__init__()
@@ -37,8 +37,8 @@ class ObjectDetectionTool(BaseTool):
             raise
 
 class EdgeDetectionTool(BaseTool):
-    name = "edge_detection"
-    description = "Detect edges in the current video"
+    name: str = "edge_detection"
+    description: str = "Detect edges in the current video"
     
     def __init__(self, edge_service):
         super().__init__()
@@ -57,8 +57,8 @@ class EdgeDetectionTool(BaseTool):
             raise
 
 class ChatTool(BaseTool):
-    name = "chat"
-    description = "Chat about the video analysis results"
+    name: str = "chat"
+    description: str = "Chat about the video analysis results"
     
     def __init__(self, chat_service):
         super().__init__()
