@@ -1,5 +1,5 @@
 from langchain.tools import BaseTool
-from typing import Dict, Any, Optional, Union, Type
+from typing import Dict, Any, Optional, Union, Type, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ class ObjectDetectionTool(BaseTool):
 class EdgeDetectionTool(BaseTool):
     name: str = "edge_detection"
     description: str = "Detect edges in the current video"
+    edge_service: Any = None
     
     def __init__(self, edge_service):
         super().__init__()
