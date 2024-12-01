@@ -38,9 +38,10 @@ class VideoAnalysisAgent:
         self.action_confirmed = False
         self.logger = logging.getLogger(__name__)
         
-        # Initialize RAG service
+        # Initialize RAG service and chain
         from backend.services.rag_service import RAGService
         self.rag_service = RAGService()
+        self._current_chain = None
         
         # Define system prompt
         self.system_prompt = """You are a helpful AI assistant that analyzes videos and chats about them using RAG (Retrieval Augmented Generation).
