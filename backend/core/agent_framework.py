@@ -200,7 +200,9 @@ Assistant: To identify objects in the video, I'll need to run object detection a
                 'tool_input': kwargs,
                 'intent': None,
                 'response': '',
-                'pending_action': ''
+                'pending_action': '',
+                'action_executed': False,
+                'executed_action': None
             }
             
             # Create and compile workflow
