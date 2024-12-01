@@ -16,7 +16,7 @@ function App() {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const { setUploadedFiles, inputMode, isStreaming, setAnalysisResults } = useStore();
-    const { handleSceneAnalysis: chatHandleAnalysis, addMessage } = useChat();
+    const { handleSceneAnalysis: chatHandleAnalysis, addMessage, setMessages } = useChat();
 
     // Initialize WebSocket connection
     useEffect(() => {
