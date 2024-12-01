@@ -95,21 +95,72 @@ class ChatService:
                 # Get latest analysis results
                 analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
                 if not analysis_files:
-                    # No analysis results - suggest running analysis
-                    return {
-                        "rag_response": {
-                            "answer": "I don't have any analysis results yet. Would you like me to analyze the current video scene?",
-                            "sources": [],
-                            "source_documents": []
-                        },
-                        "requires_analysis": True
-                    }
-                    
-                latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
-                vectordb = self.rag_service.create_knowledge_base(latest_results)
-                if not vectordb:
-                    return {"error": "Failed to create knowledge base"}
-                self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                    # No analysis results - run analysis first
+                    try:
+                        from backend.services import SceneAnalysisService
+                        scene_service = SceneAnalysisService()
+                        
+                        # Get video path
+                        video_path = Path("tmp_content/uploads") / video_path
+                        if not video_path.exists():
+                            raise ValueError(f"Video file not found: {video_path}")
+                            
+                        # Create video capture
+                        cap = cv2.VideoCapture(str(video_path))
+                        if not cap.isOpened():
+                            raise ValueError("Failed to open video file")
+                            
+                        # Capture frames for analysis
+                        frames = []
+                        frame_numbers = []
+                        timestamps = []
+                        
+                        try:
+                            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                            fps = cap.get(cv2.CAP_PROP_FPS)
+                            
+                            # Sample 8 evenly spaced frames
+                            interval = max(1, total_frames // 8)
+                            for i in range(8):
+                                pos = i * interval
+                                cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
+                                ret, frame = cap.read()
+                                if ret:
+                                    frames.append(frame)
+                                    frame_numbers.append(pos)
+                                    timestamps.append(pos / fps if fps > 0 else 0)
+                        finally:
+                            cap.release()
+                            
+                        # Run analysis
+                        analysis = scene_service.analyze_scene(
+                            frames,
+                            context=f"Analyzing video {video_path.name}",
+                            frame_numbers=frame_numbers,
+                            timestamps=timestamps
+                        )
+                        
+                        # Create knowledge base from new analysis
+                        vectordb = self.rag_service.create_knowledge_base(
+                            Path("tmp_content/analysis") / f"scene_analysis_{int(time.time())}.json"
+                        )
+                        if not vectordb:
+                            raise ValueError("Failed to create knowledge base from new analysis")
+                        self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                        
+                    except Exception as e:
+                        self.logger.error(f"Auto-analysis failed: {e}")
+                        return {
+                            "error": f"Failed to run automatic analysis: {str(e)}",
+                            "requires_analysis": True
+                        }
+                else:
+                    # Use existing analysis results
+                    latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
+                    vectordb = self.rag_service.create_knowledge_base(latest_results)
+                    if not vectordb:
+                        return {"error": "Failed to create knowledge base"}
+                    self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
             
             # Get recent chat history
             chat_history = []
