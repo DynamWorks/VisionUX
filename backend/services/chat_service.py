@@ -7,6 +7,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 import json
 import time
 import numpy as np
+import cv2
 
 class ChatService:
     """Service for handling chat interactions with video analysis context"""
