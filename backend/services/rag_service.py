@@ -119,6 +119,7 @@ class RAGService:
    - Frame numbers and timestamps analyzed
    - Resolution and video quality
    - Processing parameters used
+   - any other metadata
    - Any technical challenges or limitations
 
 3. Analysis Results:
