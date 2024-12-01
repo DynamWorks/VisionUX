@@ -192,30 +192,49 @@ def analyze_scene():
                 }
             }
 
+            # Format scene analysis description
+            scene_description = analysis['scene_analysis']['description']
+            formatted_description = f"""Scene Analysis Results:
+
+{scene_description}
+
+Analyzed Frames: {len(frames)}
+Video Duration: {duration:.2f} seconds
+Frame Rate: {fps:.2f} FPS"""
+
             # Add chat messages to response
             response_data['chat_messages'] = [
                 {
                     'role': 'system',
-                    'content': 'Scene analysis in progress...'
+                    'content': 'Starting scene analysis...'
                 },
                 {
                     'role': 'assistant',
-                    'content': f"Scene Analysis Results:\n{response_data['scene_analysis']['description']}"
+                    'content': formatted_description
                 }
             ]
 
             # Add technical details if available
             if response_data['technical_details']:
+                tech_details = json.dumps(response_data['technical_details'], indent=2)
                 response_data['chat_messages'].append({
                     'role': 'system',
-                    'content': f"Technical Details:\n{json.dumps(response_data['technical_details'], indent=2)}"
+                    'content': f"Technical Details:\n{tech_details}"
                 })
 
             # Add completion message
             response_data['chat_messages'].append({
                 'role': 'system',
-                'content': 'Analysis complete.'
+                'content': 'Analysis complete - results saved.'
             })
+
+            # Save chat messages to history
+            from backend.content_manager import ContentManager
+            content_manager = ContentManager()
+            content_manager.save_chat_history(
+                response_data['chat_messages'],
+                video_file
+            )
 
             return jsonify(response_data)
 
