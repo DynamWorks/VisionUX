@@ -142,37 +142,37 @@ JSON data to analyze:
 """
 
             try:
-                    response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
-                    if response and response.text:
-                        # Parse the response text
-                        text_representation = response.text.strip()
+                response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
+                if response and response.text:
+                    # Parse the response text
+                    text_representation = response.text.strip()
+                    
+                    # # Add metadata section if not included
+                    # if 'Metadata' not in text_representation:
+                    #     metadata_summary = f"""
                         
-                        # # Add metadata section if not included
-                        # if 'Metadata' not in text_representation:
-                        #     metadata_summary = f"""
-                            
-                        #     Metadata Summary:
-                        #     - Analysis timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
-                        #     - Frames analyzed: {len(data.get('frame_numbers', []))}
-                        #     - Video duration: {data.get('duration', 'Unknown')} seconds
-                        #     - Frame rate: {data.get('fps', 'Unknown')} FPS
-                        #     """
-                        #     text_representation += metadata_summary
-                    else:
-                        # Fallback to basic text representation
-                        text_representation = f"""
-                        Analysis Results:
-                        - Raw data: {json.dumps(data, indent=2)}
-                        """
-                        # text_representation = f"""
-                        # Analysis Results:
-                        # - Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
-                        # - Number of frames: {len(data.get('frame_numbers', []))}
-                        # - Raw data: {json.dumps(data, indent=2)}
-                        # """
-                except Exception as e:
-                    self.logger.error(f"Gemini processing failed: {e}")
-                    text_representation = json.dumps(data, indent=2)
+                    #     Metadata Summary:
+                    #     - Analysis timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
+                    #     - Frames analyzed: {len(data.get('frame_numbers', []))}
+                    #     - Video duration: {data.get('duration', 'Unknown')} seconds
+                    #     - Frame rate: {data.get('fps', 'Unknown')} FPS
+                    #     """
+                    #     text_representation += metadata_summary
+                else:
+                    # Fallback to basic text representation
+                    text_representation = f"""
+                    Analysis Results:
+                    - Raw data: {json.dumps(data, indent=2)}
+                    """
+                    # text_representation = f"""
+                    # Analysis Results:
+                    # - Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
+                    # - Number of frames: {len(data.get('frame_numbers', []))}
+                    # - Raw data: {json.dumps(data, indent=2)}
+                    # """
+            except Exception as e:
+                self.logger.error(f"Gemini processing failed: {e}")
+                text_representation = json.dumps(data, indent=2)
             else:
                 # Fallback to raw JSON if Gemini not available
                 text_representation = json.dumps(data, indent=2)
