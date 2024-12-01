@@ -1,5 +1,5 @@
 from langchain.tools import BaseTool
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 import logging
 
 logger = logging.getLogger(__name__)
@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 class SceneAnalysisTool(BaseTool):
     name: str = "scene_analysis"
     description: str = "Analyze the current video scene"
+    scene_service: Any = None
     
     def __init__(self, scene_service):
         super().__init__()
