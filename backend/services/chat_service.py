@@ -220,6 +220,19 @@ class ChatService:
 
             return response_data
 
+        except Exception as e:
+            self.logger.error(f"Chat processing failed: {e}")
+            error_msg = f"I encountered an error: {str(e)}. Please try again or contact support if the issue persists."
+            return {
+                "error": error_msg,
+                "query": query,
+                "rag_response": {
+                    "answer": error_msg,
+                    "sources": [],
+                    "source_documents": []
+                }
+            }
+
     def _analyze_for_tools(self, query: str, current_answer: str) -> Optional[str]:
         """Analyze query and current answer to suggest relevant tools"""
         tool_patterns = {
@@ -243,16 +256,3 @@ class ChatService:
         if suggestions:
             return "\n\nWould you like me to " + " Or ".join(suggestions[:-1] + ["?" if len(suggestions) == 1 else " or " + suggestions[-1] + "?"])
         return None
-
-        except Exception as e:
-            self.logger.error(f"Chat processing failed: {e}")
-            error_msg = f"I encountered an error: {str(e)}. Please try again or contact support if the issue persists."
-            return {
-                "error": error_msg,
-                "query": query,
-                "rag_response": {
-                    "answer": error_msg,
-                    "sources": [],
-                    "source_documents": []
-                }
-            }
