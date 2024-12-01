@@ -362,12 +362,11 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 return None
 
             # Create vector store directly from processed documents
-            try:
-                vectordb = FAISS.from_texts(
-                    texts=[doc["text"].strip() for doc in all_documents],
-                    embedding=self.embeddings,
-                    metadatas=[doc["metadata"] for doc in all_documents]
-                )
+            vectordb = FAISS.from_texts(
+                texts=[doc["text"].strip() for doc in all_documents],
+                embedding=self.embeddings,
+                metadatas=[doc["metadata"] for doc in all_documents]
+            )
 
             # Save store and enhanced metadata
             kb_path.mkdir(parents=True, exist_ok=True)
