@@ -228,14 +228,19 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     prompt.format(data=json.dumps(combined_data, indent=2))
                 )
 
-                if response and response.text:
+                if not response:
+                    raise ValueError("No response from Gemini model")
+                    
+                if hasattr(response, 'text') and response.text:
                     text_representation = response.text.strip()
                 else:
-                    text_representation = json.dumps(combined_data, indent=2)
+                    raise ValueError("No text in Gemini response")
 
             except Exception as e:
                 self.logger.error(f"Gemini processing failed: {e}")
+                # Fallback to raw JSON representation
                 text_representation = json.dumps(combined_data, indent=2)
+                self.logger.info("Using fallback JSON representation")
 
             # Create chunks with metadata
             chunks = []
