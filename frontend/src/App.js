@@ -80,27 +80,8 @@ function App() {
                 addMessage('system', `Analysis complete. Results saved.`);
             }
 
-            // Notify WebSocket about analysis completion
-            if (websocketService.isConnected()) {
-                websocketService.emit('analysis_complete', {
-                    type: 'scene_analysis',
-                    results: data
-                });
-            }
-
-            // Refresh chat history after analysis
-            const videoState = useStore.getState();
-            if (videoState.currentVideo) {
-                const historyResponse = await fetch(
-                    `${process.env.REACT_APP_API_URL}/api/v1/chat/history/${videoState.currentVideo.name}`
-                );
-                if (historyResponse.ok) {
-                    const historyData = await historyResponse.json();
-                    if (historyData.messages) {
-                        setMessages(historyData.messages);
-                    }
-                }
-            }
+            // Add completion message
+            addMessage('system', 'Analysis complete - results saved.');
 
             return data;
 
