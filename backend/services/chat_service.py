@@ -70,25 +70,87 @@ class ChatService:
         return required_functions
         
     def process_chat(self, query: str, video_path: str, use_swarm: bool = False, confirmed: bool = False) -> Dict:
-        """Process chat query using agent framework"""
+        """Process chat query using RAG and handle tool execution"""
         try:
-            # Process query through agent first
-            result = self.agent.process_query(
-                query,
-                confirmed=confirmed,
-                video_path=video_path,
-                use_swarm=use_swarm
-            )
-            
-            if result.get('error'):
-                return {"error": result['error']}
-                
-            # If action requires confirmation and not confirmed, return confirmation request
-            if result.get('requires_confirmation'):
+            # Always try to get or create knowledge base first
+            if not self._current_chain:
+                analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
+                if not analysis_files:
+                    # No analysis results - suggest running analysis
+                    return {
+                        "requires_confirmation": True,
+                        "pending_action": "scene_analysis",
+                        "response": "I don't have any analysis data yet. Would you like me to analyze the video first?"
+                    }
+                else:
+                    # Use existing analysis results
+                    latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
+                    vectordb = self.rag_service.create_knowledge_base(latest_results)
+                    if not vectordb:
+                        return {"error": "Failed to create knowledge base"}
+                    self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+
+            # Get chat history
+            chat_history = []
+            chat_file = Path('tmp_content/chat_history') / f"{video_path}_chat.json"
+            if chat_file.exists():
+                try:
+                    with open(chat_file) as f:
+                        chat_history = json.load(f)
+                except Exception as e:
+                    self.logger.warning(f"Failed to load chat history: {e}")
+
+            # Check if this is a tool confirmation
+            if confirmed:
+                # Execute the previously suggested tool
+                for tool in self.tools:
+                    if tool.name == query:
+                        try:
+                            result = tool.run()
+                            return {
+                                "rag_response": {
+                                    "answer": f"Tool execution complete: {result}",
+                                    "sources": [],
+                                    "source_documents": []
+                                },
+                                "action_executed": {
+                                    "action": tool.name,
+                                    "status": "completed",
+                                    "timestamp": time.time()
+                                }
+                            }
+                        except Exception as e:
+                            return {"error": f"Tool execution failed: {str(e)}"}
+
+            # Query knowledge base with chat context
+            try:
+                rag_response = self.rag_service.query_knowledge_base(
+                    query=query,
+                    chain=self._current_chain,
+                    chat_history=chat_history[-5:] if chat_history else None
+                )
+
+                # Analyze for tool suggestions
+                tool_suggestions = self._analyze_for_tools(query, rag_response.get('answer', ''))
+                if tool_suggestions:
+                    rag_response['answer'] += f"\n\n{tool_suggestions}"
+                    return {
+                        "requires_confirmation": True,
+                        "pending_action": tool_suggestions.split()[0],  # First word is tool name
+                        "rag_response": rag_response
+                    }
+
+                return {"rag_response": rag_response}
+
+            except Exception as e:
+                self.logger.error(f"RAG query error: {e}")
                 return {
-                    "requires_confirmation": True,
-                    "pending_action": result['pending_action'],
-                    "response": result['response']
+                    "error": str(e),
+                    "rag_response": {
+                        "answer": "I encountered an error accessing the knowledge base. Would you like me to run a new analysis?",
+                        "sources": [],
+                        "source_documents": []
+                    }
                 }
 
             # Try to create or get knowledge base
