@@ -361,19 +361,13 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             if not all_documents:
                 return None
 
-            # Create documents
-            processed_documents = [
-                Document(
-                    page_content=doc["text"].strip(),
-                    metadata=doc["metadata"]
-                ) for doc in all_documents
-            ]
-
-            # Split into chunks
-            chunks = self.text_splitter.split_documents(processed_documents)
-
-            # Create vector store
-            vectordb = FAISS.from_documents(chunks, self.embeddings)
+            # Create vector store directly from processed documents
+            try:
+                vectordb = FAISS.from_texts(
+                    texts=[doc["text"].strip() for doc in all_documents],
+                    embedding=self.embeddings,
+                    metadatas=[doc["metadata"] for doc in all_documents]
+                )
 
             # Save store and enhanced metadata
             kb_path.mkdir(parents=True, exist_ok=True)
