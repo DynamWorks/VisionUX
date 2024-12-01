@@ -2,7 +2,6 @@ from pathlib import Path
 import logging
 from typing import Dict, List, Optional
 from backend.content_manager import ContentManager
-from backend.core.swarm_agents import SwarmCoordinator
 from .rag_service import RAGService
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 import json
@@ -14,7 +13,6 @@ class ChatService:
     
     def __init__(self, user_id: str = None, project_id: str = None):
         self.content_manager = ContentManager()
-        self.swarm_coordinator = SwarmCoordinator()
         self.rag_service = RAGService(user_id=user_id, project_id=project_id)
         self.logger = logging.getLogger(__name__)
         self._current_chain = None
@@ -28,7 +26,7 @@ class ChatService:
         
         self.tools = [
             SceneAnalysisTool(self),
-            ObjectDetectionTool(self.swarm_coordinator),
+            ObjectDetectionTool(self),
             EdgeDetectionTool(self),
             ChatTool(self)
         ]
@@ -132,31 +130,9 @@ class ChatService:
             # Extract required functions for additional processing
             required_functions = self._extract_function_calls(query)
             
-            # Execute required functions using swarm if enabled
-            if required_functions and use_swarm:
-                import cv2
-                cap = cv2.VideoCapture(video_path)
-                frames = []
-                frame_numbers = []
-                timestamps = []
-                
-                while len(frames) < 8:  # Sample up to 8 frames
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    frames.append(frame)
-                    frame_numbers.append(len(frames))
-                    timestamps.append(cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0)
-                
-                cap.release()
-                
-                if frames:
-                    swarm_results = self.swarm_coordinator.analyze_frame_batch(
-                        frames=frames,
-                        frame_numbers=frame_numbers,
-                        timestamps=timestamps
-                    )
-                    response_data["results"] = swarm_results
+            # Execute required functions if needed
+            if required_functions:
+                response_data["results"] = {}
                     
             # Save chat results
             results_path = self.content_manager.save_analysis(
