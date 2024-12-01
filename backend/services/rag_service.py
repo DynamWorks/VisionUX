@@ -103,26 +103,43 @@ class RAGService:
             with open(results_path) as f:
                 data = json.load(f)
                 
-            # Use Gemini to get detailed text representation if available
-            if self.gemini_enabled and self.gemini_model:
-                if not self.gemini_enabled or not self.gemini_model:
-                    raise ValueError("Gemini model not initialized")
+            # Use Gemini to get detailed text representation
+            if not self.gemini_enabled or not self.gemini_model:
+                raise ValueError("Gemini model not initialized")
 
-                prompt = """Analyze this JSON data and provide a detailed text explanation that:
-                1. Describes what was analyzed (video name, timestamp, etc)
-                2. Explains the key findings and observations
-                3. References specific metadata like:
-                   - Frame numbers analyzed
-                   - Video duration and FPS
-                   - Technical details
-                4. Uses natural language to explain the analysis process
-                5. Organizes information with clear sections
-                
-                The explanation should also help users understand how the analysis was derived from the metadata.
-                
-                JSON data to analyze:
-                {data}
-                """
+            prompt = """Analyze this video analysis JSON data and create a detailed text summary that:
+
+1. Overview:
+   - Video name and timestamp
+   - Type of analysis performed
+   - Number of frames analyzed
+   - Video duration and FPS
+
+2. Technical Details:
+   - Frame numbers and timestamps analyzed
+   - Resolution and video quality
+   - Processing parameters used
+   - Any technical challenges or limitations
+
+3. Analysis Results:
+   - Scene descriptions and observations
+   - Objects and activities detected
+   - Changes or patterns observed
+   - Confidence levels and certainty
+
+4. Context and Relationships:
+   - Temporal relationships between frames
+   - Spatial relationships between objects
+   - Cause and effect observations
+   - Environmental and setting details
+
+Format the output with clear sections and bullet points.
+Include specific frame numbers, timestamps, and metrics when available.
+Focus on factual observations that can be referenced in future queries.
+
+JSON data to analyze:
+{data}
+"""
                 
                 try:
                     response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
@@ -244,15 +261,34 @@ class RAGService:
                     with open(chat_file) as f:
                         chat_data = json.load(f)
                         
-                    # Get text representation of chat
-                    chat_prompt = """Convert this chat history to a natural text summary that:
-                    1. Captures the key points of discussion
-                    2. Maintains conversation flow and context
-                    3. Highlights important questions and answers
-                    
-                    Chat history:
-                    {chat}
-                    """
+                    # Get text representation of chat with context
+                    chat_prompt = """Convert this chat history into a contextual summary that:
+
+1. Conversation Flow:
+   - Sequence of topics discussed
+   - Questions asked and answers provided
+   - Follow-up questions and clarifications
+   - Unresolved queries or points
+
+2. Key Information:
+   - Important facts and observations mentioned
+   - Specific frame references or timestamps
+   - Technical details discussed
+   - Conclusions reached
+
+3. Context Preservation:
+   - Relationships between questions
+   - References to previous answers
+   - Evolving understanding of the video
+   - Outstanding areas of interest
+
+Format as a narrative that preserves context for future queries.
+Highlight temporal relationships between messages.
+Note any recurring themes or topics.
+
+Chat history to analyze:
+{chat}
+"""
                     
                     chat_response = self.gemini_model.generate_content(
                         chat_prompt.format(chat=json.dumps(chat_data, indent=2))
@@ -269,8 +305,20 @@ class RAGService:
                             }
                         ))
             
-            # Create vector store from all documents
-            vectordb = FAISS.from_documents(chunks, self.embeddings)
+            # Create or update vector store
+            kb_path = Path("tmp_content/knowledgebase")
+            store_path = kb_path / 'vector_store'
+            
+            if store_path.exists():
+                # Load existing store and add new documents
+                vectordb = FAISS.load_local(str(store_path), self.embeddings)
+                vectordb.add_documents(chunks)
+            else:
+                # Create new store
+                vectordb = FAISS.from_documents(chunks, self.embeddings)
+            
+            # Save updated store
+            vectordb.save_local(str(store_path))
             return vectordb
             
         except Exception as e:
@@ -288,29 +336,30 @@ class RAGService:
         )
 
         # Custom prompt template
-        prompt_template = """Use the following pieces of context from video analysis results to answer the question.
-        Each analysis result contains important metadata that MUST be referenced in your response:
-        - Frame numbers: metadata['frame_numbers'] shows which frames were analyzed
-        - Total frames: metadata['context'] contains total_frames and duration
-        - Analysis details: metadata['analysis_id'] and metadata['confidence']
-        - Technical info: metadata['context'] has fps and other details
-        - Processing info: metadata['frame_pattern'] and metadata['processing_type']
+        prompt_template = """Use the following context from video analysis and chat history to answer the question.
 
-        Context: {summaries}
-        
-        Question: {question}
-        
-        Guidelines for your response:
-        1. Start with a metadata summary showing:
-           - Number of frames analyzed
-           - Which frame numbers were processed
-           - Total video frames and duration
-           - Analysis timestamp and confidence
-        2. Then provide the scene description and analysis
-        3. Always cite specific metadata values in your response
-        4. Express confidence levels based on metadata['confidence']
-        5. If any metadata is missing or conflicts, explicitly note it
-        6. Never make up information beyond what's in the context and metadata
+Context from Analysis Results:
+{summaries}
+
+Recent Chat History:
+{chat_history}
+
+Question: {question}
+
+Guidelines for your response:
+1. Prioritize information from the most relevant analysis results
+2. Reference specific frames, timestamps, and observations
+3. Build on context from recent chat history
+4. Maintain consistency with previous answers
+5. Be concise but thorough
+6. Express uncertainty when information is incomplete
+7. Only use information present in the provided context
+
+Format your response to:
+1. Directly answer the question
+2. Cite specific evidence from analysis or chat history
+3. Note any relevant context from previous discussions
+4. Highlight confidence levels and uncertainties
         """
 
         PROMPT = PromptTemplate(
