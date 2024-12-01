@@ -98,41 +98,122 @@ class RAGService:
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
     def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
-        """Load analysis results and get text representation via Gemini"""
+        """Load and combine all analysis results for comprehensive text representation"""
         try:
-            with open(results_path) as f:
-                data = json.load(f)
+            # Get all analysis files
+            analysis_dir = Path("tmp_content/analysis")
+            if not analysis_dir.exists():
+                raise ValueError("Analysis directory not found")
+
+            all_data = []
+            file_metadata = {}
+
+            # Load all analysis files
+            for file_path in analysis_dir.glob("*.json"):
+                try:
+                    with open(file_path) as f:
+                        data = json.load(f)
+                        all_data.append(data)
+                        file_metadata[str(file_path)] = {
+                            'timestamp': file_path.stat().st_mtime,
+                            'size': file_path.stat().st_size
+                        }
+                except Exception as e:
+                    self.logger.warning(f"Error loading {file_path}: {e}")
+
+            if not all_data:
+                raise ValueError("No analysis data found")
 
             if not self.gemini_enabled or not self.gemini_model:
                 raise ValueError("Gemini model not initialized")
 
-            prompt = """Analyze this video analysis JSON data and create a detailed text summary that includes:
-- Scene descriptions and key observations
-- Objects and activities detected
-- Technical details (resolution, frames, timestamps)
-- Important relationships and patterns
-- Any notable limitations or challenges
+            prompt = """Analyze these video analysis JSON files and create an extremely detailed text representation that includes:
 
-Focus on clear, factual observations that can be referenced in future queries."""
+1. Scene Analysis:
+   - Comprehensive scene descriptions from all timestamps
+   - All identified objects, people, and their positions
+   - Every detected activity and event
+   - Complete environmental details (lighting, setting, background)
+   - Temporal changes and scene evolution
+
+2. Technical Details:
+   - Full resolution and frame information
+   - All timestamps and frame numbers
+   - Complete video metadata
+   - Processing parameters used
+   - Quality metrics and confidence scores
+
+3. Object & Activity Analysis:
+   - Every detected object with confidence scores
+   - All spatial relationships between objects
+   - Complete activity timelines
+   - Movement patterns and trajectories
+   - Interaction analysis between objects/people
+
+4. Contextual Information:
+   - All relevant background information
+   - Environmental conditions
+   - Camera movement and perspective changes
+   - Scene context and setting details
+   - Temporal context and sequence information
+
+5. Analysis Results:
+   - All detection results with confidence scores
+   - Complete list of identified patterns
+   - Every relationship and correlation found
+   - All technical measurements and metrics
+   - Processing statistics and performance data
+
+6. Metadata & Technical Context:
+   - File processing history
+   - Analysis timestamps
+   - All configuration parameters
+   - System performance metrics
+   - Processing pipeline details
+
+Generate a comprehensive, structured text representation that captures 100% of the information present in the analysis files. Include all numerical values, timestamps, and technical details exactly as they appear in the source data.
+
+Focus on maximum detail and complete accuracy. Do not summarize or omit any information."""
 
             try:
-                response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
+                # Combine all data with file metadata
+                combined_data = {
+                    'analysis_files': all_data,
+                    'file_metadata': file_metadata,
+                    'total_files': len(all_data),
+                    'timestamp': time.time()
+                }
+
+                response = self.gemini_model.generate_content(
+                    prompt.format(data=json.dumps(combined_data, indent=2))
+                )
+
                 if response and response.text:
                     text_representation = response.text.strip()
                 else:
-                    text_representation = json.dumps(data, indent=2)
+                    text_representation = json.dumps(combined_data, indent=2)
+
             except Exception as e:
                 self.logger.error(f"Gemini processing failed: {e}")
-                text_representation = json.dumps(data, indent=2)
+                text_representation = json.dumps(combined_data, indent=2)
 
-            return [{
-                "text": text_representation,
-                "metadata": {
-                    'source': str(results_path),
-                    'timestamp': time.time(),
-                    'type': 'analysis'
-                }
-            }]
+            # Create chunks for each major section
+            chunks = []
+            sections = text_representation.split('\n\n')
+            
+            for i, section in enumerate(sections):
+                chunks.append({
+                    "text": section.strip(),
+                    "metadata": {
+                        'source': str(results_path),
+                        'section': f"section_{i+1}",
+                        'timestamp': time.time(),
+                        'type': 'analysis',
+                        'total_sections': len(sections)
+                    }
+                })
+
+            return chunks
 
         except Exception as e:
             self.logger.error(f"Error loading results: {str(e)}")
