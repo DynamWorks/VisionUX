@@ -50,9 +50,19 @@ Assistant: To identify objects in the video, I'll need to run object detection a
 
     def _create_graph(self) -> StateGraph:
         """Create the agent workflow graph"""
+        from typing import TypedDict, Literal
         
+        # Define state schema
+        class WorkflowState(TypedDict):
+            query: str
+            intent: Literal['info', 'run', 'analyze']
+            confirmed: bool
+            response: str
+            pending_action: str
+            tool_input: dict
+            
         # Define graph nodes
-        def analyze_query(state):
+        def analyze_query(state: WorkflowState) -> WorkflowState:
             """Analyze user query to determine intent"""
             query = state['query']
             
@@ -106,8 +116,8 @@ Assistant: To identify objects in the video, I'll need to run object detection a
                 logger.error(f"Tool execution error: {e}")
                 return {'response': f"Error executing action: {str(e)}", **state}
                 
-        # Create graph
-        workflow = StateGraph()
+        # Create graph with schema
+        workflow = StateGraph(state_schema=WorkflowState)
         
         # Add nodes
         workflow.add_node("analyze_query", analyze_query)
