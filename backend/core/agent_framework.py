@@ -38,29 +38,32 @@ class VideoAnalysisAgent:
         self.action_confirmed = False
         
         # Define system prompt
-        self.system_prompt = """You are an AI assistant that helps users analyze videos.
-You can have natural conversations and help execute various video analysis functions.
+        self.system_prompt = """You are a helpful AI assistant that analyzes videos and chats about them using RAG (Retrieval Augmented Generation).
 
-When handling user queries:
-1. Carefully analyze if they want information or want to execute an action
-2. For information requests, provide clear explanations
-3. For action requests, ask for confirmation before executing
-4. Suggest relevant analysis functions when appropriate
-5. Be clear about what actions you're about to take
-6. Express uncertainty when needed
+Your primary role is to:
+1. Use RAG to provide informed responses about video content
+2. Suggest relevant analysis functions when they could provide more insights
+3. Always get explicit confirmation before executing any actions
+4. Maintain a natural, conversational tone while being precise
+
+When responding:
+- Default to using RAG to answer questions about video content
+- If RAG data is insufficient, suggest running appropriate analysis
+- For action requests, clearly explain what will happen and get confirmation
+- Provide specific suggestions based on the conversation context
 
 Available tools:
 {tools}
 
 Example interactions:
-User: "Tell me about object detection"
-Assistant: I can explain how object detection works. Would you also like me to demonstrate by running object detection on the current video?
+User: "What's happening in the video?"
+Assistant: Let me check the analysis data... [provides RAG-based response]. I notice some interesting activity - would you like me to run a fresh scene analysis for more details?
 
-User: "Run object detection"
-Assistant: I'll help you run object detection analysis. Would you like me to proceed with object detection on the current video?
+User: "Are there any cars?"
+Assistant: From the existing analysis, [RAG-based response about vehicles]. I could run object detection specifically focused on vehicles if you'd like more precise information. Would you like me to do that?
 
-User: "What objects are in the video?"
-Assistant: To identify objects in the video, I'll need to run object detection analysis. Would you like me to do that now?
+User: "Yes, run the detection"
+Assistant: I'll run object detection to identify vehicles and other objects. This will analyze the current video frames. Would you like me to proceed with this analysis now?
 """
 
     def _create_graph(self) -> StateGraph:
@@ -74,35 +77,59 @@ Assistant: To identify objects in the video, I'll need to run object detection a
                 # Continue with previous action context
                 return {**state, "intent": state['last_action']['intent']}
                 
+            # Default to RAG intent unless explicit action requested
+            intent = 'rag'
+            
             # Check for action keywords
             action_keywords = {
                 'run': ['run', 'execute', 'perform', 'start', 'do'],
                 'analyze': ['analyze', 'detect', 'find', 'identify'],
                 'info': ['explain', 'tell', 'what is', 'how does'],
-                'continue': ['continue', 'proceed', 'go ahead', 'yes', 'ok']
+                'continue': ['continue', 'proceed', 'go ahead', 'yes', 'ok', 'sure'],
+                'rag': ['what', 'how', 'why', 'when', 'where', 'who', 'describe', 'tell me about']
             }
-            
-            intent = 'info'  # Default to information intent
             
             # Check for continuation of previous action
             if state['last_action'] and any(kw in state['query'].lower() for kw in action_keywords['continue']):
                 return {**state, "intent": state['last_action']['intent']}
             
-            # Otherwise determine new intent
-            for action, keywords in action_keywords.items():
-                if any(kw in state['query'].lower() for kw in keywords):
+            # Check for explicit action requests first
+            query_lower = state['query'].lower()
+            for action in ['run', 'analyze']:
+                if any(kw in query_lower for kw in action_keywords[action]):
                     intent = action
                     break
                     
+            # If no explicit action, use RAG by default
+            if intent == 'rag':
+                # Add suggestion for relevant analysis if appropriate
+                if any(kw in query_lower for kw in ['object', 'person', 'activity', 'movement']):
+                    state['suggest_analysis'] = True
+                    
             return {**state, "intent": intent}
             
-        def handle_info_request(state: AgentState) -> AgentState:
-            """Handle information request"""
-            # Create messages for the LLM with context
-            messages = [
-                SystemMessage(content=self.system_prompt),
-                HumanMessage(content=state['query'])
-            ]
+        def handle_rag_request(state: AgentState) -> AgentState:
+            """Handle RAG-based query"""
+            try:
+                # Get RAG response
+                rag_response = self.rag_service.query_knowledge_base(
+                    state['query'],
+                    self._current_chain,
+                    chat_history=state.get('conversation_context', [])
+                )
+                
+                response = rag_response.get('answer', '')
+                
+                # Add analysis suggestion if flagged
+                if state.get('suggest_analysis'):
+                    response += "\n\nI could run additional analysis to get more specific information about this. Would you like me to do that?"
+                    state['pending_action'] = self._get_relevant_tool(state['query'])
+                
+                return {**state, "response": response, "rag_response": rag_response}
+                
+            except Exception as e:
+                self.logger.error(f"RAG query error: {e}")
+                return {**state, "response": "I encountered an error accessing the analysis data. Would you like me to run a new analysis?"}
             
             # Add context about available analysis if any
             analysis_files = list(Path("tmp_content/analysis").glob("*.json"))
