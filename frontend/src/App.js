@@ -83,6 +83,20 @@ function App() {
             // Add completion message
             addMessage('system', 'Analysis complete - results saved.');
 
+            // Refresh chat history after analysis
+            const videoState = useStore.getState();
+            if (videoState.currentVideo) {
+                const historyResponse = await fetch(
+                    `${process.env.REACT_APP_API_URL}/api/v1/chat/history/${videoState.currentVideo.name}`
+                );
+                if (historyResponse.ok) {
+                    const historyData = await historyResponse.json();
+                    if (historyData.messages) {
+                        setMessages(historyData.messages);
+                    }
+                }
+            }
+
             return data;
 
         } catch (error) {
