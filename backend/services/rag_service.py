@@ -285,29 +285,22 @@ JSON data to analyze:
         )
 
         # Custom prompt template
-        prompt_template = """You are discussing video analysis results with a researcher or colleague. 
-Use the following analysis context to have an informed, natural conversation about the experiments and findings.
+        prompt_template = """You are discussing video analysis results with a researcher or colleague.
+Use the following analysis context to answer questions about the video.
 
 Analysis Context:
 {summaries}
 
 Question: {question}
 
-Guidelines for your response:
-1. Respond naturally like a knowledgeable colleague discussing research
-2. Reference specific frames, timestamps and observations from the analysis
-3. Be clear and concise while maintaining a conversational tone
-4. Express appropriate uncertainty when information is limited
-5. Only use information from the provided analysis context
-6. Focus on key insights and interesting findings
-7. Feel free to suggest follow-up areas to explore
+Guidelines:
+1. Keep responses between 30-50 words
+2. Be clear and concise
+3. Reference specific frames/timestamps
+4. Only use information from the context
+5. Express uncertainty when needed
 
-Format your response to:
-1. Directly address the question in a conversational way
-2. Support your points with specific evidence from the analysis
-3. Highlight interesting patterns or unexpected results
-4. Note any limitations or areas needing more investigation
-"""
+Respond naturally but briefly."""
 
         PROMPT = PromptTemplate(
             template=prompt_template, 
@@ -349,8 +342,17 @@ Question: {query}
             # Query the chain
             response = chain({"question": enhanced_query})
             
+            # Validate response length
+            answer = response["answer"].strip()
+            word_count = len(answer.split())
+            
+            if word_count < 30:
+                answer += " " + self.llm.predict("Please expand this response to at least 30 words while maintaining the same meaning: " + answer)
+            elif word_count > 50:
+                answer = self.llm.predict("Summarize this in 50 words or less while keeping key information: " + answer)
+            
             return {
-                "answer": response["answer"],
+                "answer": answer,
                 "sources": response["sources"],
                 "source_documents": [
                     {
