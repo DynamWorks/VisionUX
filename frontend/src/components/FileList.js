@@ -8,7 +8,7 @@ import useStore from '../store';
 import useChat from '../hooks/useChat';
 
 const FileList = () => {
-    const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles, autoAnalysisEnabled, setAnalysisResults } = useStore();
+    const { uploadedFiles, currentVideo, setCurrentVideo, setUploadedFiles } = useStore();
     const { addMessage } = useChat();
 
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -53,19 +53,19 @@ const FileList = () => {
             }
             const files = listData.files || [];
             setUploadedFiles(files);
-            
+
             // Clear chat history for new uploads
             if (file) {
                 addMessage('system', 'New file uploaded - chat history cleared');
             }
-            
+
             // Auto-select and analyze logic:
             let fileToSelect = null;
-            
+
             // 1. If there's only one file, select it
             if (files.length === 1) {
                 fileToSelect = files[0];
-            } 
+            }
             // 2. If this is a new upload, select the uploaded file
             else if (file && files.length > 0) {
                 fileToSelect = files.find(f => f.name === file.name);
@@ -78,7 +78,7 @@ const FileList = () => {
             if (fileToSelect) {
                 handleVideoSelect(fileToSelect);
             }
-            
+
             setUploadProgress(100);
 
         } catch (error) {
@@ -124,15 +124,15 @@ const FileList = () => {
                     <CloudUploadIcon sx={{ fontSize: 40, color: '#bd9544', mb: 1 }} />
                     <Typography>
                         {isUploading ? "Uploading..." :
-                         isDragActive ? "Drop the video here" :
-                         "Drag & drop a video file here, or click to select"}
+                            isDragActive ? "Drop the video here" :
+                                "Drag & drop a video file here, or click to select"}
                     </Typography>
                 </Box>
-                
+
                 {isUploading && (
                     <Box sx={{ mt: 2 }}>
-                        <LinearProgress 
-                            variant="determinate" 
+                        <LinearProgress
+                            variant="determinate"
                             value={uploadProgress}
                             sx={{
                                 height: 8,
@@ -150,9 +150,9 @@ const FileList = () => {
                 )}
 
                 {uploadError && (
-                    <Typography 
-                        color="error" 
-                        variant="body2" 
+                    <Typography
+                        color="error"
+                        variant="body2"
                         align="center"
                         sx={{ mt: 1 }}
                     >
@@ -174,54 +174,54 @@ const FileList = () => {
                     <Typography variant="h6" sx={{ mb: 1 }}>
                         Uploaded Files
                     </Typography>
-            <List>
-                {uploadedFiles.map((file, index) => (
-                    <ListItem 
-                        key={index}
-                        sx={{
-                            mb: 1,
-                            borderRadius: 1,
-                            flexDirection: 'column',
-                            alignItems: 'stretch',
-                            bgcolor: currentVideo?.name === file.name ? '#2a2a2a' : '#1a1a1a',
-                            transition: 'background-color 0.2s ease'
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
-                            <ListItemIcon>
-                                <VideoFileIcon sx={{ color: '#bd9544' }} />
-                            </ListItemIcon>
-                            <ListItemText 
-                                primary={
-                                    <Typography variant="body1" sx={{ color: 'white' }}>
-                                        {file.name}
-                                    </Typography>
-                                }
-                                secondary={
-                                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                        {file.size ? `Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB` : ''}
-                                    </Typography>
-                                }
-                            />
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                            <IconButton
-                                onClick={() => handleVideoSelect(file)}
+                    <List>
+                        {uploadedFiles.map((file, index) => (
+                            <ListItem
+                                key={index}
                                 sx={{
-                                    bgcolor: currentVideo?.name === file.name ? '#1b5e20' : '#2e7d32',
-                                    color: 'white',
-                                    '&:hover': {
-                                        bgcolor: currentVideo?.name === file.name ? '#1b5e20' : '#1b5e20'
-                                    },
+                                    mb: 1,
+                                    borderRadius: 1,
+                                    flexDirection: 'column',
+                                    alignItems: 'stretch',
+                                    bgcolor: currentVideo?.name === file.name ? '#2a2a2a' : '#1a1a1a',
                                     transition: 'background-color 0.2s ease'
                                 }}
                             >
-                                <PlayArrowIcon />
-                            </IconButton>
-                        </Box>
-                    </ListItem>
-                ))}
-            </List>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
+                                    <ListItemIcon>
+                                        <VideoFileIcon sx={{ color: '#bd9544' }} />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={
+                                            <Typography variant="body1" sx={{ color: 'white' }}>
+                                                {file.name}
+                                            </Typography>
+                                        }
+                                        secondary={
+                                            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                {file.size ? `Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB` : ''}
+                                            </Typography>
+                                        }
+                                    />
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                    <IconButton
+                                        onClick={() => handleVideoSelect(file)}
+                                        sx={{
+                                            bgcolor: currentVideo?.name === file.name ? '#1b5e20' : '#2e7d32',
+                                            color: 'white',
+                                            '&:hover': {
+                                                bgcolor: currentVideo?.name === file.name ? '#1b5e20' : '#1b5e20'
+                                            },
+                                            transition: 'background-color 0.2s ease'
+                                        }}
+                                    >
+                                        <PlayArrowIcon />
+                                    </IconButton>
+                                </Box>
+                            </ListItem>
+                        ))}
+                    </List>
                 </Box>
             )}
         </Box>
