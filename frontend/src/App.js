@@ -55,19 +55,29 @@ function App() {
 
             const data = await response.json();
 
+            // Add initial analysis message
+            addMessage('system', 'Scene analysis in progress...');
+
             if (data.chat_messages) {
                 // Add each message from the response
                 data.chat_messages.forEach(msg => {
                     addMessage(msg.role, msg.content);
                 });
             } else if (data.scene_analysis?.description) {
-                // Fallback for older response format
-                addMessage('system', `Scene Analysis:\n${data.scene_analysis.description}`);
+                // Add scene analysis description
+                addMessage('assistant', `Scene Analysis Results:\n${data.scene_analysis.description}`);
+                
+                // Add technical details if available
+                if (data.technical_details) {
+                    addMessage('system', `Technical Details:\n${JSON.stringify(data.technical_details, null, 2)}`);
+                }
             }
 
             // Update analysis results in store
             if (data.results) {
                 setAnalysisResults(data.results);
+                // Add results summary to chat
+                addMessage('system', `Analysis complete. Results saved.`);
             }
 
             // Notify WebSocket about analysis completion
