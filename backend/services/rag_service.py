@@ -118,9 +118,10 @@ class RAGService:
                 4. Uses natural language to explain the analysis process
                 5. Organizes information with clear sections
                 
-                The explanation should help users understand how the analysis was derived from the metadata.
+                The explanation should also help users understand how the analysis was derived from the metadata.
                 
                 JSON data to analyze:
+                {data}
                 """
                 
                 try:
@@ -144,10 +145,14 @@ class RAGService:
                         # Fallback to basic text representation
                         text_representation = f"""
                         Analysis Results:
-                        - Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
-                        - Number of frames: {len(data.get('frame_numbers', []))}
                         - Raw data: {json.dumps(data, indent=2)}
                         """
+                        # text_representation = f"""
+                        # Analysis Results:
+                        # - Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
+                        # - Number of frames: {len(data.get('frame_numbers', []))}
+                        # - Raw data: {json.dumps(data, indent=2)}
+                        # """
                 except Exception as e:
                     self.logger.error(f"Gemini processing failed: {e}")
                     text_representation = json.dumps(data, indent=2)
