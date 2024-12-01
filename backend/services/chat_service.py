@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 from backend.content_manager import ContentManager
 from backend.core.swarm_agents import SwarmCoordinator
 from .rag_service import RAGService
-from backend.utils.memory_manager import MemoryManager
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 import json
 import time
@@ -13,10 +12,22 @@ import numpy as np
 class ChatService:
     """Service for handling chat interactions with video analysis context"""
     
-    def __init__(self):
+    def __init__(self, user_id: str = None, project_id: str = None):
         self.content_manager = ContentManager()
         self.swarm_coordinator = SwarmCoordinator()
+        self.rag_service = RAGService(user_id=user_id, project_id=project_id)
         self.logger = logging.getLogger(__name__)
+        self._current_chain = None
+        self.system_message = SystemMessage(
+            content="""You are an AI assistant powered by a RAG system.
+            When answering questions about video content:
+            1. Only use information from the provided context
+            2. If the context doesn't contain enough information, clearly state that
+            3. Cite specific frames and timestamps when possible
+            4. Keep responses clear and concise
+            5. If you're unsure about something, express that uncertainty
+            6. Never make up information that isn't in the context"""
+        )
         
     def _get_context_from_tmp(self) -> List[Dict]:
         """Gather context from tmp_content directory"""
@@ -49,23 +60,6 @@ class ChatService:
                 required_functions.append(func)
                 
         return required_functions
-        
-    def __init__(self, user_id: str = None, project_id: str = None):
-        self.content_manager = ContentManager()
-        self.swarm_coordinator = SwarmCoordinator()
-        self.rag_service = RAGService(user_id=user_id, project_id=project_id)
-        self.logger = logging.getLogger(__name__)
-        self._current_chain = None
-        self.system_message = SystemMessage(
-            content="""You are an AI assistant powered by a RAG system.
-            When answering questions about video content:
-            1. Only use information from the provided context
-            2. If the context doesn't contain enough information, clearly state that
-            3. Cite specific frames and timestamps when possible
-            4. Keep responses clear and concise
-            5. If you're unsure about something, express that uncertainty
-            6. Never make up information that isn't in the context"""
-        )
         
     def process_chat(self, query: str, video_path: str, use_swarm: bool = False) -> Dict:
         """Process chat query with RAG and execute required functions"""
