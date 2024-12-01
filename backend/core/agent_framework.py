@@ -68,8 +68,6 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         # Define graph nodes
         def analyze_query(state: AgentState) -> AgentState:
             """Analyze user query to determine intent"""
-            query = state['query']
-            
             # Check for action keywords
             action_keywords = {
                 'run': ['run', 'execute', 'perform', 'start', 'do'],
@@ -79,27 +77,33 @@ Assistant: To identify objects in the video, I'll need to run object detection a
             
             intent = 'info'  # Default to information intent
             for action, keywords in action_keywords.items():
-                if any(kw in query.lower() for kw in keywords):
+                if any(kw in state['query'].lower() for kw in keywords):
                     intent = action
                     break
                     
-            return {"intent": intent}
+            return {**state, "intent": intent}
             
         def handle_info_request(state: AgentState) -> AgentState:
             """Handle information request"""
-            response = self.llm.predict(
-                self.system_prompt + f"\nUser: {state['query']}\nAssistant:"
-            )
-            return {"response": response}
+            # Create messages for the LLM
+            messages = [
+                SystemMessage(content=self.system_prompt),
+                HumanMessage(content=state['query'])
+            ]
+            
+            # Use invoke instead of predict
+            response = self.llm.invoke(messages).content
+            return {**state, "response": response}
             
         def confirm_action(state: AgentState) -> AgentState:
             """Get confirmation for action"""
             if state.get('confirmed'):
-                return {"response": 'Action confirmed'}
+                return {**state, "response": 'Action confirmed'}
                 
             tool_name = self._get_relevant_tool(state['query'])
             confirmation_msg = f"Would you like me to run {tool_name} analysis now?"
             return {
+                **state,
                 "response": confirmation_msg,
                 "pending_action": tool_name
             }
@@ -107,20 +111,21 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         def execute_action(state: AgentState) -> AgentState:
             """Execute confirmed action"""
             if not state.get('confirmed'):
-                return {"response": 'Action not confirmed'}
+                return {**state, "response": 'Action not confirmed'}
                 
             tool = self._get_tool(state['pending_action'])
             if not tool:
                 return {
+                    **state,
                     "response": f"Sorry, {state['pending_action']} is not available"
                 }
                 
             try:
                 result = tool.run(state.get('tool_input', {}))
-                return {"response": f"Action completed: {result}"}
+                return {**state, "response": f"Action completed: {result}"}
             except Exception as e:
                 logger.error(f"Tool execution error: {e}")
-                return {"response": f"Error executing action: {str(e)}"}
+                return {**state, "response": f"Error executing action: {str(e)}"}
                 
         # Create graph
         workflow = StateGraph(AgentState)
@@ -184,14 +189,8 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         
     def process_query(self, query: str, **kwargs) -> Dict:
         """Process user query and return response"""
-        if not query or not isinstance(query, str):
-            return {
-                'error': 'Invalid query format',
-                'response': 'Please provide a valid text query.'
-            }
-
         try:
-            # Initialize state
+            # Initialize state with all required fields
             state: AgentState = {
                 'query': query,
                 'confirmed': kwargs.get('confirmed', False),
@@ -206,14 +205,7 @@ Assistant: To identify objects in the video, I'll need to run object detection a
             app = workflow.compile()
             
             # Run workflow using invoke
-            try:
-                result = app.invoke(state)
-            except Exception as workflow_error:
-                logger.error(f"Workflow execution error: {workflow_error}")
-                return {
-                    'error': str(workflow_error),
-                    'response': "I encountered an error in processing your request. Please try rephrasing or simplifying your query."
-                }
+            result = app.invoke(state)
             
             # Update conversation history
             self.conversation_history.append({
@@ -222,19 +214,19 @@ Assistant: To identify objects in the video, I'll need to run object detection a
             })
             self.conversation_history.append({
                 'role': 'assistant',
-                'content': result.get('response', 'No response generated')
+                'content': result['response']
             })
             
             return {
-                'response': result.get('response', 'No response generated'),
+                'response': result['response'],
                 'pending_action': result.get('pending_action'),
                 'requires_confirmation': bool(result.get('pending_action')) and not result.get('confirmed'),
                 'conversation_history': self.conversation_history[-5:]  # Last 5 messages
             }
             
         except Exception as e:
-            logger.error(f"Error processing query: {str(e)}", exc_info=True)
+            logger.error(f"Error processing query: {e}")
             return {
                 'error': str(e),
-                'response': "I encountered an unexpected error. Please try again or contact support if the issue persists."
+                'response': "I encountered an error processing your request."
             }
