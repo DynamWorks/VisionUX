@@ -18,15 +18,24 @@ class ChatService:
         self.rag_service = RAGService(user_id=user_id, project_id=project_id)
         self.logger = logging.getLogger(__name__)
         self._current_chain = None
-        self.system_message = SystemMessage(
-            content="""You are an AI assistant powered by a RAG system.
-            When answering questions about video content:
-            1. Only use information from the provided context
-            2. If the context doesn't contain enough information, clearly state that
-            3. Cite specific frames and timestamps when possible
-            4. Keep responses clear and concise
-            5. If you're unsure about something, express that uncertainty
-            6. Never make up information that isn't in the context"""
+        
+        # Initialize agent with tools
+        from backend.core.analysis_tools import (
+            SceneAnalysisTool, ObjectDetectionTool, 
+            EdgeDetectionTool, ChatTool
+        )
+        from backend.core.agent_framework import VideoAnalysisAgent
+        
+        self.tools = [
+            SceneAnalysisTool(self),
+            ObjectDetectionTool(self.swarm_coordinator),
+            EdgeDetectionTool(self),
+            ChatTool(self)
+        ]
+        
+        self.agent = VideoAnalysisAgent(
+            llm=self.rag_service.llm,
+            tools=self.tools
         )
         
     def _get_context_from_tmp(self) -> List[Dict]:
@@ -61,15 +70,27 @@ class ChatService:
                 
         return required_functions
         
-    def process_chat(self, query: str, video_path: str, use_swarm: bool = False) -> Dict:
-        """Process chat query with RAG and execute required functions"""
+    def process_chat(self, query: str, video_path: str, use_swarm: bool = False, confirmed: bool = False) -> Dict:
+        """Process chat query using agent framework"""
         try:
-            # Get latest analysis results
-            analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
-            if not analysis_files:
-                return {"error": "No analysis results found"}
+            # Process query through agent
+            result = self.agent.process_query(
+                query,
+                confirmed=confirmed,
+                video_path=video_path,
+                use_swarm=use_swarm
+            )
+            
+            if result.get('error'):
+                return {"error": result['error']}
                 
-            latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
+            # If action requires confirmation and not confirmed, return confirmation request
+            if result.get('requires_confirmation'):
+                return {
+                    "requires_confirmation": True,
+                    "pending_action": result['pending_action'],
+                    "response": result['response']
+                }
             
             # Create or get knowledge base
             if not self._current_chain:
