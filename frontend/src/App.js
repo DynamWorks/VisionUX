@@ -88,6 +88,20 @@ function App() {
                 });
             }
 
+            // Refresh chat history after analysis
+            const { currentVideo } = useStore.getState();
+            if (currentVideo) {
+                const historyResponse = await fetch(
+                    `${process.env.REACT_APP_API_URL}/api/v1/chat/history/${currentVideo.name}`
+                );
+                if (historyResponse.ok) {
+                    const historyData = await historyResponse.json();
+                    if (historyData.messages) {
+                        setMessages(historyData.messages);
+                    }
+                }
+            }
+
             return data;
 
         } catch (error) {
