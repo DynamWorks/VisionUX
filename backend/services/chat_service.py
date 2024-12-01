@@ -220,6 +220,30 @@ class ChatService:
 
             return response_data
 
+    def _analyze_for_tools(self, query: str, current_answer: str) -> Optional[str]:
+        """Analyze query and current answer to suggest relevant tools"""
+        tool_patterns = {
+            'object_detection': ['object', 'detect', 'find', 'identify', 'locate', 'spot'],
+            'scene_analysis': ['describe', 'analyze', 'understand', 'explain', 'what is happening'],
+            'edge_detection': ['edge', 'boundary', 'outline', 'shape', 'contour']
+        }
+        
+        query_lower = query.lower()
+        suggestions = []
+        
+        for tool, patterns in tool_patterns.items():
+            if any(p in query_lower for p in patterns):
+                if tool == 'object_detection':
+                    suggestions.append("I can run object detection to identify and locate specific objects in the video.")
+                elif tool == 'scene_analysis':
+                    suggestions.append("I can perform a detailed scene analysis to better understand what's happening.")
+                elif tool == 'edge_detection':
+                    suggestions.append("I can enable edge detection to highlight object boundaries and shapes.")
+                    
+        if suggestions:
+            return "\n\nWould you like me to " + " Or ".join(suggestions[:-1] + ["?" if len(suggestions) == 1 else " or " + suggestions[-1] + "?"])
+        return None
+
         except Exception as e:
             self.logger.error(f"Chat processing failed: {e}")
             error_msg = f"I encountered an error: {str(e)}. Please try again or contact support if the issue persists."
