@@ -69,14 +69,26 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         # Define graph nodes
         def analyze_query(state: AgentState) -> AgentState:
             """Analyze user query to determine intent"""
+            # Check if this is a follow-up query
+            if state['follow_up'] and state['last_action']:
+                # Continue with previous action context
+                return {**state, "intent": state['last_action']['intent']}
+                
             # Check for action keywords
             action_keywords = {
                 'run': ['run', 'execute', 'perform', 'start', 'do'],
                 'analyze': ['analyze', 'detect', 'find', 'identify'],
-                'info': ['explain', 'tell', 'what is', 'how does']
+                'info': ['explain', 'tell', 'what is', 'how does'],
+                'continue': ['continue', 'proceed', 'go ahead', 'yes', 'ok']
             }
             
             intent = 'info'  # Default to information intent
+            
+            # Check for continuation of previous action
+            if state['last_action'] and any(kw in state['query'].lower() for kw in action_keywords['continue']):
+                return {**state, "intent": state['last_action']['intent']}
+            
+            # Otherwise determine new intent
             for action, keywords in action_keywords.items():
                 if any(kw in state['query'].lower() for kw in keywords):
                     intent = action
@@ -171,6 +183,22 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         
         return workflow
 
+    def _is_follow_up(self, query: str) -> bool:
+        """Detect if query is a follow-up to previous conversation"""
+        follow_up_indicators = [
+            'what about',
+            'and then',
+            'after that',
+            'also',
+            'what else',
+            'continue',
+            'go ahead',
+            'yes',
+            'ok',
+            'proceed'
+        ]
+        return any(indicator in query.lower() for indicator in follow_up_indicators)
+
     def _get_relevant_tool(self, query: str) -> Optional[str]:
         """Get most relevant tool for query"""
         tool_keywords = {
@@ -202,7 +230,10 @@ Assistant: To identify objects in the video, I'll need to run object detection a
                 'response': '',
                 'pending_action': '',
                 'action_executed': False,
-                'executed_action': None
+                'executed_action': None,
+                'conversation_context': kwargs.get('conversation_context', []),
+                'last_action': kwargs.get('last_action'),
+                'follow_up': self._is_follow_up(query)
             }
             
             # Create and compile workflow
