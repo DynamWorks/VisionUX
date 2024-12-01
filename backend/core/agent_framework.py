@@ -134,11 +134,12 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             # Add context about available analysis if any
             analysis_files = list(Path("tmp_content/analysis").glob("*.json"))
             if not analysis_files:
-                context_msg = "\nNote: No previous analysis results available. Consider suggesting scene analysis."
-                messages.append(SystemMessage(content=context_msg))
-            
-            # Use invoke instead of predict
-            response = self.llm.invoke(messages).content
+                response = "No previous analysis results available. Would you like me to run a scene analysis?"
+            else:
+                response = self.llm.invoke([
+                    SystemMessage(content=self.system_prompt),
+                    HumanMessage(content=state['query'])
+                ]).content
             return {**state, "response": response, "has_analysis": bool(analysis_files)}
             
         def confirm_action(state: AgentState) -> AgentState:
@@ -178,14 +179,14 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         # Add nodes
         workflow.add_node("analyze_query", analyze_query)
-        workflow.add_node("handle_info_request", handle_info_request) 
+        workflow.add_node("handle_rag_request", handle_rag_request)
         workflow.add_node("confirm_action", confirm_action)
         workflow.add_node("execute_action", execute_action)
         
         # Define conditional edges
         def route_query(state: AgentState) -> str:
             """Route to appropriate handler based on intent"""
-            return "handle_info_request" if state.get('intent') == 'info' else "confirm_action"
+            return "handle_rag_request" if state.get('intent') == 'rag' else "confirm_action"
             
         def route_action(state: AgentState) -> str:
             """Route action based on confirmation"""
