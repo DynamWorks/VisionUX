@@ -203,7 +203,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         )
         
         # Add final edges
-        workflow.add_edge("handle_info_request", END)
+        workflow.add_edge("handle_rag_request", END)
         workflow.add_edge("execute_action", END)
         
         # Set entry point
