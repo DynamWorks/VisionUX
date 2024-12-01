@@ -1,5 +1,5 @@
 from langchain.tools import BaseTool
-from typing import Dict, Any, Optional, Union, Type, Any
+from typing import Dict, Any, Optional, Union, Type
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ class EdgeDetectionTool(BaseTool):
 class ChatTool(BaseTool):
     name: str = "chat"
     description: str = "Chat about the video analysis results"
+    chat_service: Any = None
     
     def __init__(self, chat_service):
         super().__init__()
