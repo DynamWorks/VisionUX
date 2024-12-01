@@ -21,6 +21,7 @@ storage:
     - "chat_history"
     - "visualizations"
     - "knowledgebase"
+    - "knowledgebase"
   max_file_size: 104857600
   allowed_extensions: [".mp4", ".avi", ".mov", ".webm"]
   cleanup_interval: 86400
