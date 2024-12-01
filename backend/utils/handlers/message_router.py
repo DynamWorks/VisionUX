@@ -71,21 +71,22 @@ class MessageRouter:
                         raise ValueError(f"Invalid data for handler {message_type}")
                     result = handler.handle(data)
 
-                # If confirmation provided and there's a pending action, execute it
-                if state.get('confirmed') and state.get('pending_action'):
-                    tool = self._get_tool(state['pending_action'])
-                    if tool:
-                        try:
-                            tool_result = tool.run(state.get('tool_input', {}))
-                            state['action_executed'] = True
-                            state['executed_action'] = state['pending_action']
-                            state['response'] = f"Action completed: {tool_result}"
-                        except Exception as e:
-                            state['response'] = f"Error executing action: {str(e)}"
-                            state['action_executed'] = False
-                    else:
-                        state['response'] = f"Tool {state['pending_action']} not found"
-                        state['action_executed'] = False
+                # Handle tool execution if data contains confirmation state
+                if isinstance(data, dict) and data.get('confirmed') and data.get('pending_action'):
+                    if hasattr(handler, '_get_tool'):
+                        tool = handler._get_tool(data['pending_action'])
+                        if tool:
+                            try:
+                                tool_result = tool.run(data.get('tool_input', {}))
+                                result['action_executed'] = True
+                                result['executed_action'] = data['pending_action']
+                                result['response'] = f"Action completed: {tool_result}"
+                            except Exception as e:
+                                result['response'] = f"Error executing action: {str(e)}"
+                                result['action_executed'] = False
+                        else:
+                            result['response'] = f"Tool {data['pending_action']} not found"
+                            result['action_executed'] = False
 
                 if result.get('status') == 'error':
                     self.progress_handler.fail_operation(
