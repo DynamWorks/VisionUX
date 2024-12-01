@@ -220,24 +220,52 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             return []
             
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
-        """Create vector store from analysis results"""
+        """Create or update vector store from analysis results"""
         try:
-            # Get all analysis files
             analysis_dir = Path("tmp_content/analysis")
+            kb_path = Path("tmp_content/knowledgebase")
+            store_path = kb_path / 'vector_store'
+            metadata_path = kb_path / 'metadata.json'
+
             if not analysis_dir.exists():
                 return None
-                
+
+            # Calculate hash of all analysis files
+            import hashlib
+            current_hash = hashlib.md5()
+            analysis_files = sorted(analysis_dir.glob("*.json"))
+            
+            for file_path in analysis_files:
+                current_hash.update(str(file_path.stat().st_mtime).encode())
+                with open(file_path, 'rb') as f:
+                    current_hash.update(f.read())
+            
+            current_hash = current_hash.hexdigest()
+
+            # Check if existing store is current
+            if store_path.exists() and metadata_path.exists():
+                try:
+                    with open(metadata_path) as f:
+                        metadata = json.load(f)
+                    if metadata.get('analysis_hash') == current_hash:
+                        self.logger.info("Using existing knowledge base - no changes detected")
+                        return FAISS.load_local(str(store_path), self.embeddings)
+                except Exception as e:
+                    self.logger.warning(f"Error checking knowledge base currency: {e}")
+
+            # Create new knowledge base
+            self.logger.info("Creating new knowledge base")
             all_documents = []
             
-            # Load all analysis files
-            for file_path in analysis_dir.glob("*.json"):
+            # Load and process all analysis files
+            for file_path in analysis_files:
                 documents = self._load_and_chunk_results(file_path)
                 if documents:
                     all_documents.extend(documents)
-                    
+
             if not all_documents:
                 return None
-                
+
             # Create documents
             processed_documents = [
                 Document(
@@ -245,19 +273,27 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     metadata=doc["metadata"]
                 ) for doc in all_documents
             ]
-            
+
             # Split into chunks
             chunks = self.text_splitter.split_documents(processed_documents)
-            
+
             # Create vector store
             vectordb = FAISS.from_documents(chunks, self.embeddings)
-            
-            # Save store
-            kb_path = Path("tmp_content/knowledgebase")
-            store_path = kb_path / 'vector_store'
+
+            # Save store and metadata
             kb_path.mkdir(parents=True, exist_ok=True)
             vectordb.save_local(str(store_path))
-            
+
+            # Save metadata with hash
+            with open(metadata_path, 'w') as f:
+                json.dump({
+                    'analysis_hash': current_hash,
+                    'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'file_count': len(analysis_files),
+                    'chunk_count': len(chunks)
+                }, f, indent=2)
+
+            self.logger.info(f"Created new knowledge base with {len(chunks)} chunks from {len(analysis_files)} files")
             return vectordb
             
         except Exception as e:
