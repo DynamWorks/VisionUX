@@ -125,11 +125,27 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         workflow.add_node("confirm_action", confirm_action)
         workflow.add_node("execute_action", execute_action)
         
-        # Add edges with conditions
-        workflow.add_edge("analyze_query", "handle_info_request", condition=lambda x: x['intent'] == 'info')
-        workflow.add_edge("analyze_query", "confirm_action", condition=lambda x: x['intent'] in ['run', 'analyze'])
-        workflow.add_edge("confirm_action", "execute_action", condition=lambda x: x.get('confirmed', False))
-        workflow.add_edge("confirm_action", END, condition=lambda x: not x.get('confirmed', False))
+        # Add edges with conditional routing
+        workflow.add_edge(
+            "analyze_query",
+            "handle_info_request",
+            lambda x: x['intent'] == 'info'
+        )
+        workflow.add_edge(
+            "analyze_query", 
+            "confirm_action",
+            lambda x: x['intent'] in ['run', 'analyze']
+        )
+        workflow.add_edge(
+            "confirm_action",
+            "execute_action", 
+            lambda x: x.get('confirmed', False)
+        )
+        workflow.add_edge(
+            "confirm_action",
+            END,
+            lambda x: not x.get('confirmed', False)
+        )
         workflow.add_edge("handle_info_request", END)
         workflow.add_edge("execute_action", END)
         
