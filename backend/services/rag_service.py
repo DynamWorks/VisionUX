@@ -257,11 +257,10 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             self.logger.info("Creating new knowledge base")
             all_documents = []
             
-            # Load and process all analysis files
-            for file_path in analysis_files:
-                documents = self._load_and_chunk_results(file_path)
-                if documents:
-                    all_documents.extend(documents)
+            # Process all analysis files together
+            documents = self._load_and_chunk_results(Path("tmp_content/analysis"))
+            if documents:
+                all_documents.extend(documents)
 
             if not all_documents:
                 return None
