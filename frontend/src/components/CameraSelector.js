@@ -16,7 +16,7 @@ import useStore from '../store';
 import { websocketService } from '../services/websocket';
 
 const CameraSelector = () => {
-    const { isStreaming, setIsStreaming } = useStore();
+    const { setIsStreaming } = useStore();
     const [devices, setDevices] = useState([]);
     const [selectedDevice, setSelectedDevice] = useState('');
     const [error, setError] = useState(null);

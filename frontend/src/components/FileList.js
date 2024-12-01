@@ -76,7 +76,7 @@ const FileList = () => {
             }
 
             if (fileToSelect) {
-                handleVideoSelect(fileToSelect, true); // Pass true to indicate this is from upload
+                handleVideoSelect(fileToSelect);
             }
             
             setUploadProgress(100);
@@ -97,52 +97,8 @@ const FileList = () => {
         maxFiles: 1
     });
 
-    const handleVideoSelect = async (file, isFromUpload = false) => {
+    const handleVideoSelect = (file) => {
         setCurrentVideo(file);
-
-        // Only trigger auto-analysis if enabled and this is from an upload
-        if (autoAnalysisEnabled && isFromUpload) {
-            try {
-                console.log('Triggering auto-analysis for:', file.name);
-                addMessage('system', 'Auto-analyzing scene...');
-                
-                // Stop any existing stream first
-                await fetch(`${process.env.REACT_APP_API_URL}/api/v1/stream/stop`, {
-                    method: 'POST'
-                });
-
-                // Then trigger scene analysis
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        stream_type: 'video',
-                        video_file: file.name,
-                        num_frames: 8
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Scene analysis failed');
-                }
-
-                const data = await response.json();
-                if (data.scene_analysis?.description) {
-                    addMessage('system', `Auto Scene Analysis:\n${data.scene_analysis.description}`);
-                    
-                    // Also update analysis results in store if available
-                    if (data.results) {
-                        setAnalysisResults(data.results);
-                    }
-                }
-            } catch (error) {
-                console.error('Auto analysis error:', error);
-                addMessage('error', `Auto analysis failed: ${error.message}`);
-            }
-        }
     };
 
     return (
