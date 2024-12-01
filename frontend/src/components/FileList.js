@@ -77,6 +77,41 @@ const FileList = () => {
 
             if (fileToSelect) {
                 handleVideoSelect(fileToSelect);
+                
+                // If this is a new upload and auto-analysis is enabled, trigger analysis
+                const { autoAnalysisEnabled } = useStore.getState();
+                if (file && autoAnalysisEnabled) {
+                    // Wait a short moment for video to load
+                    setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/analyze_scene`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    stream_type: 'video',
+                                    video_file: fileToSelect.name,
+                                    num_frames: 8
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Analysis failed: ${response.statusText}`);
+                            }
+
+                            const data = await response.json();
+                            addMessage('system', 'Auto-analysis complete');
+                            
+                            if (data.scene_analysis?.description) {
+                                addMessage('assistant', data.scene_analysis.description);
+                            }
+                        } catch (error) {
+                            console.error('Auto-analysis error:', error);
+                            addMessage('error', `Auto-analysis failed: ${error.message}`);
+                        }
+                    }, 1000);
+                }
             }
 
             setUploadProgress(100);
