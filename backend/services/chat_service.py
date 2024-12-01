@@ -94,6 +94,12 @@ class ChatService:
             
             # Create or get knowledge base
             if not self._current_chain:
+                # Get latest analysis results
+                analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
+                if not analysis_files:
+                    return {"error": "No analysis results found"}
+                    
+                latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
                 vectordb = self.rag_service.create_knowledge_base(latest_results)
                 if not vectordb:
                     return {"error": "Failed to create knowledge base"}
