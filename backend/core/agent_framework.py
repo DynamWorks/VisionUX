@@ -36,6 +36,7 @@ class VideoAnalysisAgent:
         self.conversation_history = []
         self.pending_action = None
         self.action_confirmed = False
+        self.logger = logging.getLogger(__name__)
         
         # Define system prompt
         self.system_prompt = """You are a helpful AI assistant that analyzes videos and chats about them using RAG (Retrieval Augmented Generation).
