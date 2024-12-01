@@ -364,16 +364,40 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 
             current_hash = current_hash.hexdigest()
 
-            # Check if existing store is current
-            if store_path.exists() and metadata_path.exists():
+            # Get list of processed files in knowledgebase
+            kb_path = Path("tmp_content/knowledgebase")
+            processed_files = set()
+            if metadata_path.exists():
                 try:
                     with open(metadata_path) as f:
                         metadata = json.load(f)
-                    if metadata.get('analysis_hash') == current_hash:
-                        self.logger.info("Using existing knowledge base - no changes detected")
-                        return FAISS.load_local(str(store_path), self.embeddings)
+                        processed_files = set(metadata.get('processed_files', []))
                 except Exception as e:
-                    self.logger.warning(f"Error checking knowledge base currency: {e}")
+                    self.logger.warning(f"Error loading metadata: {e}")
+
+            # Check for new analysis files
+            new_files = []
+            for file_path in analysis_files:
+                file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
+                if file_hash not in processed_files:
+                    new_files.append(file_path)
+                    processed_files.add(file_hash)
+
+            # Process new files through Gemini
+            if new_files:
+                self.logger.info(f"Processing {len(new_files)} new analysis files")
+                for file_path in new_files:
+                    try:
+                        with open(file_path) as f:
+                            analysis_data = json.load(f)
+                        self._load_and_chunk_results(file_path)
+                    except Exception as e:
+                        self.logger.error(f"Error processing {file_path}: {e}")
+
+            # Check if store exists and is current
+            if store_path.exists() and not new_files:
+                self.logger.info("Using existing knowledge base - no new files")
+                return FAISS.load_local(str(store_path), self.embeddings)
 
             # Create new knowledge base
             self.logger.info("Creating new knowledge base")
