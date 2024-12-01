@@ -204,15 +204,27 @@ JSON data to analyze:
             return []
             
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
-        """Create vector store from analysis results and chat history"""
+        """Create vector store from all analysis results"""
         try:
-            documents = self._load_and_chunk_results(results_path)
-            if not documents:
+            # Get all analysis files
+            analysis_dir = Path("tmp_content/analysis")
+            if not analysis_dir.exists():
+                return None
+                
+            all_documents = []
+            
+            # Load all analysis files
+            for file_path in analysis_dir.glob("*.json"):
+                documents = self._load_and_chunk_results(file_path)
+                if documents:
+                    all_documents.extend(documents)
+                    
+            if not all_documents:
                 return None
                 
             # Create documents with parsed metadata
             processed_documents = []
-            for doc in documents:
+            for doc in all_documents:
                 # Parse and structure metadata
                 metadata = {}
                 for k, v in doc.get("metadata", {}).items():
