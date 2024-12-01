@@ -145,8 +145,6 @@ const VideoPlayer = ({ file }) => {
 
                     videoRef.current.onloadedmetadata = () => {
                         setIsLoading(false);
-                        // Automatically start playing when metadata is loaded
-                        handlePlay();
                     };
 
                     videoRef.current.onerror = () => {
