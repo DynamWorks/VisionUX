@@ -336,7 +336,7 @@ Respond naturally but briefly."""
         
         return chain
         
-    def query_knowledge_base(self, query: str, chain: RetrievalQAWithSourcesChain, chat_history: Optional[List[Dict]] = None) -> Dict:
+    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQAWithSourcesChain] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
         try:
             # Format chat history as context if provided
@@ -354,8 +354,19 @@ Question: {query}
 
 {chat_context}
 """
+            # Ensure chain is initialized
+            if not chain:
+                raise ValueError("RAG chain not initialized. Please create knowledge base first.")
+                
             # Query the chain
-            response = chain({"question": enhanced_query})
+            try:
+                response = chain({"question": enhanced_query})
+            except Exception as e:
+                self.logger.error(f"Chain query error: {e}")
+                return {
+                    "error": str(e),
+                    "answer": "I encountered an error processing your query. Please try again."
+                }
             
             # Validate response length
             answer = response["answer"].strip()

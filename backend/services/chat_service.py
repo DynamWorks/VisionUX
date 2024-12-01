@@ -122,11 +122,18 @@ class ChatService:
                     self.logger.warning(f"Failed to load chat history: {e}")
 
             # Query knowledge base with chat context
-            rag_response = self.rag_service.query_knowledge_base(
-                query, 
-                self._current_chain,
-                chat_history=chat_history[-5:] if chat_history else None  # Pass last 5 messages
-            )
+            try:
+                rag_response = self.rag_service.query_knowledge_base(
+                    query=query,
+                    chain=self._current_chain,
+                    chat_history=chat_history[-5:] if chat_history else None  # Pass last 5 messages
+                )
+            except Exception as e:
+                self.logger.error(f"RAG query error: {e}")
+                rag_response = {
+                    "answer": "I encountered an error accessing the knowledge base. Would you like me to run a new analysis?",
+                    "error": str(e)
+                }
             
             # Initialize response data
             response_data = {
