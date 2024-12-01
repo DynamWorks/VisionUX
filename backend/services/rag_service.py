@@ -229,18 +229,19 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 )
 
                 if not response:
-                    raise ValueError("No response from Gemini model")
+                    raise ValueError("No response received from Gemini model")
                     
-                if hasattr(response, 'text') and response.text:
-                    text_representation = response.text.strip()
-                else:
-                    raise ValueError("No text in Gemini response")
+                if not hasattr(response, 'text'):
+                    raise ValueError("Response missing 'text' attribute")
+                    
+                if not response.text:
+                    raise ValueError("Response text is empty")
+                    
+                text_representation = response.text.strip()
 
             except Exception as e:
                 self.logger.error(f"Gemini processing failed: {e}")
-                # Fallback to raw JSON representation
-                text_representation = json.dumps(combined_data, indent=2)
-                self.logger.info("Using fallback JSON representation")
+                raise ValueError(f"Failed to process data with Gemini: {str(e)}")
 
             # Create chunks with metadata
             chunks = []
