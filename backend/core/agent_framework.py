@@ -139,15 +139,11 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         # Define conditional edges
         def route_query(state: AgentState) -> str:
             """Route to appropriate handler based on intent"""
-            if state.get('intent') == 'info':
-                return "handle_info_request"
-            return "confirm_action"
+            return "handle_info_request" if state.get('intent') == 'info' else "confirm_action"
             
         def route_action(state: AgentState) -> str:
             """Route action based on confirmation"""
-            if state.get('confirmed', False):
-                return "execute_action"
-            return "end"
+            return "execute_action" if state.get('confirmed', False) else str(END)
         
         # Add conditional edges
         workflow.add_conditional_edges(
