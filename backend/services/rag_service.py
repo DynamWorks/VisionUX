@@ -100,29 +100,69 @@ class RAGService:
     def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
         """Load and combine all analysis results for comprehensive text representation"""
         try:
-            # Get all analysis files
+            # Validate input path
+            if not isinstance(results_path, Path):
+                raise ValueError("results_path must be a Path object")
+                
             analysis_dir = Path("tmp_content/analysis")
             if not analysis_dir.exists():
                 raise ValueError("Analysis directory not found")
 
             all_data = []
             file_metadata = {}
+            total_size = 0
+            
+            # Track document stats
+            doc_stats = {
+                'total_files': 0,
+                'total_size': 0,
+                'oldest_file': None,
+                'newest_file': None
+            }
 
-            # Load all analysis files
+            # Load all analysis files with validation
             for file_path in analysis_dir.glob("*.json"):
                 try:
+                    if not file_path.is_file():
+                        continue
+                        
+                    file_size = file_path.stat().st_size
+                    if file_size == 0:
+                        self.logger.warning(f"Skipping empty file: {file_path}")
+                        continue
+                        
+                    file_time = file_path.stat().st_mtime
+                    
+                    # Update document stats
+                    doc_stats['total_files'] += 1
+                    doc_stats['total_size'] += file_size
+                    if not doc_stats['oldest_file'] or file_time < doc_stats['oldest_file']:
+                        doc_stats['oldest_file'] = file_time
+                    if not doc_stats['newest_file'] or file_time > doc_stats['newest_file']:
+                        doc_stats['newest_file'] = file_time
+
                     with open(file_path) as f:
                         data = json.load(f)
+                        # Validate expected fields
+                        if not isinstance(data, dict):
+                            raise ValueError(f"Invalid JSON structure in {file_path}")
+                            
                         all_data.append(data)
                         file_metadata[str(file_path)] = {
-                            'timestamp': file_path.stat().st_mtime,
-                            'size': file_path.stat().st_size
+                            'timestamp': file_time,
+                            'size': file_size,
+                            'type': 'analysis'
                         }
+                        
+                except json.JSONDecodeError as e:
+                    self.logger.error(f"Invalid JSON in {file_path}: {e}")
+                    continue
                 except Exception as e:
                     self.logger.warning(f"Error loading {file_path}: {e}")
+                    continue
 
             if not all_data:
-                raise ValueError("No analysis data found")
+                raise ValueError("No valid analysis data found")
 
             if not self.gemini_enabled or not self.gemini_model:
                 raise ValueError("Gemini model not initialized")
@@ -197,22 +237,47 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 self.logger.error(f"Gemini processing failed: {e}")
                 text_representation = json.dumps(combined_data, indent=2)
 
-            # Create chunks for each major section
+            # Create chunks with metadata
             chunks = []
             sections = text_representation.split('\n\n')
             
+            # Calculate optimal chunk size and overlap
+            avg_section_length = sum(len(s) for s in sections) / len(sections)
+            chunk_overlap = min(200, int(avg_section_length * 0.2))  # 20% overlap up to 200 chars
+            
             for i, section in enumerate(sections):
+                # Skip empty sections
+                if not section.strip():
+                    continue
+                    
+                chunk_text = section.strip()
+                
+                # Add context from previous/next sections for overlap
+                if i > 0:
+                    prev_section = sections[i-1].strip()
+                    chunk_text = prev_section[-chunk_overlap:] + "\n\n" + chunk_text
+                if i < len(sections) - 1:
+                    next_section = sections[i+1].strip()
+                    chunk_text = chunk_text + "\n\n" + next_section[:chunk_overlap]
+                
                 chunks.append({
-                    "text": section.strip(),
+                    "text": chunk_text,
                     "metadata": {
                         'source': str(results_path),
                         'section': f"section_{i+1}",
                         'timestamp': time.time(),
                         'type': 'analysis',
-                        'total_sections': len(sections)
+                        'total_sections': len(sections),
+                        'chunk_stats': {
+                            'length': len(chunk_text),
+                            'overlap': chunk_overlap,
+                            'position': i + 1
+                        },
+                        'doc_stats': doc_stats
                     }
                 })
 
+            self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
             return chunks
 
         except Exception as e:
@@ -230,16 +295,47 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             if not analysis_dir.exists():
                 return None
 
-            # Calculate hash of all analysis files
+            # Calculate hash of all analysis files with validation
             import hashlib
             current_hash = hashlib.md5()
             analysis_files = sorted(analysis_dir.glob("*.json"))
             
-            for file_path in analysis_files:
-                current_hash.update(str(file_path.stat().st_mtime).encode())
-                with open(file_path, 'rb') as f:
-                    current_hash.update(f.read())
+            # Track file statistics
+            file_stats = {
+                'total_files': 0,
+                'total_size': 0,
+                'file_types': {},
+                'modification_times': []
+            }
             
+            for file_path in analysis_files:
+                try:
+                    if not file_path.is_file():
+                        continue
+                        
+                    stat = file_path.stat()
+                    if stat.st_size == 0:
+                        continue
+                        
+                    # Update stats
+                    file_stats['total_files'] += 1
+                    file_stats['total_size'] += stat.st_size
+                    file_stats['modification_times'].append(stat.st_mtime)
+                    file_type = file_path.suffix
+                    file_stats['file_types'][file_type] = file_stats['file_types'].get(file_type, 0) + 1
+                    
+                    # Update hash
+                    current_hash.update(str(stat.st_mtime).encode())
+                    with open(file_path, 'rb') as f:
+                        current_hash.update(f.read())
+                        
+                except Exception as e:
+                    self.logger.warning(f"Error processing {file_path}: {e}")
+                    continue
+            
+            if file_stats['total_files'] == 0:
+                raise ValueError("No valid analysis files found")
+                
             current_hash = current_hash.hexdigest()
 
             # Check if existing store is current
@@ -279,17 +375,28 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             # Create vector store
             vectordb = FAISS.from_documents(chunks, self.embeddings)
 
-            # Save store and metadata
+            # Save store and enhanced metadata
             kb_path.mkdir(parents=True, exist_ok=True)
             vectordb.save_local(str(store_path))
 
-            # Save metadata with hash
+            # Calculate knowledge base stats
+            kb_stats = {
+                'total_chunks': len(chunks),
+                'avg_chunk_size': sum(len(c['text']) for c in chunks) / len(chunks),
+                'embedding_model': 'text-embedding-ada-002',
+                'vector_dimensions': 1536,  # OpenAI embedding size
+                'similarity_metric': 'cosine'
+            }
+
+            # Save comprehensive metadata
             with open(metadata_path, 'w') as f:
                 json.dump({
                     'analysis_hash': current_hash,
                     'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-                    'file_count': len(analysis_files),
-                    'chunk_count': len(chunks)
+                    'file_stats': file_stats,
+                    'kb_stats': kb_stats,
+                    'last_update': time.time(),
+                    'version': '1.0'
                 }, f, indent=2)
 
             self.logger.info(f"Created new knowledge base with {len(chunks)} chunks from {len(analysis_files)} files")
