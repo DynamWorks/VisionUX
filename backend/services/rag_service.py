@@ -238,6 +238,26 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     raise ValueError("Response text is empty")
                     
                 text_representation = response.text.strip()
+                
+                # Save response to knowledgebase
+                kb_path = Path("tmp_content/knowledgebase")
+                kb_path.mkdir(parents=True, exist_ok=True)
+                
+                timestamp = int(time.time())
+                response_file = kb_path / f"gemini_response_{timestamp}.json"
+                
+                with open(response_file, 'w') as f:
+                    json.dump({
+                        'prompt': prompt,
+                        'response': text_representation,
+                        'timestamp': timestamp,
+                        'metadata': {
+                            'model': 'gemini',
+                            'input_data': combined_data
+                        }
+                    }, f, indent=2)
+                
+                self.logger.info(f"Saved Gemini response to {response_file}")
 
             except Exception as e:
                 self.logger.error(f"Gemini processing failed: {e}")
