@@ -184,6 +184,12 @@ Assistant: To identify objects in the video, I'll need to run object detection a
         
     def process_query(self, query: str, **kwargs) -> Dict:
         """Process user query and return response"""
+        if not query or not isinstance(query, str):
+            return {
+                'error': 'Invalid query format',
+                'response': 'Please provide a valid text query.'
+            }
+
         try:
             # Initialize state
             state: AgentState = {
@@ -200,7 +206,14 @@ Assistant: To identify objects in the video, I'll need to run object detection a
             app = workflow.compile()
             
             # Run workflow using invoke
-            result = app.invoke(state)
+            try:
+                result = app.invoke(state)
+            except Exception as workflow_error:
+                logger.error(f"Workflow execution error: {workflow_error}")
+                return {
+                    'error': str(workflow_error),
+                    'response': "I encountered an error in processing your request. Please try rephrasing or simplifying your query."
+                }
             
             # Update conversation history
             self.conversation_history.append({
@@ -209,19 +222,19 @@ Assistant: To identify objects in the video, I'll need to run object detection a
             })
             self.conversation_history.append({
                 'role': 'assistant',
-                'content': result['response']
+                'content': result.get('response', 'No response generated')
             })
             
             return {
-                'response': result['response'],
+                'response': result.get('response', 'No response generated'),
                 'pending_action': result.get('pending_action'),
                 'requires_confirmation': bool(result.get('pending_action')) and not result.get('confirmed'),
                 'conversation_history': self.conversation_history[-5:]  # Last 5 messages
             }
             
         except Exception as e:
-            logger.error(f"Error processing query: {e}")
+            logger.error(f"Error processing query: {str(e)}", exc_info=True)
             return {
                 'error': str(e),
-                'response': "I encountered an error processing your request."
+                'response': "I encountered an unexpected error. Please try again or contact support if the issue persists."
             }
