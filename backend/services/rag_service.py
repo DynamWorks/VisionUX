@@ -299,6 +299,9 @@ Guidelines:
 3. Reference specific frames/timestamps
 4. Only use information from the context
 5. Express uncertainty when needed
+6. go above 50 words while still focusing on consise responses only when asked to expand or elaborate.
+7. If not enough information is available but is a well known and still context relevant topic, answer but only with facts.
+8. If the question is not related to the analysis context, politely decline to answer.
 
 Respond naturally but briefly."""
 
@@ -346,10 +349,10 @@ Question: {query}
             answer = response["answer"].strip()
             word_count = len(answer.split())
             
-            if word_count < 30:
-                answer += " " + self.llm.predict("Please expand this response to at least 30 words while maintaining the same meaning: " + answer)
-            elif word_count > 50:
-                answer = self.llm.predict("Summarize this in 50 words or less while keeping key information: " + answer)
+            # if word_count < 30:
+            #     answer += " " + self.llm.predict("Please expand this response to at least 30 words while maintaining the same meaning: " + answer)
+            # elif word_count > 50:
+            #     answer = self.llm.predict("Summarize this in 50 words or less while keeping key information: " + answer)
             
             return {
                 "answer": answer,
