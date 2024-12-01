@@ -140,8 +140,8 @@ Focus on factual observations that can be referenced in future queries.
 JSON data to analyze:
 {data}
 """
-                
-                try:
+
+            try:
                     response = self.gemini_model.generate_content(prompt.format(data=json.dumps(data, indent=2)))
                     if response and response.text:
                         # Parse the response text
