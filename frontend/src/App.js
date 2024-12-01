@@ -89,10 +89,10 @@ function App() {
             }
 
             // Refresh chat history after analysis
-            const { currentVideo } = useStore.getState();
-            if (currentVideo) {
+            const videoState = useStore.getState();
+            if (videoState.currentVideo) {
                 const historyResponse = await fetch(
-                    `${process.env.REACT_APP_API_URL}/api/v1/chat/history/${currentVideo.name}`
+                    `${process.env.REACT_APP_API_URL}/api/v1/chat/history/${videoState.currentVideo.name}`
                 );
                 if (historyResponse.ok) {
                     const historyData = await historyResponse.json();
