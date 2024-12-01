@@ -1,5 +1,5 @@
 from langchain.tools import BaseTool
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, Type
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ class SceneAnalysisTool(BaseTool):
 class ObjectDetectionTool(BaseTool):
     name: str = "object_detection" 
     description: str = "Detect objects in the current video"
+    detection_service: Any = None
     
     def __init__(self, detection_service):
         super().__init__()
