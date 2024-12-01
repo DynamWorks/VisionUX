@@ -59,24 +59,26 @@ const FileList = () => {
                 addMessage('system', 'New file uploaded - chat history cleared');
             }
 
-            // Auto-select and analyze logic:
+            // Auto-select logic with initial chat message
             let fileToSelect = null;
 
-            // 1. If there's only one file, select it
+            // Select appropriate file
             if (files.length === 1) {
                 fileToSelect = files[0];
-            }
-            // 2. If this is a new upload, select the uploaded file
-            else if (file && files.length > 0) {
+            } else if (file && files.length > 0) {
                 fileToSelect = files.find(f => f.name === file.name);
-            }
-            // 3. Otherwise maintain current selection if it still exists
-            else if (currentVideo) {
+            } else if (currentVideo) {
                 fileToSelect = files.find(f => f.name === currentVideo.name);
             }
 
             if (fileToSelect) {
                 handleVideoSelect(fileToSelect);
+                
+                // Add welcome message to chat
+                addMessage('system', 
+                    `Video "${fileToSelect.name}" selected. How can I help you analyze this video? ` +
+                    `You can ask me to analyze the scene, detect objects, or ask questions about the video.`
+                );
                 
                 // If this is a new upload and auto-analysis is enabled, trigger analysis
                 const { autoAnalysisEnabled } = useStore.getState();

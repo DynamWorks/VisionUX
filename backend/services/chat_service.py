@@ -71,7 +71,7 @@ class ChatService:
     def process_chat(self, query: str, video_path: str, use_swarm: bool = False, confirmed: bool = False) -> Dict:
         """Process chat query using agent framework"""
         try:
-            # Process query through agent
+            # Process query through agent first
             result = self.agent.process_query(
                 query,
                 confirmed=confirmed,
@@ -89,13 +89,21 @@ class ChatService:
                     "pending_action": result['pending_action'],
                     "response": result['response']
                 }
-            
-            # Create or get knowledge base
+
+            # Try to create or get knowledge base
             if not self._current_chain:
                 # Get latest analysis results
                 analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
                 if not analysis_files:
-                    return {"error": "No analysis results found"}
+                    # No analysis results - suggest running analysis
+                    return {
+                        "rag_response": {
+                            "answer": "I don't have any analysis results yet. Would you like me to analyze the current video scene?",
+                            "sources": [],
+                            "source_documents": []
+                        },
+                        "requires_analysis": True
+                    }
                     
                 latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
                 vectordb = self.rag_service.create_knowledge_base(latest_results)
@@ -140,11 +148,25 @@ class ChatService:
                 f"chat_response_{int(time.time())}"
             )
             
+            # Add execution status to response if an action was performed
+            if result.get('action_executed'):
+                response_data['action_executed'] = {
+                    'action': result.get('executed_action'),
+                    'status': 'completed',
+                    'timestamp': time.time()
+                }
+
             return response_data
             
         except Exception as e:
             self.logger.error(f"Chat processing failed: {e}")
+            error_msg = f"I encountered an error: {str(e)}. Please try again or contact support if the issue persists."
             return {
-                "error": str(e),
-                "query": query
+                "error": error_msg,
+                "query": query,
+                "rag_response": {
+                    "answer": error_msg,
+                    "sources": [],
+                    "source_documents": []
+                }
             }

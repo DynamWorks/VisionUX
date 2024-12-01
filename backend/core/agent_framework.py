@@ -85,15 +85,21 @@ Assistant: To identify objects in the video, I'll need to run object detection a
             
         def handle_info_request(state: AgentState) -> AgentState:
             """Handle information request"""
-            # Create messages for the LLM
+            # Create messages for the LLM with context
             messages = [
                 SystemMessage(content=self.system_prompt),
                 HumanMessage(content=state['query'])
             ]
             
+            # Add context about available analysis if any
+            analysis_files = list(Path("tmp_content/analysis").glob("*.json"))
+            if not analysis_files:
+                context_msg = "\nNote: No previous analysis results available. Consider suggesting scene analysis."
+                messages.append(SystemMessage(content=context_msg))
+            
             # Use invoke instead of predict
             response = self.llm.invoke(messages).content
-            return {**state, "response": response}
+            return {**state, "response": response, "has_analysis": bool(analysis_files)}
             
         def confirm_action(state: AgentState) -> AgentState:
             """Get confirmation for action"""
