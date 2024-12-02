@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import hashlib
 from typing import Dict, List, Optional
 from backend.content_manager import ContentManager
 from .rag_service import RAGService
