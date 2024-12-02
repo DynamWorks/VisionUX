@@ -278,11 +278,11 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 chunk_overlap = min(200, int(avg_section_length * 0.2))  # 20% overlap up to 200 chars
                 
                 for i, section in enumerate(sections):
-                # Skip empty sections
-                if not section.strip():
-                    continue
+                    # Skip empty sections
+                    if not section.strip():
+                        continue
                     
-                chunk_text = section.strip()
+                    chunk_text = section.strip()
                 
                 # Add context from previous/next sections for overlap
                 if i > 0:
