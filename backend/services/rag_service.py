@@ -97,14 +97,13 @@ class RAGService:
         self.persist_dir = Path("tmp_content/vector_store")
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
-    def _load_and_chunk_results(self, new_files: List[Path]) -> List[Dict[str, Any]]:
-        """Process new analysis files and create text representations"""
-        try:
-            if not new_files:
-                return []
+    def _process_analysis_files(self, new_files: List[Path]) -> List[Dict]:
+        """Process analysis files and generate text representations"""
+        if not new_files:
+            return []
 
-            all_data = []
-            file_metadata = {}
+        all_data = []
+        file_metadata = {}
             
             # Track document stats
             doc_stats = {
@@ -161,7 +160,9 @@ class RAGService:
             if not self.gemini_enabled or not self.gemini_model:
                 raise ValueError("Gemini model not initialized")
 
-            prompt = """Analyze these video analysis JSON files and create an extremely detailed text representation that includes:
+    def _get_analysis_prompt(self) -> str:
+        """Get the analysis prompt template"""
+        return """Analyze these video analysis JSON files and create an extremely detailed text representation that includes:
 
 1. Scene Analysis:
    - Comprehensive scene descriptions from all timestamps
@@ -209,16 +210,25 @@ Generate a comprehensive, structured text representation that captures 100% of t
 
 Focus on maximum detail and complete accuracy. Do not summarize or omit any information."""
 
-            # Process each analysis file individually
-            processed_texts = []
+    def _generate_text_representations(self, analysis_files: List[Dict]) -> List[Dict]:
+        """Generate text representations using Gemini"""
+        if not analysis_files:
+            return []
             
-            for analysis_data in all_data:
-                try:
-                    # Create individual prompt for this analysis
-                    response = self.gemini_model.generate_content([
-                        {"text": prompt},
-                        {"text": f"Analysis JSON data:\n{json.dumps(analysis_data, indent=2)}"}
-                    ])
+        if not self.gemini_enabled or not self.gemini_model:
+            raise ValueError("Gemini model not initialized")
+
+        kb_path = Path("tmp_content/knowledgebase")
+        kb_path.mkdir(parents=True, exist_ok=True)
+        
+        processed_texts = []
+        
+        for file_data in analysis_files:
+            try:
+                response = self.gemini_model.generate_content([
+                    {"text": self._get_analysis_prompt()},
+                    {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
+                ])
 
                     if not response:
                         self.logger.warning(f"No response received for analysis file")
