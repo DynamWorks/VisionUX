@@ -148,10 +148,29 @@ class ChatService:
                         )
 
                         # Create knowledge base from new analysis
-                        vectordb = self.rag_service.create_knowledge_base((Path('tmp_content/analysis')))
-                        if not vectordb:
-                            raise ValueError("Failed to create knowledge base")
-                        self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                        try:
+                            vectordb = self.rag_service.create_knowledge_base(Path('tmp_content/analysis'))
+                            if vectordb:
+                                self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                            else:
+                                return {
+                                    "rag_response": {
+                                        "answer": "I need to analyze the video first. Would you like me to run a scene analysis?",
+                                        "sources": [],
+                                        "source_documents": []
+                                    },
+                                    "requires_analysis": True
+                                }
+                        except Exception as e:
+                            self.logger.error(f"Knowledge base creation failed: {e}")
+                            return {
+                                "rag_response": {
+                                    "answer": "I encountered an error creating the knowledge base. Would you like me to try analyzing the video again?",
+                                    "sources": [],
+                                    "source_documents": []
+                                },
+                                "requires_analysis": True
+                            }
 
                     except Exception as e:
                         self.logger.error(f"Auto-analysis failed: {e}")

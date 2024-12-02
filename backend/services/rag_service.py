@@ -328,7 +328,11 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             analysis_files = self._get_new_analysis_files(metadata_path)
             if not analysis_files:
                 self.logger.warning("No new analysis files found")
-                return self._load_existing_store(store_path)
+                if store_path.exists():
+                    return self._load_existing_store(store_path)
+                else:
+                    self.logger.warning("No existing store found")
+                    return None
 
             # Process files and generate text representations
             processed_files = self._process_analysis_files(analysis_files)
