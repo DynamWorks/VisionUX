@@ -140,7 +140,7 @@ class RAGService:
                         # Validate expected fields
                         if not isinstance(data, dict):
                             raise ValueError(f"Invalid JSON structure in {file_path}")
-                            
+                        
                         all_data.append(data)
                         file_metadata[str(file_path)] = {
                             'timestamp': file_time,
