@@ -252,18 +252,19 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 continue
 
         if not processed_texts:
-            raise ValueError("No analysis files were successfully processed")
+            self.logger.warning("No analysis files were successfully processed")
+            return []
                 
-            # Combine all processed texts
-            text_representation = "\n\n".join(processed_texts)
+        # Combine all processed texts with clear section markers
+        text_representation = "\n\n=== Section Break ===\n\n".join(processed_texts)
 
-            # Create chunks with metadata
-            chunks = []
-            sections = text_representation.split('\n\n')
+        # Create chunks with metadata
+        chunks = []
+        sections = text_representation.split("=== Section Break ===")
             
-            # Calculate optimal chunk size and overlap
-            avg_section_length = sum(len(s) for s in sections) / len(sections)
-            chunk_overlap = min(200, int(avg_section_length * 0.2))  # 20% overlap up to 200 chars
+        # Calculate optimal chunk size and overlap
+        avg_section_length = sum(len(s.strip()) for s in sections) / len(sections)
+        chunk_overlap = min(300, int(avg_section_length * 0.3))  # 30% overlap up to 300 chars
             
             for i, section in enumerate(sections):
                 # Skip empty sections
