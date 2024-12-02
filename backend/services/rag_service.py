@@ -215,75 +215,74 @@ Generate a comprehensive, structured text representation that captures 100% of t
 
 Focus on maximum detail and complete accuracy. Do not summarize or omit any information."""
 
-            try:
-                # Process each analysis file individually
-                processed_texts = []
-                
-                for analysis_data in all_data:
-                    try:
-                        # Create individual prompt for this analysis
-                        response = self.gemini_model.generate_content(
-                            prompt.format(data=json.dumps(analysis_data, indent=2))
-                        )
+            # Process each analysis file individually
+            processed_texts = []
+            
+            for analysis_data in all_data:
+                try:
+                    # Create individual prompt for this analysis
+                    response = self.gemini_model.generate_content(
+                        prompt.format(data=json.dumps(analysis_data, indent=2))
+                    )
 
-                        if not response:
-                            self.logger.warning(f"No response received for analysis file")
-                            continue
-                            
-                        if not hasattr(response, 'text') or not response.text:
-                            self.logger.warning(f"Empty response for analysis file")
-                            continue
-
-                        text_representation = response.text.strip()
+                    if not response:
+                        self.logger.warning(f"No response received for analysis file")
+                        continue
                         
-                        # Save individual response to knowledgebase
-                        kb_path = Path("tmp_content/knowledgebase")
-                        kb_path.mkdir(parents=True, exist_ok=True)
-                        
-                        timestamp = int(time.time())
-                        file_hash = hashlib.md5(json.dumps(analysis_data).encode()).hexdigest()[:10]
-                        response_file = kb_path / f"gemini_response_{file_hash}_{timestamp}.json"
-                        
-                        with open(response_file, 'w') as f:
-                            json.dump({
-                                'prompt': prompt,
-                                'response': text_representation,
-                                'timestamp': timestamp,
-                                'metadata': {
-                                    'model': 'gemini',
-                                    'input_data': analysis_data,
-                                    'file_metadata': file_metadata.get(str(response_file), {})
-                                }
-                            }, f, indent=2)
-                        
-                        self.logger.info(f"Saved Gemini response to {response_file}")
-                        processed_texts.append(text_representation)
-
-                    except Exception as e:
-                        self.logger.error(f"Failed to process analysis file: {e}")
+                    if not hasattr(response, 'text') or not response.text:
+                        self.logger.warning(f"Empty response for analysis file")
                         continue
 
-                if not processed_texts:
-                    raise ValueError("No analysis files were successfully processed")
+                    text_representation = response.text.strip()
                     
-                # Combine all processed texts
-                text_representation = "\n\n".join(processed_texts)
+                    # Save individual response to knowledgebase
+                    kb_path = Path("tmp_content/knowledgebase")
+                    kb_path.mkdir(parents=True, exist_ok=True)
+                    
+                    timestamp = int(time.time())
+                    file_hash = hashlib.md5(json.dumps(analysis_data).encode()).hexdigest()[:10]
+                    response_file = kb_path / f"gemini_response_{file_hash}_{timestamp}.json"
+                    
+                    with open(response_file, 'w') as f:
+                        json.dump({
+                            'prompt': prompt,
+                            'response': text_representation,
+                            'timestamp': timestamp,
+                            'metadata': {
+                                'model': 'gemini',
+                                'input_data': analysis_data,
+                                'file_metadata': file_metadata.get(str(response_file), {})
+                            }
+                        }, f, indent=2)
+                    
+                    self.logger.info(f"Saved Gemini response to {response_file}")
+                    processed_texts.append(text_representation)
 
-                # Create chunks with metadata
-                chunks = []
-                sections = text_representation.split('\n\n')
+                except Exception as e:
+                    self.logger.error(f"Failed to process analysis file: {e}")
+                    continue
+
+            if not processed_texts:
+                raise ValueError("No analysis files were successfully processed")
                 
-                # Calculate optimal chunk size and overlap
-                avg_section_length = sum(len(s) for s in sections) / len(sections)
-                chunk_overlap = min(200, int(avg_section_length * 0.2))  # 20% overlap up to 200 chars
+            # Combine all processed texts
+            text_representation = "\n\n".join(processed_texts)
+
+            # Create chunks with metadata
+            chunks = []
+            sections = text_representation.split('\n\n')
+            
+            # Calculate optimal chunk size and overlap
+            avg_section_length = sum(len(s) for s in sections) / len(sections)
+            chunk_overlap = min(200, int(avg_section_length * 0.2))  # 20% overlap up to 200 chars
+            
+            for i, section in enumerate(sections):
+                # Skip empty sections
+                if not section.strip():
+                    continue
                 
-                for i, section in enumerate(sections):
-                    # Skip empty sections
-                    if not section.strip():
-                        continue
-                    
-                    chunk_text = section.strip()
-                
+                chunk_text = section.strip()
+            
                 # Add context from previous/next sections for overlap
                 if i > 0:
                     prev_section = sections[i-1].strip()
@@ -291,23 +290,23 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 if i < len(sections) - 1:
                     next_section = sections[i+1].strip()
                     chunk_text = chunk_text + "\n\n" + next_section[:chunk_overlap]
-                
-                    chunks.append({
-                        "text": chunk_text,
-                        "metadata": {
-                            'source': str(results_path),
-                            'section': f"section_{i+1}",
-                            'timestamp': time.time(),
-                            'type': 'analysis',
-                            'total_sections': len(sections),
-                            'chunk_stats': {
-                                'length': len(chunk_text),
-                                'overlap': chunk_overlap,
-                                'position': i + 1
-                            },
-                            'doc_stats': doc_stats
-                        }
-                    })
+            
+                chunks.append({
+                    "text": chunk_text,
+                    "metadata": {
+                        'source': str(results_path),
+                        'section': f"section_{i+1}",
+                        'timestamp': time.time(),
+                        'type': 'analysis',
+                        'total_sections': len(sections),
+                        'chunk_stats': {
+                            'length': len(chunk_text),
+                            'overlap': chunk_overlap,
+                            'position': i + 1
+                        },
+                        'doc_stats': doc_stats
+                    }
+                })
 
             self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
             return chunks
