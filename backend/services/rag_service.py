@@ -18,7 +18,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import json
 import logging
 import hashlib
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -217,19 +217,19 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     kb_path.mkdir(parents=True, exist_ok=True)
                     
                     timestamp = int(time.time())
-                    file_hash = hashlib.md5(json.dumps(analysis_data).encode()).hexdigest()[:10]
-                    # Use same name as analysis file but as .txt
-                    response_file = kb_path / f"{file_path.stem}.json"
+                    file_hash = hashlib.md5(json.dumps(file_data['data']).encode()).hexdigest()[:10]
+                    # Use file_data info for response file name
+                    response_file = kb_path / f"analysis_{file_hash}.json"
                     
                     with open(response_file, 'w') as f:
                         json.dump({
-                            'prompt': prompt,
+                            'prompt': self._get_analysis_prompt(),
                             'response': text_representation,
                             'timestamp': timestamp,
                             'metadata': {
                                 'model': 'gemini',
-                                'input_data': analysis_data,
-                                'file_metadata': file_metadata.get(str(response_file), {})
+                                'input_data': file_data['data'],
+                                'file_metadata': {}
                             }
                         }, f, indent=2)
                     
@@ -272,7 +272,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 chunks.append({
                     "text": chunk_text,
                     "metadata": {
-                        'source': str(file_path),  # Use current file path being processed
+                        'source': f"analysis_{i}",  # Use sequential identifier
                         'section': f"section_{i+1}",
                         'timestamp': time.time(),
                         'type': 'analysis',
@@ -282,18 +282,18 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                             'overlap': chunk_overlap,
                             'position': i + 1
                         },
-                        'doc_stats': doc_stats
+                        'doc_stats': {}  # Initialize empty doc stats
                     }
                 })
 
         # Validate results
-        if not all_data:
-            raise ValueError("No valid analysis data found")
+        if not chunks:
+            raise ValueError("No valid chunks created")
 
         if not self.gemini_enabled or not self.gemini_model:
             raise ValueError("Gemini model not initialized")
 
-        self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
+        self.logger.info(f"Created {len(chunks)} chunks")
         return chunks
 
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
