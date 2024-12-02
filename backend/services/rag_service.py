@@ -317,6 +317,14 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
         return chunks
 
+        if not all_data:
+            raise ValueError("No valid analysis data found")
+
+        if not self.gemini_enabled or not self.gemini_model:
+            raise ValueError("Gemini model not initialized")
+
+        return all_data
+
     except Exception as e:
         self.logger.error(f"Error loading results: {str(e)}")
         return []
