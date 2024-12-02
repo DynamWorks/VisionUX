@@ -216,52 +216,58 @@ Generate a comprehensive, structured text representation that captures 100% of t
 Focus on maximum detail and complete accuracy. Do not summarize or omit any information."""
 
             try:
-                # Combine all data with file metadata
-                combined_data = {
-                    'analysis_files': all_data,
-                    'file_metadata': file_metadata,
-                    'total_files': len(all_data),
-                    'timestamp': time.time()
-                }
+                # Process each analysis file individually
+                processed_texts = []
+                
+                for analysis_data in all_data:
+                    try:
+                        # Create individual prompt for this analysis
+                        response = self.gemini_model.generate_content(
+                            prompt.format(data=json.dumps(analysis_data, indent=2))
+                        )
 
-                response = self.gemini_model.generate_content(
-                    prompt.format(data=json.dumps(combined_data, indent=2))
-                )
+                        if not response:
+                            self.logger.warning(f"No response received for analysis file")
+                            continue
+                            
+                        if not hasattr(response, 'text') or not response.text:
+                            self.logger.warning(f"Empty response for analysis file")
+                            continue
 
-                if not response:
-                    raise ValueError("No response received from Gemini model")
-                    
-                if not hasattr(response, 'text'):
-                    raise ValueError("Response missing 'text' attribute")
-                    
-                if not response.text:
-                    raise ValueError("Response text is empty")
-                    
-                text_representation = response.text.strip()
-                
-                # Save response to knowledgebase
-                kb_path = Path("tmp_content/knowledgebase")
-                kb_path.mkdir(parents=True, exist_ok=True)
-                
-                timestamp = int(time.time())
-                response_file = kb_path / f"gemini_response_{timestamp}.json"
-                
-                with open(response_file, 'w') as f:
-                    json.dump({
-                        'prompt': prompt,
-                        'response': text_representation,
-                        'timestamp': timestamp,
-                        'metadata': {
-                            'model': 'gemini',
-                            'input_data': combined_data
-                        }
-                    }, f, indent=2)
-                
-                self.logger.info(f"Saved Gemini response to {response_file}")
+                        text_representation = response.text.strip()
+                        
+                        # Save individual response to knowledgebase
+                        kb_path = Path("tmp_content/knowledgebase")
+                        kb_path.mkdir(parents=True, exist_ok=True)
+                        
+                        timestamp = int(time.time())
+                        file_hash = hashlib.md5(json.dumps(analysis_data).encode()).hexdigest()[:10]
+                        response_file = kb_path / f"gemini_response_{file_hash}_{timestamp}.json"
+                        
+                        with open(response_file, 'w') as f:
+                            json.dump({
+                                'prompt': prompt,
+                                'response': text_representation,
+                                'timestamp': timestamp,
+                                'metadata': {
+                                    'model': 'gemini',
+                                    'input_data': analysis_data,
+                                    'file_metadata': file_metadata.get(str(response_file), {})
+                                }
+                            }, f, indent=2)
+                        
+                        self.logger.info(f"Saved Gemini response to {response_file}")
+                        processed_texts.append(text_representation)
 
-            except Exception as e:
-                self.logger.error(f"Gemini processing failed: {e}")
-                raise ValueError(f"Failed to process data with Gemini: {str(e)}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to process analysis file: {e}")
+                        continue
+
+                if not processed_texts:
+                    raise ValueError("No analysis files were successfully processed")
+                    
+                # Combine all processed texts
+                text_representation = "\n\n".join(processed_texts)
 
             # Create chunks with metadata
             chunks = []
