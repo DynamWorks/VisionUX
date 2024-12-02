@@ -497,6 +497,11 @@ Use the following analysis context to answer questions about the video.
 Analysis Context (Retrieved Passages):
 {summaries}
 
+Available Tools:
+- scene_analysis: Analyze the current video scene in detail
+- object_detection: Detect and identify objects in the video
+- edge_detection: Highlight edges and boundaries in the video
+
 User Question: {question}
 
 Guidelines:
@@ -508,8 +513,20 @@ Guidelines:
 6. Expand beyond 50 words only when explicitly asked
 7. For relevant topics not covered in context, provide factual responses
 8. Politely decline unrelated questions
+9. If the user's query would benefit from using an available tool, suggest it
+10. If user confirms or requests to use a tool, include "confirmation": true and "tool": "<tool_name>" in your response
+11. If user requests unavailable tool, mention it may be added in future updates
 
-Respond naturally but briefly."""
+Format your response as a JSON object with these fields:
+{
+    "answer": "Your natural response here",
+    "tool_suggestion": "tool_name" or null,
+    "confirmation": true/false,
+    "tool": "tool_name" or null,
+    "internal_notes": "Any processing notes or observations"
+}
+
+Respond naturally but ensure the response can be parsed as valid JSON."""
 
         PROMPT = PromptTemplate(
             template=prompt_template, 
@@ -578,18 +595,42 @@ Question: {query}
             # elif word_count > 50:
             #     answer = self.llm.predict("Summarize this in 50 words or less while keeping key information: " + answer)
             
-            return {
-                "answer": answer,
-                "sources": response["sources"],
-                "source_documents": [
-                    {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
-                        "score": getattr(doc, "score", None)
-                    }
-                    for doc in response["source_documents"]
-                ]
-            }
+            # Parse the JSON response
+            import json
+            try:
+                parsed_response = json.loads(answer)
+                
+                # Structure the complete response
+                return {
+                    "answer": parsed_response["answer"],
+                    "sources": response["sources"],
+                    "source_documents": [
+                        {
+                            "content": doc.page_content,
+                            "metadata": doc.metadata,
+                            "score": getattr(doc, "score", None)
+                        }
+                        for doc in response["source_documents"]
+                    ],
+                    "tool_suggestion": parsed_response.get("tool_suggestion"),
+                    "confirmation": parsed_response.get("confirmation", False),
+                    "tool": parsed_response.get("tool"),
+                    "internal_notes": parsed_response.get("internal_notes")
+                }
+            except json.JSONDecodeError:
+                # Fallback for non-JSON responses
+                return {
+                    "answer": answer,
+                    "sources": response["sources"],
+                    "source_documents": [
+                        {
+                            "content": doc.page_content,
+                            "metadata": doc.metadata,
+                            "score": getattr(doc, "score", None)
+                        }
+                        for doc in response["source_documents"]
+                    ]
+                }
         except Exception as e:
             self.logger.error(f"Error querying knowledge base: {str(e)}")
             return {
