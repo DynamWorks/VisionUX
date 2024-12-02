@@ -37,10 +37,10 @@ class RAGService:
         if not openai_api_key:
             openai_api_key = self.config.get('services', 'openai', 'api_key')
 
-        openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')        
-        if not openai_api_base:                                                            
-             openai_api_base = self.config.get('services', 'openai', 'api_base',            
- default='https://api.openai.com/v1')                        
+        openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+        if not openai_api_base:
+            openai_api_base = self.config.get('services', 'openai', 'api_base',
+                                            default='https://api.openai.com/v1')
             
         # Initialize logger
         self.logger = logging.getLogger(__name__)
@@ -292,24 +292,24 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     next_section = sections[i+1].strip()
                     chunk_text = chunk_text + "\n\n" + next_section[:chunk_overlap]
                 
-                chunks.append({
-                    "text": chunk_text,
-                    "metadata": {
-                        'source': str(results_path),
-                        'section': f"section_{i+1}",
-                        'timestamp': time.time(),
-                        'type': 'analysis',
-                        'total_sections': len(sections),
-                        'chunk_stats': {
-                            'length': len(chunk_text),
-                            'overlap': chunk_overlap,
-                            'position': i + 1
-                        },
-                        'doc_stats': doc_stats
-                    }
-                })
+                    chunks.append({
+                        "text": chunk_text,
+                        "metadata": {
+                            'source': str(results_path),
+                            'section': f"section_{i+1}",
+                            'timestamp': time.time(),
+                            'type': 'analysis',
+                            'total_sections': len(sections),
+                            'chunk_stats': {
+                                'length': len(chunk_text),
+                                'overlap': chunk_overlap,
+                                'position': i + 1
+                            },
+                            'doc_stats': doc_stats
+                        }
+                    })
 
-                self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
+            self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
                 return chunks
 
             except Exception as e:
