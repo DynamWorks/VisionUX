@@ -97,20 +97,14 @@ class RAGService:
         self.persist_dir = Path("tmp_content/vector_store")
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
-    def _load_and_chunk_results(self, results_path: Path) -> List[Dict[str, Any]]:
-        """Load and combine all analysis results for comprehensive text representation"""
+    def _load_and_chunk_results(self, new_files: List[Path]) -> List[Dict[str, Any]]:
+        """Process new analysis files and create text representations"""
         try:
-            # Validate input path
-            if not isinstance(results_path, Path):
-                raise ValueError("results_path must be a Path object")
-                
-            analysis_dir = Path("tmp_content/analysis")
-            if not analysis_dir.exists():
-                raise ValueError("Analysis directory not found")
+            if not new_files:
+                return []
 
             all_data = []
             file_metadata = {}
-            total_size = 0
             
             # Track document stats
             doc_stats = {
@@ -120,8 +114,8 @@ class RAGService:
                 'newest_file': None
             }
 
-            # Load all analysis files with validation
-            for file_path in analysis_dir.glob("*.json"):
+            # Process only the new files
+            for file_path in new_files:
                 try:
                     if not file_path.is_file():
                         continue
@@ -241,7 +235,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     
                     timestamp = int(time.time())
                     file_hash = hashlib.md5(json.dumps(analysis_data).encode()).hexdigest()[:10]
-                    response_file = kb_path / f"gemini_response_{file_hash}_{timestamp}.json"
+                    # Use same name as analysis file but as .txt
+                    response_file = kb_path / f"{file_path.stem}.txt"
                     
                     with open(response_file, 'w') as f:
                         json.dump({
@@ -325,51 +320,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             if not analysis_dir.exists():
                 return None
 
-            # Calculate hash of all analysis files with validation
-            import hashlib
-            current_hash = hashlib.md5()
-            analysis_files = sorted(analysis_dir.glob("*.json"))
-            
-            # Track file statistics
-            file_stats = {
-                'total_files': 0,
-                'total_size': 0,
-                'file_types': {},
-                'modification_times': []
-            }
-            
-            for file_path in analysis_files:
-                try:
-                    if not file_path.is_file():
-                        continue
-                        
-                    stat = file_path.stat()
-                    if stat.st_size == 0:
-                        continue
-                        
-                    # Update stats
-                    file_stats['total_files'] += 1
-                    file_stats['total_size'] += stat.st_size
-                    file_stats['modification_times'].append(stat.st_mtime)
-                    file_type = file_path.suffix
-                    file_stats['file_types'][file_type] = file_stats['file_types'].get(file_type, 0) + 1
-                    
-                    # Update hash
-                    current_hash.update(str(stat.st_mtime).encode())
-                    with open(file_path, 'rb') as f:
-                        current_hash.update(f.read())
-                        
-                except Exception as e:
-                    self.logger.warning(f"Error processing {file_path}: {e}")
-                    continue
-            
-            if file_stats['total_files'] == 0:
-                raise ValueError("No valid analysis files found")
-                
-            current_hash = current_hash.hexdigest()
-
-            # Get list of processed files in knowledgebase
-            kb_path = Path("tmp_content/knowledgebase")
+            # Get list of processed files from metadata
             processed_files = set()
             if metadata_path.exists():
                 try:
@@ -379,7 +330,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 except Exception as e:
                     self.logger.warning(f"Error loading metadata: {e}")
 
-            # Check for new analysis files
+            # Find new analysis files
+            analysis_files = sorted(analysis_dir.glob("*.json"))
             new_files = []
             for file_path in analysis_files:
                 file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
@@ -387,31 +339,30 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     new_files.append(file_path)
                     processed_files.add(file_hash)
 
-            # Process new files through Gemini
+            # Process new files if any
             if new_files:
                 self.logger.info(f"Processing {len(new_files)} new analysis files")
-                for file_path in new_files:
-                    try:
-                        with open(file_path) as f:
-                            analysis_data = json.load(f)
-                        self._load_and_chunk_results(file_path)
-                    except Exception as e:
-                        self.logger.error(f"Error processing {file_path}: {e}")
+                chunks = self._load_and_chunk_results(new_files)
+            else:
+                chunks = []
 
-            # Check if store exists and is current
-            if store_path.exists() and not new_files:
-                self.logger.info("Using existing knowledge base - no new files")
-                return FAISS.load_local(str(store_path), self.embeddings)
+            # Load existing knowledge base texts
+            kb_texts = []
+            for text_file in kb_path.glob("*.txt"):
+                try:
+                    with open(text_file) as f:
+                        kb_texts.append({
+                            "text": f.read(),
+                            "metadata": {
+                                'source': str(text_file),
+                                'type': 'knowledge_base'
+                            }
+                        })
+                except Exception as e:
+                    self.logger.error(f"Error reading knowledge base file {text_file}: {e}")
 
-            # Create new knowledge base
-            self.logger.info("Creating new knowledge base")
-            all_documents = []
-            
-            # Process all analysis files together
-            documents = self._load_and_chunk_results(Path("tmp_content/analysis"))
-            if documents:
-                all_documents.extend(documents)
-
+            # Combine all documents
+            all_documents = kb_texts + chunks
             if not all_documents:
                 return None
 
