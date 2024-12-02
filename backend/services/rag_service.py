@@ -113,12 +113,12 @@ class RAGService:
                 'newest_file': None
             }
 
-            # Process only the new files
-            for file_path in new_files:
-                try:
-                    if not file_path.is_file():
-                        continue
-                        
+        # Process only the new files
+        for file_path in new_files:
+            try:
+                if not file_path.is_file():
+                    continue
+                    
                     file_size = file_path.stat().st_size
                     if file_size == 0:
                         self.logger.warning(f"Skipping empty file: {file_path}")
@@ -314,13 +314,13 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     }
                 })
 
-            self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
-            return chunks
+        self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
+        return chunks
 
-        except Exception as e:
-            self.logger.error(f"Error loading results: {str(e)}")
-            return []
-        
+    except Exception as e:
+        self.logger.error(f"Error loading results: {str(e)}")
+        return []
+    
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
         """Create or update vector store from analysis results"""
         try:
