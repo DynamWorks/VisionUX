@@ -98,67 +98,39 @@ class RAGService:
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
     def _process_analysis_files(self, new_files: List[Path]) -> List[Dict]:
-        """Process analysis files and generate text representations"""
+        """
+        Process analysis files and generate text representations
+        
+        Args:
+            new_files: List of Path objects pointing to new analysis files
+            
+        Returns:
+            List of processed analysis data dictionaries
+            
+        Raises:
+            ValueError: If no valid data found or Gemini not initialized
+        """
         if not new_files:
             return []
 
         all_data = []
         file_metadata = {}
-        
-        # Track document stats
-        doc_stats = {
-                'total_files': 0,
-                'total_size': 0,
-                'oldest_file': None,
-                'newest_file': None
-            }
+        doc_stats = self._init_doc_stats()
 
-        # Process only the new files
-        for file_path in new_files:
-            try:
-                if not file_path.is_file():
-                    continue
-                    
-                file_size = file_path.stat().st_size
-                if file_size == 0:
-                    self.logger.warning(f"Skipping empty file: {file_path}")
-                    continue
-                    
-                file_time = file_path.stat().st_mtime
+        try:
+            all_data, file_metadata = self._process_files(new_files, doc_stats)
+            
+            if not all_data:
+                raise ValueError("No valid analysis data found")
+
+            if not self.gemini_enabled or not self.gemini_model:
+                raise ValueError("Gemini model not initialized")
                 
-                # Update document stats
-                doc_stats['total_files'] += 1
-                doc_stats['total_size'] += file_size
-                if not doc_stats['oldest_file'] or file_time < doc_stats['oldest_file']:
-                    doc_stats['oldest_file'] = file_time
-                if not doc_stats['newest_file'] or file_time > doc_stats['newest_file']:
-                    doc_stats['newest_file'] = file_time
+            return all_data
 
-                try:
-                    with open(file_path) as f:
-                        data = json.load(f)
-                        # Validate expected fields
-                        if not isinstance(data, dict):
-                            raise ValueError(f"Invalid JSON structure in {file_path}")
-                        
-                        all_data.append(data)
-                        file_metadata[str(file_path)] = {
-                            'timestamp': file_time,
-                            'size': file_size,
-                            'type': 'analysis'
-                        }
-                except json.JSONDecodeError as e:
-                    self.logger.error(f"Invalid JSON in {file_path}: {e}")
-                    continue
-                except Exception as e:
-                    self.logger.warning(f"Error loading {file_path}: {e}")
-                    continue
-
-        if not all_data:
-            raise ValueError("No valid analysis data found")
-
-        if not self.gemini_enabled or not self.gemini_model:
-            raise ValueError("Gemini model not initialized")
+        except Exception as e:
+            self.logger.error(f"Error processing analysis files: {e}")
+            raise
 
     def _get_analysis_prompt(self) -> str:
         """Get the analysis prompt template"""
@@ -650,3 +622,96 @@ Question: {query}
         except Exception as e:
             self.logger.error(f"Error saving vector store metadata: {str(e)}")
             raise
+    def _init_doc_stats(self) -> Dict:
+        """Initialize document statistics tracking"""
+        return {
+            'total_files': 0,
+            'total_size': 0,
+            'oldest_file': None,
+            'newest_file': None
+        }
+
+    def _process_files(self, files: List[Path], doc_stats: Dict) -> Tuple[List[Dict], Dict]:
+        """
+        Process individual analysis files
+        
+        Args:
+            files: List of files to process
+            doc_stats: Statistics dictionary to update
+            
+        Returns:
+            Tuple of (processed data list, file metadata dict)
+        """
+        all_data = []
+        file_metadata = {}
+        
+        for file_path in files:
+            try:
+                if not self._is_valid_file(file_path):
+                    continue
+                
+                file_info = self._get_file_info(file_path)
+                self._update_doc_stats(doc_stats, file_info)
+                
+                data = self._load_json_file(file_path)
+                if data:
+                    all_data.append(data)
+                    file_metadata[str(file_path)] = {
+                        'timestamp': file_info['mtime'],
+                        'size': file_info['size'],
+                        'type': 'analysis'
+                    }
+                    
+            except Exception as e:
+                self.logger.warning(f"Error processing {file_path}: {e}")
+                continue
+                
+        return all_data, file_metadata
+        
+    def _is_valid_file(self, file_path: Path) -> bool:
+        """Check if file is valid for processing"""
+        if not file_path.is_file():
+            return False
+            
+        if file_path.stat().st_size == 0:
+            self.logger.warning(f"Skipping empty file: {file_path}")
+            return False
+            
+        return True
+        
+    def _get_file_info(self, file_path: Path) -> Dict:
+        """Get file information"""
+        stat = file_path.stat()
+        return {
+            'size': stat.st_size,
+            'mtime': stat.st_mtime
+        }
+        
+    def _update_doc_stats(self, stats: Dict, file_info: Dict) -> None:
+        """Update document statistics with file info"""
+        stats['total_files'] += 1
+        stats['total_size'] += file_info['size']
+        
+        if not stats['oldest_file'] or file_info['mtime'] < stats['oldest_file']:
+            stats['oldest_file'] = file_info['mtime']
+            
+        if not stats['newest_file'] or file_info['mtime'] > stats['newest_file']:
+            stats['newest_file'] = file_info['mtime']
+            
+    def _load_json_file(self, file_path: Path) -> Optional[Dict]:
+        """Load and validate JSON file"""
+        try:
+            with open(file_path) as f:
+                data = json.load(f)
+                
+            if not isinstance(data, dict):
+                raise ValueError(f"Invalid JSON structure in {file_path}")
+                
+            return data
+            
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON in {file_path}: {e}")
+        except Exception as e:
+            self.logger.warning(f"Error loading {file_path}: {e}")
+            
+        return None
