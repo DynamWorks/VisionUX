@@ -269,11 +269,11 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 # Combine all processed texts
                 text_representation = "\n\n".join(processed_texts)
 
-            # Create chunks with metadata
-            chunks = []
-            sections = text_representation.split('\n\n')
-            
-            # Calculate optimal chunk size and overlap
+                # Create chunks with metadata
+                chunks = []
+                sections = text_representation.split('\n\n')
+                
+                # Calculate optimal chunk size and overlap
             avg_section_length = sum(len(s) for s in sections) / len(sections)
             chunk_overlap = min(200, int(avg_section_length * 0.2))  # 20% overlap up to 200 chars
             
