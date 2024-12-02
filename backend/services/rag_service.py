@@ -215,9 +215,10 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             for analysis_data in all_data:
                 try:
                     # Create individual prompt for this analysis
-                    response = self.gemini_model.generate_content(
-                        prompt.format(data=json.dumps(analysis_data, indent=2))
-                    )
+                    response = self.gemini_model.generate_content([
+                        {"text": prompt},
+                        {"text": f"Analysis JSON data:\n{json.dumps(analysis_data, indent=2)}"}
+                    ])
 
                     if not response:
                         self.logger.warning(f"No response received for analysis file")
