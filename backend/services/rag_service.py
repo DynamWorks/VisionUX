@@ -103,38 +103,39 @@ class RAGService:
             self.logger.info(f"Initialized directory: {directory}")
         
     def _process_analysis_files(self, new_files: List[Path]) -> List[Dict]:
-        """
-        Process analysis files and generate text representations
-        
-        Args:
-            new_files: List of Path objects pointing to new analysis files
-            
-        Returns:
-            List of processed analysis data dictionaries
-            
-        Raises:
-            ValueError: If no valid data found
-        """
+        """Process analysis files and generate text representations"""
         if not new_files:
             return []
 
-        all_data = []
-        file_metadata = {}
-        doc_stats = self._init_doc_stats()
-
         try:
-            all_data, file_metadata = self._process_files(new_files, doc_stats)
-            
-            if not all_data:
+            # Process each file
+            processed_data = []
+            for file_path in new_files:
+                try:
+                    with open(file_path) as f:
+                        data = json.load(f)
+                    processed_data.append({
+                        'data': data,
+                        'metadata': {
+                            'file_path': str(file_path),
+                            'timestamp': file_path.stat().st_mtime,
+                            'type': 'analysis'
+                        }
+                    })
+                except Exception as e:
+                    self.logger.warning(f"Error processing {file_path}: {e}")
+                    continue
+
+            if not processed_data:
                 self.logger.warning("No valid analysis data found in files")
                 return []
 
-            # Don't require Gemini for initial processing
-            if not self.gemini_enabled or not self.gemini_model:
-                self.logger.warning("Gemini not available - skipping text generation")
-                return all_data
-                
-            return all_data
+            # Generate text representations if Gemini available
+            if self.gemini_enabled and self.gemini_model:
+                return self._generate_text_representations(processed_data)
+            
+            self.logger.info("Gemini not available - using raw analysis data")
+            return processed_data
 
         except Exception as e:
             self.logger.error(f"Error processing analysis files: {e}")

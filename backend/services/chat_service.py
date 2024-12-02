@@ -73,161 +73,24 @@ class ChatService:
     def process_chat(self, query: str, video_path: str, use_swarm: bool = False, confirmed: bool = False) -> Dict:
         """Process chat query using RAG and handle tool execution"""
         try:
-            # Initialize response data
-            response_data = {
-                "query": query,
-                "timestamp": time.time()
-            }
-
-            # Check if this is a tool confirmation
+            # Handle tool confirmation
             if confirmed:
-                for tool in self.tools:
-                    if tool.name == query:
-                        try:
-                            result = tool.run()
-                            return {
-                                "rag_response": {
-                                    "answer": f"Tool execution complete: {result}",
-                                    "sources": [],
-                                    "source_documents": []
-                                },
-                                "action_executed": {
-                                    "action": tool.name,
-                                    "status": "completed",
-                                    "timestamp": time.time()
-                                }
-                            }
-                        except Exception as e:
-                            return {"error": f"Tool execution failed: {str(e)}"}
+                return self._execute_confirmed_tool(query)
 
-            # Always try to get or create knowledge base
+            # Initialize or update knowledge base
             if not self._current_chain:
-                analysis_files = list(Path('tmp_content/analysis').glob('*.json'))
-                if not analysis_files:
-                    # No analysis - run scene analysis first
-                    try:
-                        from backend.services import SceneAnalysisService
-                        scene_service = SceneAnalysisService()
-                        
-                        # Get video path and verify
-                        video_path_full = Path("tmp_content/uploads") / video_path
-                        if not video_path_full.exists():
-                            raise ValueError(f"Video file not found: {video_path}")
-                            
-                        # Capture video frames
-                        cap = cv2.VideoCapture(str(video_path_full))
-                        if not cap.isOpened():
-                            raise ValueError("Failed to open video file")
-                            
-                        frames = []
-                        frame_numbers = []
-                        timestamps = []
-                        
-                        try:
-                            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                            fps = cap.get(cv2.CAP_PROP_FPS)
-                            
-                            # Sample 8 evenly spaced frames
-                            interval = max(1, total_frames // 8)
-                            for i in range(8):
-                                pos = i * interval
-                                cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
-                                ret, frame = cap.read()
-                                if ret:
-                                    frames.append(frame)
-                                    frame_numbers.append(pos)
-                                    timestamps.append(pos / fps if fps > 0 else 0)
-                        finally:
-                            cap.release()
-
-                        # Run analysis
-                        analysis = scene_service.analyze_scene(
-                            frames,
-                            context=f"Analyzing video {video_path}",
-                            frame_numbers=frame_numbers,
-                            timestamps=timestamps
-                        )
-
-                        # Create knowledge base from new analysis
-                        try:
-                            vectordb = self.rag_service.create_knowledge_base(Path('tmp_content/analysis'))
-                            if vectordb:
-                                self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
-                            else:
-                                return {
-                                    "rag_response": {
-                                        "answer": "I need to analyze the video first. Would you like me to run a scene analysis?",
-                                        "sources": [],
-                                        "source_documents": []
-                                    },
-                                    "requires_analysis": True
-                                }
-                        except Exception as e:
-                            self.logger.error(f"Knowledge base creation failed: {e}")
-                            return {
-                                "rag_response": {
-                                    "answer": "I encountered an error creating the knowledge base. Would you like me to try analyzing the video again?",
-                                    "sources": [],
-                                    "source_documents": []
-                                },
-                                "requires_analysis": True
-                            }
-
-                    except Exception as e:
-                        self.logger.error(f"Auto-analysis failed: {e}")
-                        return {
-                            "error": f"Failed to run automatic analysis: {str(e)}",
-                            "requires_analysis": True
-                        }
-                else:
-                    # Check for new analysis files that haven't been processed
-                    kb_path = Path('tmp_content/knowledgebase')
-                    processed_files = set()
-                    if kb_path.exists():
-                        processed_files = {f.stem.split('_')[1] for f in kb_path.glob('analysis_*.json')}
-                    
-                    # Get unprocessed analysis files
-                    new_files = [f for f in analysis_files 
-                               if hashlib.md5(f.read_bytes()).hexdigest()[:10] not in processed_files]
-
-                    if new_files:
-                        # Process new files and update knowledge base
-                        try:
-                            vectordb = self.rag_service.create_knowledge_base(Path('tmp_content/analysis'))
-                            if not vectordb:
-                                return {"error": "Failed to create knowledge base"}
-                            self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
-                        except Exception as e:
-                            self.logger.error(f"Failed to update knowledge base: {e}")
-                            return {"error": f"Knowledge base update failed: {str(e)}"}
-                    else:
-                        # Use existing knowledge base
-                        try:
-                            store_path = kb_path / 'vector_store'
-                            if not store_path.exists():
-                                # Create new if doesn't exist
-                                vectordb = self.rag_service.create_knowledge_base(Path('tmp_content/analysis'))
-                            else:
-                                # Load existing
-                                from langchain.vectorstores.faiss import FAISS
-                                vectordb = FAISS.load_local(str(store_path), self.rag_service.embeddings)
-                            
-                            if not vectordb:
-                                return {"error": "Failed to load knowledge base"}
-                            self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
-                        except Exception as e:
-                            self.logger.error(f"Failed to load knowledge base: {e}")
-                            return {"error": f"Knowledge base loading failed: {str(e)}"}
+                self._current_chain = self.rag_service.initialize_knowledge_base(video_path)
+                if not self._current_chain:
+                    return {
+                        "rag_response": {
+                            "answer": "I need to analyze the video first. Would you like me to run a scene analysis?",
+                            "sources": []
+                        },
+                        "requires_analysis": True
+                    }
 
             # Get chat history
-            chat_history = []
-            chat_file = Path('tmp_content/chat_history') / f"{video_path}_chat.json"
-            if chat_file.exists():
-                try:
-                    with open(chat_file) as f:
-                        chat_history = json.load(f)
-                except Exception as e:
-                    self.logger.warning(f"Failed to load chat history: {e}")
+            chat_history = self._get_chat_history(video_path)
 
             # Query knowledge base
             try:
@@ -236,54 +99,83 @@ class ChatService:
                     chain=self._current_chain,
                     chat_history=chat_history[-5:] if chat_history else None
                 )
-                response_data["rag_response"] = rag_response
 
-                # Analyze response for tool suggestions
+                # Check for tool suggestions
                 tool_suggestions = self._analyze_for_tools(query, rag_response.get('answer', ''))
                 if tool_suggestions:
                     rag_response['answer'] += f"\n\n{tool_suggestions}"
-                    response_data.update({
+                    rag_response.update({
                         "requires_confirmation": True,
-                        "pending_action": tool_suggestions.split()[0],  # First word is tool name
+                        "pending_action": tool_suggestions.split()[0]
                     })
+
+                # Save chat history
+                self._save_chat_message(video_path, query, rag_response.get('answer', ''))
+
+                return {
+                    "query": query,
+                    "timestamp": time.time(),
+                    "rag_response": rag_response
+                }
 
             except Exception as e:
                 self.logger.error(f"RAG query error: {e}")
-                return {
-                    "error": str(e),
-                    "rag_response": {
-                        "answer": "I encountered an error accessing the knowledge base. Would you like me to run a new analysis?",
-                        "sources": [],
-                        "source_documents": []
-                    }
-                }
-
-            # Save chat results
-            self.content_manager.save_chat_history(
-                [{
-                    'role': 'user',
-                    'content': query
-                }, {
-                    'role': 'assistant',
-                    'content': rag_response.get('answer', '')
-                }],
-                video_path
-            )
-
-            return response_data
+                return self._format_error_response(str(e), query)
 
         except Exception as e:
             self.logger.error(f"Chat processing failed: {e}")
-            error_msg = f"I encountered an error: {str(e)}. Please try again or contact support if the issue persists."
-            return {
-                "error": error_msg,
-                "query": query,
-                "rag_response": {
-                    "answer": error_msg,
-                    "sources": [],
-                    "source_documents": []
-                }
+            return self._format_error_response(str(e), query)
+
+    def _execute_confirmed_tool(self, tool_name: str) -> Dict:
+        """Execute a confirmed tool action"""
+        for tool in self.tools:
+            if tool.name == tool_name:
+                try:
+                    result = tool.run()
+                    return {
+                        "rag_response": {
+                            "answer": f"Tool execution complete: {result}",
+                            "sources": []
+                        },
+                        "action_executed": {
+                            "action": tool.name,
+                            "status": "completed",
+                            "timestamp": time.time()
+                        }
+                    }
+                except Exception as e:
+                    return {"error": f"Tool execution failed: {str(e)}"}
+        return {"error": f"Tool {tool_name} not found"}
+
+    def _get_chat_history(self, video_path: str) -> List[Dict]:
+        """Get chat history for video"""
+        try:
+            chat_file = Path('tmp_content/chat_history') / f"{video_path}_chat.json"
+            if chat_file.exists():
+                with open(chat_file) as f:
+                    return json.load(f)
+        except Exception as e:
+            self.logger.warning(f"Failed to load chat history: {e}")
+        return []
+
+    def _save_chat_message(self, video_path: str, query: str, response: str) -> None:
+        """Save chat message to history"""
+        self.content_manager.save_chat_history([
+            {'role': 'user', 'content': query},
+            {'role': 'assistant', 'content': response}
+        ], video_path)
+
+    def _format_error_response(self, error: str, query: str) -> Dict:
+        """Format error response"""
+        error_msg = f"I encountered an error: {error}. Please try again or contact support if the issue persists."
+        return {
+            "error": error_msg,
+            "query": query,
+            "rag_response": {
+                "answer": error_msg,
+                "sources": []
             }
+        }
 
     def _analyze_for_tools(self, query: str, current_answer: str) -> Optional[str]:
         """Analyze query and current answer to suggest relevant tools"""
