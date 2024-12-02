@@ -296,10 +296,6 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         self.logger.info(f"Created {len(chunks)} chunks from {doc_stats['total_files']} files")
         return chunks
 
-    except Exception as e:
-        self.logger.error(f"Error loading results: {str(e)}")
-        return []
-    
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
         """Create or update vector store from analysis results"""
         try:
