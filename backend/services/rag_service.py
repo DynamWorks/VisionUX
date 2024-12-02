@@ -289,7 +289,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 chunks.append({
                     "text": chunk_text,
                     "metadata": {
-                        'source': str(results_path),
+                        'source': str(file_path),  # Use current file path being processed
                         'section': f"section_{i+1}",
                         'timestamp': time.time(),
                         'type': 'analysis',
@@ -389,9 +389,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             # Save comprehensive metadata
             with open(metadata_path, 'w') as f:
                 json.dump({
-                    'analysis_hash': current_hash,
                     'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-                    'file_stats': file_stats,
                     'kb_stats': kb_stats,
                     'last_update': time.time(),
                     'version': '1.0'
