@@ -180,6 +180,7 @@ class ChatService:
                         }
                 else:
                     # Use existing analysis results
+                    # Get most recently modified analysis file by comparing timestamps
                     latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
                     vectordb = self.rag_service.create_knowledge_base(latest_results)
                     if not vectordb:
