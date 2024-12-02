@@ -651,12 +651,18 @@ Question: {query}
                 
                 data = self._load_json_file(file_path)
                 if data:
-                    all_data.append(data)
-                    file_metadata[str(file_path)] = {
-                        'timestamp': file_info['mtime'],
-                        'size': file_info['size'],
-                        'type': 'analysis'
+                    # Create a properly structured analysis data entry
+                    analysis_entry = {
+                        'data': data,  # Original JSON data
+                        'metadata': {
+                            'file_path': str(file_path),
+                            'timestamp': file_info['mtime'],
+                            'size': file_info['size'],
+                            'type': 'analysis'
+                        }
                     }
+                    all_data.append(analysis_entry)
+                    file_metadata[str(file_path)] = analysis_entry['metadata']
                     
             except Exception as e:
                 self.logger.warning(f"Error processing {file_path}: {e}")
