@@ -94,8 +94,13 @@ class RAGService:
             openai_api_base=openai_api_base
         )
         self.logger = logging.getLogger(__name__)
+        # Create required directories
         self.persist_dir = Path("tmp_content/vector_store")
-        self.persist_dir.mkdir(parents=True, exist_ok=True)
+        self.kb_dir = Path("tmp_content/knowledgebase")
+        
+        for directory in [self.persist_dir, self.kb_dir]:
+            directory.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Initialized directory: {directory}")
         
     def _process_analysis_files(self, new_files: List[Path]) -> List[Dict]:
         """
@@ -209,32 +214,35 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     self.logger.warning(f"No response received for analysis file")
                     continue
                     
-                    if not hasattr(response, 'text') or not response.text:
+                    # Extract text from Gemini response
+                    text_representation = response.text if hasattr(response, 'text') else str(response)
+                    if not text_representation.strip():
                         self.logger.warning(f"Empty response for analysis file")
                         continue
 
-                    text_representation = response.text.strip()
-                    
                     # Save individual response to knowledgebase
                     kb_path = Path("tmp_content/knowledgebase")
                     kb_path.mkdir(parents=True, exist_ok=True)
                     
                     timestamp = int(time.time())
                     file_hash = hashlib.md5(json.dumps(file_data['data']).encode()).hexdigest()[:10]
-                    # Use file_data info for response file name
                     response_file = kb_path / f"analysis_{file_hash}.json"
                     
+                    # Create response data with metadata
+                    response_data = {
+                        'text': text_representation.strip(),
+                        'prompt': self._get_analysis_prompt(),
+                        'timestamp': timestamp,
+                        'metadata': {
+                            'model': 'gemini',
+                            'source_file': file_data.get('metadata', {}).get('file_path', 'unknown'),
+                            'input_data': file_data['data']
+                        }
+                    }
+                    
+                    # Save response file
                     with open(response_file, 'w') as f:
-                        json.dump({
-                            'prompt': self._get_analysis_prompt(),
-                            'response': text_representation,
-                            'timestamp': timestamp,
-                            'metadata': {
-                                'model': 'gemini',
-                                'input_data': file_data['data'],
-                                'file_metadata': {}
-                            }
-                        }, f, indent=2)
+                        json.dump(response_data, f, indent=2)
                     
                     self.logger.info(f"Saved Gemini response to {response_file}")
                     processed_texts.append(text_representation)
