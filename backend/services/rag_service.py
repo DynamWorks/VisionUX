@@ -322,87 +322,142 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             if not analysis_dir.exists():
                 return None
 
-            # Get list of processed files from metadata
-            processed_files = set()
-            if metadata_path.exists():
-                try:
-                    with open(metadata_path) as f:
-                        metadata = json.load(f)
-                        processed_files = set(metadata.get('processed_files', []))
-                except Exception as e:
-                    self.logger.warning(f"Error loading metadata: {e}")
-
-            # Find new analysis files
-            analysis_files = sorted(analysis_dir.glob("*.json"))
-            new_files = []
-            for file_path in analysis_files:
-                file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
-                if file_hash not in processed_files:
-                    new_files.append(file_path)
-                    processed_files.add(file_hash)
-
-            # Process new files if any
-            if new_files:
-                self.logger.info(f"Processing {len(new_files)} new analysis files")
-                chunks = self._load_and_chunk_results(new_files)
-            else:
-                chunks = []
-
-            # Load existing knowledge base texts
-            kb_texts = []
-            for text_file in kb_path.glob("*.json"):
-                try:
-                    with open(text_file) as f:
-                        kb_texts.append({
-                            "text": f.read(),
-                            "metadata": {
-                                'source': str(text_file),
-                                'type': 'knowledge_base'
-                            }
-                        })
-                except Exception as e:
-                    self.logger.error(f"Error reading knowledge base file {text_file}: {e}")
-
-            # Combine all documents
-            all_documents = kb_texts + chunks
-            if not all_documents:
+            # Get new analysis files
+            analysis_files = self._get_new_analysis_files(metadata_path)
+            if not analysis_files:
                 return None
 
-            # Create vector store directly from processed documents
-            vectordb = FAISS.from_texts(
-                texts=[doc["text"].strip() for doc in all_documents],
-                embedding=self.embeddings,
-                metadatas=[doc["metadata"] for doc in all_documents]
-            )
+            # Process files and generate text representations
+            processed_files = self._process_analysis_files(analysis_files)
+            text_representations = self._generate_text_representations(processed_files)
 
-            # Save store and enhanced metadata
-            kb_path.mkdir(parents=True, exist_ok=True)
-            vectordb.save_local(str(store_path))
+            # Create chunks from text representations
+            chunks = self._create_chunks(text_representations)
 
-            # Calculate knowledge base stats
-            kb_stats = {
-                'total_chunks': len(all_documents),
-                'avg_chunk_size': sum(len(d['text']) for d in all_documents) / len(all_documents),
-                'embedding_model': 'text-embedding-ada-002',
-                'vector_dimensions': 1536,  # OpenAI embedding size
-                'similarity_metric': 'cosine'
-            }
+            # Load existing knowledge base texts
+            kb_texts = self._load_existing_kb_texts(kb_path)
 
-            # Save comprehensive metadata
-            with open(metadata_path, 'w') as f:
-                json.dump({
-                    'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-                    'kb_stats': kb_stats,
-                    'last_update': time.time(),
-                    'version': '1.0'
-                }, f, indent=2)
+            # Create vector store
+            vectordb = self._create_vector_store(kb_texts + chunks, store_path)
 
-            self.logger.info(f"Created new knowledge base with {len(all_documents)} chunks from {len(analysis_files)} files")
+            # Save metadata
+            self._save_kb_metadata(metadata_path, len(chunks), len(analysis_files))
+
             return vectordb
             
         except Exception as e:
             self.logger.error(f"Error creating knowledge base: {str(e)}")
             return None
+
+    def _get_new_analysis_files(self, metadata_path: Path) -> List[Path]:
+        """Get list of new analysis files to process"""
+        processed_files = set()
+        if metadata_path.exists():
+            try:
+                with open(metadata_path) as f:
+                    metadata = json.load(f)
+                    processed_files = set(metadata.get('processed_files', []))
+            except Exception as e:
+                self.logger.warning(f"Error loading metadata: {e}")
+
+        analysis_files = sorted(Path("tmp_content/analysis").glob("*.json"))
+        new_files = []
+        
+        for file_path in analysis_files:
+            file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
+            if file_hash not in processed_files:
+                new_files.append(file_path)
+                processed_files.add(file_hash)
+
+        return new_files
+
+    def _create_chunks(self, text_representations: List[Dict]) -> List[Dict]:
+        """Create chunks from text representations"""
+        chunks = []
+        for text_rep in text_representations:
+            sections = text_rep['text'].split('\n\n')
+            
+            # Calculate chunk parameters
+            avg_length = sum(len(s) for s in sections) / len(sections)
+            chunk_overlap = min(200, int(avg_length * 0.2))
+            
+            for i, section in enumerate(sections):
+                if not section.strip():
+                    continue
+                    
+                chunk_text = section.strip()
+                
+                # Add overlap context
+                if i > 0:
+                    chunk_text = sections[i-1][-chunk_overlap:] + "\n\n" + chunk_text
+                if i < len(sections) - 1:
+                    chunk_text = chunk_text + "\n\n" + sections[i+1][:chunk_overlap]
+                    
+                chunks.append({
+                    "text": chunk_text,
+                    "metadata": {
+                        **text_rep['metadata'],
+                        'section': f"section_{i+1}",
+                        'total_sections': len(sections),
+                        'chunk_stats': {
+                            'length': len(chunk_text),
+                            'overlap': chunk_overlap,
+                            'position': i + 1
+                        }
+                    }
+                })
+                
+        return chunks
+
+    def _load_existing_kb_texts(self, kb_path: Path) -> List[Dict]:
+        """Load existing knowledge base texts"""
+        kb_texts = []
+        for text_file in kb_path.glob("*.json"):
+            try:
+                with open(text_file) as f:
+                    data = json.load(f)
+                    kb_texts.append({
+                        "text": data['text'],
+                        "metadata": {
+                            **data['metadata'],
+                            'source': str(text_file),
+                            'type': 'knowledge_base'
+                        }
+                    })
+            except Exception as e:
+                self.logger.error(f"Error reading KB file {text_file}: {e}")
+                
+        return kb_texts
+
+    def _create_vector_store(self, documents: List[Dict], store_path: Path) -> FAISS:
+        """Create FAISS vector store from documents"""
+        vectordb = FAISS.from_texts(
+            texts=[doc["text"].strip() for doc in documents],
+            embedding=self.embeddings,
+            metadatas=[doc["metadata"] for doc in documents]
+        )
+        
+        store_path.parent.mkdir(parents=True, exist_ok=True)
+        vectordb.save_local(str(store_path))
+        return vectordb
+
+    def _save_kb_metadata(self, metadata_path: Path, num_chunks: int, num_files: int):
+        """Save knowledge base metadata"""
+        kb_stats = {
+            'total_chunks': num_chunks,
+            'total_files': num_files,
+            'embedding_model': 'text-embedding-ada-002',
+            'vector_dimensions': 1536,
+            'similarity_metric': 'cosine'
+        }
+
+        with open(metadata_path, 'w') as f:
+            json.dump({
+                'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'kb_stats': kb_stats,
+                'last_update': time.time(),
+                'version': '1.0'
+            }, f, indent=2)
             
     def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQAWithSourcesChain:
         """Create retrieval chain with custom prompt"""
