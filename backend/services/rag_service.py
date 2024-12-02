@@ -124,16 +124,17 @@ class RAGService:
                         self.logger.warning(f"Skipping empty file: {file_path}")
                         continue
                         
-                    file_time = file_path.stat().st_mtime
-                    
-                    # Update document stats
-                    doc_stats['total_files'] += 1
-                    doc_stats['total_size'] += file_size
-                    if not doc_stats['oldest_file'] or file_time < doc_stats['oldest_file']:
-                        doc_stats['oldest_file'] = file_time
-                    if not doc_stats['newest_file'] or file_time > doc_stats['newest_file']:
-                        doc_stats['newest_file'] = file_time
+                file_time = file_path.stat().st_mtime
+                
+                # Update document stats
+                doc_stats['total_files'] += 1
+                doc_stats['total_size'] += file_size
+                if not doc_stats['oldest_file'] or file_time < doc_stats['oldest_file']:
+                    doc_stats['oldest_file'] = file_time
+                if not doc_stats['newest_file'] or file_time > doc_stats['newest_file']:
+                    doc_stats['newest_file'] = file_time
 
+                try:
                     with open(file_path) as f:
                         data = json.load(f)
                         # Validate expected fields
@@ -146,7 +147,6 @@ class RAGService:
                             'size': file_size,
                             'type': 'analysis'
                         }
-                        
                 except json.JSONDecodeError as e:
                     self.logger.error(f"Invalid JSON in {file_path}: {e}")
                     continue
@@ -154,11 +154,11 @@ class RAGService:
                     self.logger.warning(f"Error loading {file_path}: {e}")
                     continue
 
-            if not all_data:
-                raise ValueError("No valid analysis data found")
+        if not all_data:
+            raise ValueError("No valid analysis data found")
 
-            if not self.gemini_enabled or not self.gemini_model:
-                raise ValueError("Gemini model not initialized")
+        if not self.gemini_enabled or not self.gemini_model:
+            raise ValueError("Gemini model not initialized")
 
     def _get_analysis_prompt(self) -> str:
         """Get the analysis prompt template"""
