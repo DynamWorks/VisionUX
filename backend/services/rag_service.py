@@ -265,8 +265,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         # Calculate optimal chunk size and overlap
         avg_section_length = sum(len(s.strip()) for s in sections) / len(sections)
         chunk_overlap = min(300, int(avg_section_length * 0.3))  # 30% overlap up to 300 chars
-            
-            for i, section in enumerate(sections):
+        
+        for i, section in enumerate(sections):
                 # Skip empty sections
                 if not section.strip():
                     continue
