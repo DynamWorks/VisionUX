@@ -119,11 +119,11 @@ class RAGService:
                 if not file_path.is_file():
                     continue
                     
-                    file_size = file_path.stat().st_size
-                    if file_size == 0:
-                        self.logger.warning(f"Skipping empty file: {file_path}")
-                        continue
-                        
+                file_size = file_path.stat().st_size
+                if file_size == 0:
+                    self.logger.warning(f"Skipping empty file: {file_path}")
+                    continue
+                    
                 file_time = file_path.stat().st_mtime
                 
                 # Update document stats
