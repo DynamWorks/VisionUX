@@ -37,3 +37,6 @@ logs/
 tmp_content/
 models/
 node_modules/
+
+unknown_video_analysis_1732865618_1732865618.json
+*.pem

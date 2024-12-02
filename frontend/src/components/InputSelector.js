@@ -1,31 +1,69 @@
 import React from 'react';
-import { Box, ToggleButtonGroup, ToggleButton, Typography } from '@mui/material';
+import { Box, ToggleButtonGroup, ToggleButton, useTheme, useMediaQuery } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
+import useStore from '../store';
 
-const InputSelector = ({ inputType, setInputType }) => {
+const InputSelector = () => {
+    const { inputMode, setInputMode } = useStore();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+    const handleModeChange = (event, newMode) => {
+        if (newMode !== null) {
+            setInputMode(newMode);
+        }
+    };
+
     return (
-        <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-                Select Input Source
-            </Typography>
+        <Box sx={{ mb: 2 }}>
             <ToggleButtonGroup
-                value={inputType}
+                value={inputMode}
                 exclusive
-                onChange={(e, newValue) => {
-                    if (newValue !== null) {
-                        setInputType(newValue);
+                onChange={handleModeChange}
+                aria-label="input mode"
+                fullWidth
+                size={isMobile ? 'small' : 'medium'}
+                sx={{
+                    bgcolor: '#1a1a1a',
+                    '& .MuiToggleButton-root': {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        '&.Mui-selected': {
+                            color: 'white',
+                            bgcolor: '#2e7d32',
+                            '&:hover': {
+                                bgcolor: '#1b5e20'
+                            }
+                        },
+                        '&:hover': {
+                            bgcolor: 'rgba(46, 125, 50, 0.1)'
+                        }
                     }
                 }}
-                fullWidth
             >
-                <ToggleButton value="camera" aria-label="camera">
-                    <VideocamIcon sx={{ mr: 1 }} />
+                <ToggleButton 
+                    value="camera" 
+                    aria-label="camera"
+                    sx={{
+                        display: 'flex',
+                        gap: 1,
+                        py: 1.5
+                    }}
+                >
+                    <VideocamIcon />
                     Camera
                 </ToggleButton>
-                <ToggleButton value="upload" aria-label="upload">
-                    <VideoFileIcon sx={{ mr: 1 }} />
-                    Upload Video
+                <ToggleButton 
+                    value="upload" 
+                    aria-label="upload"
+                    sx={{
+                        display: 'flex',
+                        gap: 1,
+                        py: 1.5
+                    }}
+                >
+                    <VideoFileIcon />
+                    Upload
                 </ToggleButton>
             </ToggleButtonGroup>
         </Box>

@@ -1,28 +1,35 @@
 from abc import ABC, abstractmethod
-import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-class MessageHandler(ABC):
-    """Base interface for WebSocket message handlers"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+class HandlerInterface(ABC):
+    """Interface for all handlers"""
     
     @abstractmethod
-    async def handle(self, websocket: Any, message: Dict) -> None:
-        """Handle incoming WebSocket message"""
+    def handle(self, data: Any) -> Dict:
+        """Handle incoming data and return response"""
         pass
-    
-    async def send_response(self, websocket: Any, data: Dict) -> None:
-        """Send response through WebSocket"""
-        try:
-            await websocket.send_json(data)
-        except Exception as e:
-            self.logger.error(f"Error sending response: {e}")
-            
-    async def send_error(self, websocket: Any, error: str) -> None:
-        """Send error response"""
-        await self.send_response(websocket, {
-            'type': 'error',
-            'error': str(error)
-        })
+
+    @abstractmethod
+    def validate(self, data: Any) -> bool:
+        """Validate incoming data"""
+        pass
+
+    @abstractmethod
+    def get_name(self) -> str:
+        """Get handler name"""
+        pass
+
+    @abstractmethod
+    def get_type(self) -> str:
+        """Get handler type"""
+        pass
+
+    @abstractmethod
+    def get_status(self) -> Dict:
+        """Get handler status"""
+        pass
+
+    @abstractmethod
+    def cleanup(self) -> None:
+        """Cleanup handler resources"""
+        pass

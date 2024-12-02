@@ -1,6 +1,6 @@
 import React from 'react';
-import { AppBar, Toolbar, Box } from '@mui/material';
-import RestartControls from './RestartControls';
+import { AppBar, Toolbar, Box, Button } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import logo from '../assets/logo.png';
 
 const Header = ({ onRestartWebSockets }) => {
@@ -18,9 +18,15 @@ const Header = ({ onRestartWebSockets }) => {
                             }}
                         />
                     </Box>
-                    <RestartControls 
-                        onRestartWebSockets={onRestartWebSockets}
-                    />
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<RefreshIcon />}
+                        onClick={onRestartWebSockets}
+                        sx={{ color: 'white', borderColor: 'white' }}
+                    >
+                        Restart WebSocket
+                    </Button>
                 </Box>
             </Toolbar>
         </AppBar>
