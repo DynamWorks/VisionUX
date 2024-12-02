@@ -237,7 +237,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     timestamp = int(time.time())
                     file_hash = hashlib.md5(json.dumps(analysis_data).encode()).hexdigest()[:10]
                     # Use same name as analysis file but as .txt
-                    response_file = kb_path / f"{file_path.stem}.txt"
+                    response_file = kb_path / f"{file_path.stem}.json"
                     
                     with open(response_file, 'w') as f:
                         json.dump({
@@ -310,6 +310,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         except Exception as e:
             self.logger.error(f"Error loading results: {str(e)}")
             return []
+        
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
         """Create or update vector store from analysis results"""
         try:
@@ -349,7 +350,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
             # Load existing knowledge base texts
             kb_texts = []
-            for text_file in kb_path.glob("*.txt"):
+            for text_file in kb_path.glob("*.json"):
                 try:
                     with open(text_file) as f:
                         kb_texts.append({
