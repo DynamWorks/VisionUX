@@ -179,13 +179,44 @@ class ChatService:
                             "requires_analysis": True
                         }
                 else:
-                    # Use existing analysis results
-                    # Get most recently modified analysis file by comparing timestamps
-                    latest_results = max(analysis_files, key=lambda p: p.stat().st_mtime)
-                    vectordb = self.rag_service.create_knowledge_base(latest_results)
-                    if not vectordb:
-                        return {"error": "Failed to create knowledge base"}
-                    self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                    # Check for new analysis files that haven't been processed
+                    kb_path = Path('tmp_content/knowledgebase')
+                    processed_files = set()
+                    if kb_path.exists():
+                        processed_files = {f.stem.split('_')[1] for f in kb_path.glob('analysis_*.json')}
+                    
+                    # Get unprocessed analysis files
+                    new_files = [f for f in analysis_files 
+                               if hashlib.md5(f.read_bytes()).hexdigest()[:10] not in processed_files]
+
+                    if new_files:
+                        # Process new files and update knowledge base
+                        try:
+                            vectordb = self.rag_service.create_knowledge_base(Path('tmp_content/analysis'))
+                            if not vectordb:
+                                return {"error": "Failed to create knowledge base"}
+                            self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                        except Exception as e:
+                            self.logger.error(f"Failed to update knowledge base: {e}")
+                            return {"error": f"Knowledge base update failed: {str(e)}"}
+                    else:
+                        # Use existing knowledge base
+                        try:
+                            store_path = kb_path / 'vector_store'
+                            if not store_path.exists():
+                                # Create new if doesn't exist
+                                vectordb = self.rag_service.create_knowledge_base(Path('tmp_content/analysis'))
+                            else:
+                                # Load existing
+                                from langchain.vectorstores.faiss import FAISS
+                                vectordb = FAISS.load_local(str(store_path), self.rag_service.embeddings)
+                            
+                            if not vectordb:
+                                return {"error": "Failed to load knowledge base"}
+                            self._current_chain = self.rag_service.get_retrieval_chain(vectordb)
+                        except Exception as e:
+                            self.logger.error(f"Failed to load knowledge base: {e}")
+                            return {"error": f"Knowledge base loading failed: {str(e)}"}
 
             # Get chat history
             chat_history = []
