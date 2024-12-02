@@ -209,43 +209,43 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     {"text": self._get_analysis_prompt()},
                     {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
                 ])
-
+                
                 if not response:
                     self.logger.warning(f"No response received for analysis file")
                     continue
                     
-                    # Extract text from Gemini response
-                    text_representation = response.text if hasattr(response, 'text') else str(response)
-                    if not text_representation.strip():
-                        self.logger.warning(f"Empty response for analysis file")
-                        continue
+                # Extract text from Gemini response
+                text_representation = response.text if hasattr(response, 'text') else str(response)
+                if not text_representation.strip():
+                    self.logger.warning(f"Empty response for analysis file")
+                    continue
 
-                    # Save individual response to knowledgebase
-                    kb_path = Path("tmp_content/knowledgebase")
-                    kb_path.mkdir(parents=True, exist_ok=True)
-                    
-                    timestamp = int(time.time())
-                    file_hash = hashlib.md5(json.dumps(file_data['data']).encode()).hexdigest()[:10]
-                    response_file = kb_path / f"analysis_{file_hash}.json"
-                    
-                    # Create response data with metadata
-                    response_data = {
-                        'text': text_representation.strip(),
-                        'prompt': self._get_analysis_prompt(),
-                        'timestamp': timestamp,
-                        'metadata': {
-                            'model': 'gemini',
-                            'source_file': file_data.get('metadata', {}).get('file_path', 'unknown'),
-                            'input_data': file_data['data']
-                        }
+                # Save individual response to knowledgebase
+                kb_path = Path("tmp_content/knowledgebase")
+                kb_path.mkdir(parents=True, exist_ok=True)
+                
+                timestamp = int(time.time())
+                file_hash = hashlib.md5(json.dumps(file_data['data']).encode()).hexdigest()[:10]
+                response_file = kb_path / f"analysis_{file_hash}.json"
+                
+                # Create response data with metadata
+                response_data = {
+                    'text': text_representation.strip(),
+                    'prompt': self._get_analysis_prompt(),
+                    'timestamp': timestamp,
+                    'metadata': {
+                        'model': 'gemini',
+                        'source_file': file_data.get('metadata', {}).get('file_path', 'unknown'),
+                        'input_data': file_data['data']
                     }
-                    
-                    # Save response file
-                    with open(response_file, 'w') as f:
-                        json.dump(response_data, f, indent=2)
-                    
-                    self.logger.info(f"Saved Gemini response to {response_file}")
-                    processed_texts.append(text_representation)
+                }
+                
+                # Save response file
+                with open(response_file, 'w') as f:
+                    json.dump(response_data, f, indent=2)
+                
+                self.logger.info(f"Saved Gemini response to {response_file}")
+                processed_texts.append(text_representation)
 
             except Exception as e:
                 self.logger.error(f"Failed to process analysis file: {e}")
