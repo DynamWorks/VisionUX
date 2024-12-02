@@ -104,9 +104,9 @@ class RAGService:
 
         all_data = []
         file_metadata = {}
-            
-            # Track document stats
-            doc_stats = {
+        
+        # Track document stats
+        doc_stats = {
                 'total_files': 0,
                 'total_size': 0,
                 'oldest_file': None,
@@ -230,10 +230,10 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
                 ])
 
-                    if not response:
-                        self.logger.warning(f"No response received for analysis file")
-                        continue
-                        
+                if not response:
+                    self.logger.warning(f"No response received for analysis file")
+                    continue
+                    
                     if not hasattr(response, 'text') or not response.text:
                         self.logger.warning(f"Empty response for analysis file")
                         continue
@@ -264,12 +264,12 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     self.logger.info(f"Saved Gemini response to {response_file}")
                     processed_texts.append(text_representation)
 
-                except Exception as e:
-                    self.logger.error(f"Failed to process analysis file: {e}")
-                    continue
+            except Exception as e:
+                self.logger.error(f"Failed to process analysis file: {e}")
+                continue
 
-            if not processed_texts:
-                raise ValueError("No analysis files were successfully processed")
+        if not processed_texts:
+            raise ValueError("No analysis files were successfully processed")
                 
             # Combine all processed texts
             text_representation = "\n\n".join(processed_texts)
