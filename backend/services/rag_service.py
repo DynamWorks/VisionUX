@@ -108,7 +108,7 @@ class RAGService:
             List of processed analysis data dictionaries
             
         Raises:
-            ValueError: If no valid data found or Gemini not initialized
+            ValueError: If no valid data found
         """
         if not new_files:
             return []
@@ -121,10 +121,13 @@ class RAGService:
             all_data, file_metadata = self._process_files(new_files, doc_stats)
             
             if not all_data:
-                raise ValueError("No valid analysis data found")
+                self.logger.warning("No valid analysis data found in files")
+                return []
 
+            # Don't require Gemini for initial processing
             if not self.gemini_enabled or not self.gemini_model:
-                raise ValueError("Gemini model not initialized")
+                self.logger.warning("Gemini not available - skipping text generation")
+                return all_data
                 
             return all_data
 
@@ -304,17 +307,36 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             store_path = kb_path / 'vector_store'
             metadata_path = kb_path / 'metadata.json'
 
+            # Create required directories
+            kb_path.mkdir(parents=True, exist_ok=True)
+            store_path.mkdir(parents=True, exist_ok=True)
+
             if not analysis_dir.exists():
+                self.logger.warning("Analysis directory does not exist")
                 return None
 
             # Get new analysis files
             analysis_files = self._get_new_analysis_files(metadata_path)
             if not analysis_files:
-                return None
+                self.logger.warning("No new analysis files found")
+                return self._load_existing_store(store_path)
 
             # Process files and generate text representations
             processed_files = self._process_analysis_files(analysis_files)
-            text_representations = self._generate_text_representations(processed_files)
+            if not processed_files:
+                self.logger.warning("No files were successfully processed")
+                return self._load_existing_store(store_path)
+
+            # Generate text representations if Gemini is available
+            text_representations = []
+            if self.gemini_enabled and self.gemini_model:
+                text_representations = self._generate_text_representations(processed_files)
+            else:
+                # Use raw analysis data if Gemini not available
+                text_representations = [{
+                    'text': str(file_data.get('data', {})),
+                    'metadata': file_data.get('metadata', {})
+                } for file_data in processed_files]
 
             # Create chunks from text representations
             chunks = self._create_chunks(text_representations)
