@@ -604,7 +604,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 }, f, indent=2)
 
                 self.logger.info(f"Created vector store with {len(texts)} documents")
-            return vectordb
+                return vectordb
 
         except Exception as e:
             self.logger.error(f"Error creating vector store: {e}")
