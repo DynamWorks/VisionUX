@@ -16,72 +16,73 @@ class SceneAnalysisTool(BaseTool):
         super().__init__()
         self.scene_service = scene_service
         
-    def _run(self, **kwargs) -> str:
+    def _run(self, video_path: Path = None, **kwargs) -> str:
+        """Run scene analysis on video file or frames"""
         try:
-            result = self.scene_service.analyze_scene(**kwargs)
-            return f"Scene analysis completed: {result['scene_analysis']['description']}"
+            if video_path:
+                # Import here to avoid circular imports
+                from backend.services import SceneAnalysisService
+                self.scene_service = SceneAnalysisService()
+                
+                # Get video path
+                video_file = Path("tmp_content/uploads") / video_path.name
+                if not video_file.exists():
+                    raise ValueError(f"Video file not found: {video_file}")
+                    
+                # Create video capture
+                cap = cv2.VideoCapture(str(video_file))
+                if not cap.isOpened():
+                    raise ValueError("Failed to open video file")
+                    
+                try:
+                    # Sample frames for analysis
+                    frames = []
+                    frame_numbers = []
+                    timestamps = []
+                    
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    interval = max(1, total_frames // 8)  # Sample 8 frames
+                    
+                    for i in range(8):
+                        frame_pos = i * interval
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
+                        ret, frame = cap.read()
+                        if ret:
+                            frames.append(frame)
+                            frame_numbers.append(frame_pos)
+                            timestamps.append(frame_pos / fps if fps > 0 else 0)
+                finally:
+                    cap.release()
+                    
+                if not frames:
+                    raise ValueError("Failed to capture frames for analysis")
+                    
+                # Perform scene analysis
+                analysis = self.scene_service.analyze_scene(
+                    frames,
+                    context=str({
+                        'video_file': video_path.name,
+                        'source_type': 'video',
+                        'timestamp': time.time()
+                    }),
+                    frame_numbers=frame_numbers,
+                    timestamps=timestamps
+                )
+                
+                if not analysis:
+                    raise ValueError("Analysis failed")
+                    
+                return f"Scene analysis completed: {analysis['scene_analysis']['description']}"
+                
+            else:
+                # Handle direct frame analysis
+                result = self.scene_service.analyze_scene(**kwargs)
+                return f"Scene analysis completed: {result['scene_analysis']['description']}"
+                
         except Exception as e:
             logger.error(f"Scene analysis error: {e}")
             raise
-            
-    def analyze_video(self, video_path: Path) -> bool:
-        """Analyze video file and generate scene analysis"""
-        try:
-            # Import here to avoid circular imports
-            from backend.services import SceneAnalysisService
-            self.scene_service = SceneAnalysisService()
-            
-            # Get video path
-            video_file = Path("tmp_content/uploads") / video_path.name
-            if not video_file.exists():
-                raise ValueError(f"Video file not found: {video_file}")
-                
-            # Create video capture
-            cap = cv2.VideoCapture(str(video_file))
-            if not cap.isOpened():
-                raise ValueError("Failed to open video file")
-                
-            try:
-                # Sample frames for analysis
-                frames = []
-                frame_numbers = []
-                timestamps = []
-                
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                interval = max(1, total_frames // 8)  # Sample 8 frames
-                
-                for i in range(8):
-                    frame_pos = i * interval
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
-                    ret, frame = cap.read()
-                    if ret:
-                        frames.append(frame)
-                        frame_numbers.append(frame_pos)
-                        timestamps.append(frame_pos / fps if fps > 0 else 0)
-            finally:
-                cap.release()
-                
-            if not frames:
-                raise ValueError("Failed to capture frames for analysis")
-                
-            # Perform scene analysis
-            analysis = self.scene_service.analyze_scene(
-                frames,
-                context=str({
-                    'video_file': video_path.name,
-                    'source_type': 'video',
-                    'timestamp': time.time()
-                }),
-                frame_numbers=frame_numbers,
-                timestamps=timestamps
-            )
-            
-            return True if analysis else False
-            
-        except Exception as e:
-            logger.error(f"Video analysis failed: {e}")
-            return False
 
 class ObjectDetectionTool(BaseTool):
     name: str = "object_detection" 
