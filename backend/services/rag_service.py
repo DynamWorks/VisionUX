@@ -736,6 +736,19 @@ Response Format:
                 fetch_k=20
             )
 
+            # Get vectordb from chain
+            vectordb = chain.retriever.vectorstore if hasattr(chain, 'retriever') else None
+            if not vectordb:
+                raise ValueError("No vector store available in chain")
+
+            # Get relevant documents using vectordb directly
+            relevant_docs = vectordb.similarity_search_with_score(
+                query,
+                k=5,
+                score_threshold=0.6,
+                fetch_k=20
+            )
+
             # Query the chain with proper input format
             chain_response = chain({
                 "input_documents": [doc[0] for doc in relevant_docs],
@@ -749,11 +762,11 @@ Response Format:
                 "sources": chain_response.get("sources", []),
                 "source_documents": [
                     {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
-                        "score": getattr(doc, "score", None)
+                        "content": doc[0].page_content,
+                        "metadata": doc[0].metadata,
+                        "score": doc[1]  # Include similarity score
                     }
-                    for doc in chain_response.get("source_documents", [])
+                    for doc in relevant_docs
                 ]
             }
 
