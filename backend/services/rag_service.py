@@ -718,8 +718,8 @@ Question: {query}
                 
             # Query the chain
             try:
-                # Use the chain's invoke method with proper input format
-                chain_response = chain.invoke({
+                # Use the chain's call method with proper input format
+                chain_response = chain({
                     "question": enhanced_query,
                     "chat_history": chat_context if chat_context else []
                 })
