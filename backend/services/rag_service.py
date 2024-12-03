@@ -654,7 +654,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         prompt_template = """You are an AI assistant analyzing video content. Use the following analysis context to answer questions about the video.
 
 Context from Analysis:
-{summaries}
+{context}
 
 Chat History:
 {chat_history}
@@ -675,7 +675,7 @@ Provide your response in natural language, focusing on being informative and hel
         # Create prompt with improved input variables
         PROMPT = PromptTemplate(
             template=prompt_template,
-            input_variables=["summaries", "question", "chat_history"]
+            input_variables=["context", "question", "chat_history"]
         )
 
         # Create chain with enhanced configuration
@@ -748,7 +748,7 @@ Provide your response in natural language, focusing on being informative and hel
 
             # Query the chain with proper input format and context using invoke
             chain_response = chain.invoke({
-                "summaries": [doc[0].page_content for doc in relevant_docs],
+                "context": "\n\n".join([doc[0].page_content for doc in relevant_docs]),
                 "question": query,
                 "chat_history": formatted_history
             })
