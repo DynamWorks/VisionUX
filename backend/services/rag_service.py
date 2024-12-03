@@ -591,7 +591,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     raise ValueError("Vector store save failed - store directory not created")
 
             # Save metadata about the store
-            with open(store_path / 'metadata.json', 'w') as f:
+            metadata_path = store_path / 'metadata.json'
+            with open(str(metadata_path), 'w') as f:
                 json.dump({
                     'num_documents': len(texts),
                     'embedding_dim': dimension,
