@@ -644,6 +644,12 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             }
         )
 
+        # Create memory for chat history
+        memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True
+        )
+
         # Enhanced prompt template
         prompt_template = """You are an AI assistant analyzing video content. Use the following analysis context to answer questions about the video.
 
@@ -680,18 +686,19 @@ Response Format:
         )
 
         # Create chain with enhanced configuration
-        return RetrievalQAWithSourcesChain.from_chain_type(
+        chain = RetrievalQAWithSourcesChain.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
             retriever=retriever,
             return_source_documents=True,
+            memory=memory,
             chain_type_kwargs={
                 "prompt": PROMPT,
                 "document_variable_name": "summaries",
-                "verbose": True,
-                "memory_key": "chat_history"
+                "verbose": True
             }
         )
+        return chain
         
     def query_knowledge_base(self, query: str, chain: Optional[RetrievalQAWithSourcesChain] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
