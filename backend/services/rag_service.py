@@ -196,7 +196,7 @@ Generate a comprehensive, structured text representation that captures 100% of t
 Focus on maximum detail and complete accuracy. Do not summarize or omit any information."""
 
     def _generate_text_representations(self, analysis_files: List[Dict]) -> List[Dict]:
-        """Generate text representations using Gemini"""
+        """Generate text representations using Gemini with enhanced error handling and retries"""
         if not analysis_files:
             return []
             
@@ -207,54 +207,78 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         kb_path.mkdir(parents=True, exist_ok=True)
         
         processed_texts = []
+        max_retries = 3
+        retry_delay = 1  # seconds
         
         for file_data in analysis_files:
-            try:
-                response = self.gemini_model.generate_content([
-                    {"text": self._get_analysis_prompt()},
-                    {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
-                ])
-                
-                if not response:
-                    self.logger.warning(f"No response received for analysis file")
-                    continue
+            for attempt in range(max_retries):
+                try:
+                    # Enhanced prompt with structured sections
+                    prompt_sections = [
+                        {"text": "Task: Generate a detailed text representation of video analysis data"},
+                        {"text": "Required sections:\n1. Scene Description\n2. Object Analysis\n3. Activity Timeline\n4. Technical Details\n5. Metadata Summary"},
+                        {"text": self._get_analysis_prompt()},
+                        {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
+                    ]
                     
-                # Extract text from Gemini response
-                text_representation = response.text if hasattr(response, 'text') else str(response)
-                if not text_representation.strip():
-                    self.logger.warning(f"Empty response for analysis file")
-                    continue
+                    response = self.gemini_model.generate_content(prompt_sections)
+                    
+                    if not response:
+                        raise ValueError("Empty response from model")
+                    
+                    # Extract and validate text
+                    text_representation = response.text if hasattr(response, 'text') else str(response)
+                    if not text_representation.strip():
+                        raise ValueError("Empty text representation")
 
-                # Save individual response to knowledgebase
-                kb_path = Path("tmp_content/knowledgebase")
-                kb_path.mkdir(parents=True, exist_ok=True)
-                
-                timestamp = int(time.time())
-                file_hash = hashlib.md5(json.dumps(file_data['data']).encode()).hexdigest()[:10]
-                response_file = kb_path / f"analysis_{file_hash}.json"
-                
-                # Create response data with metadata
-                response_data = {
-                    'text': text_representation.strip(),
-                    'prompt': self._get_analysis_prompt(),
-                    'timestamp': timestamp,
-                    'metadata': {
+                    # Generate unique identifier
+                    content_hash = hashlib.sha256(
+                        (text_representation + str(time.time())).encode()
+                    ).hexdigest()[:16]
+                    
+                    # Enhanced metadata
+                    metadata = {
                         'model': 'gemini',
+                        'model_version': getattr(self.gemini_model, 'version', 'unknown'),
                         'source_file': file_data.get('metadata', {}).get('file_path', 'unknown'),
-                        'input_data': file_data['data']
+                        'generation_time': time.strftime('%Y-%m-%d %H:%M:%S'),
+                        'content_hash': content_hash,
+                        'input_data_hash': hashlib.md5(
+                            json.dumps(file_data['data']).encode()
+                        ).hexdigest(),
+                        'processing_stats': {
+                            'attempt': attempt + 1,
+                            'timestamp': time.time(),
+                            'text_length': len(text_representation)
+                        }
                     }
-                }
-                
-                # Save response file
-                with open(response_file, 'w') as f:
-                    json.dump(response_data, f, indent=2)
-                
-                self.logger.info(f"Saved Gemini response to {response_file}")
-                processed_texts.append(text_representation)
-
-            except Exception as e:
-                self.logger.error(f"Failed to process analysis file: {e}")
-                continue
+                    
+                    # Save response with enhanced structure
+                    response_file = kb_path / f"analysis_{content_hash}.json"
+                    response_data = {
+                        'text': text_representation.strip(),
+                        'prompt': prompt_sections,
+                        'metadata': metadata,
+                        'source_data': {
+                            'type': file_data.get('metadata', {}).get('type', 'unknown'),
+                            'timestamp': file_data.get('metadata', {}).get('timestamp'),
+                            'hash': metadata['input_data_hash']
+                        }
+                    }
+                    
+                    with open(response_file, 'w') as f:
+                        json.dump(response_data, f, indent=2)
+                    
+                    self.logger.info(f"Successfully generated and saved text representation: {response_file}")
+                    processed_texts.append(response_data)
+                    break  # Success - exit retry loop
+                    
+                except Exception as e:
+                    self.logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                    else:
+                        self.logger.error(f"Failed to process file after {max_retries} attempts")
 
         if not processed_texts:
             self.logger.warning("No analysis files were successfully processed")
@@ -387,56 +411,90 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             List of chunk dicts with text and metadata
         """
         chunks = []
+        chunk_size = 1000  # Base chunk size
+        min_chunk_size = 500  # Minimum chunk size
+        max_chunk_size = 1500  # Maximum chunk size
+        
+        def calculate_optimal_chunk_size(text: str) -> int:
+            """Calculate optimal chunk size based on text characteristics"""
+            avg_sentence_length = len(text.split('.'))
+            return min(max_chunk_size, max(min_chunk_size, 
+                int(avg_sentence_length * 100)))  # ~100 chars per sentence
+        
+        def add_chunk_with_context(text: str, index: int, total: int, metadata: Dict) -> None:
+            """Add chunk with surrounding context and metadata"""
+            chunk_text = text.strip()
+            if not chunk_text:
+                return
+                
+            # Add chunk with enhanced metadata
+            chunks.append({
+                "text": chunk_text,
+                "metadata": {
+                    **metadata,
+                    'chunk_index': index,
+                    'total_chunks': total,
+                    'timestamp': time.time(),
+                    'chunk_stats': {
+                        'length': len(chunk_text),
+                        'sentences': len(chunk_text.split('.')),
+                        'words': len(chunk_text.split()),
+                        'relative_position': index / total
+                    }
+                }
+            })
         
         # Handle single text string
         if isinstance(text_input, str):
             sections = text_input.split("=== Section Break ===" if "=== Section Break ===" in text_input else separator)
-            base_metadata = {
-                'type': 'analysis',
-                'timestamp': time.time()
-            }
+            chunk_size = calculate_optimal_chunk_size(text_input)
+            
+            for i, section in enumerate(sections):
+                if not section.strip():
+                    continue
+                    
+                # Split long sections into smaller chunks
+                section_chunks = [section[j:j+chunk_size] for j in range(0, len(section), chunk_size)]
+                
+                for k, chunk in enumerate(section_chunks):
+                    add_chunk_with_context(
+                        chunk,
+                        k + 1,
+                        len(section_chunks),
+                        {
+                            'type': 'analysis',
+                            'section': f"section_{i+1}",
+                            'total_sections': len(sections),
+                            'source_type': 'single_text'
+                        }
+                    )
+                    
         # Handle list of text representations
         else:
-            text_reps = text_input
-            for text_rep in text_reps:
+            for text_rep in text_input:
+                if not isinstance(text_rep, dict) or 'text' not in text_rep:
+                    continue
+                    
+                chunk_size = calculate_optimal_chunk_size(text_rep['text'])
                 sections = text_rep['text'].split(separator)
                 base_metadata = text_rep.get('metadata', {})
                 
-                if not any(sections):
-                    continue
-                
-                # Calculate optimal chunk parameters
-                avg_length = sum(len(s.strip()) for s in sections) / len(sections)
-                chunk_overlap = min(300, int(avg_length * 0.3))  # 30% overlap up to 300 chars
-                
                 for i, section in enumerate(sections):
-                    if not section.strip():
-                        continue
-                        
-                    chunk_text = section.strip()
+                    section_chunks = [section[j:j+chunk_size] for j in range(0, len(section), chunk_size)]
                     
-                    # Add context from adjacent sections
-                    if i > 0:
-                        chunk_text = sections[i-1][-chunk_overlap:].strip() + "\n\n" + chunk_text
-                    if i < len(sections) - 1:
-                        chunk_text = chunk_text + "\n\n" + sections[i+1][:chunk_overlap].strip()
-                    
-                    # Create chunk with metadata
-                    chunks.append({
-                        "text": chunk_text,
-                        "metadata": {
-                            **base_metadata,
-                            'section': f"section_{i+1}",
-                            'total_sections': len(sections),
-                            'chunk_stats': {
-                                'length': len(chunk_text),
-                                'overlap': chunk_overlap,
-                                'position': i + 1,
-                                'source_type': 'single_text' if isinstance(text_input, str) else 'text_representation'
+                    for k, chunk in enumerate(section_chunks):
+                        add_chunk_with_context(
+                            chunk,
+                            k + 1,
+                            len(section_chunks),
+                            {
+                                **base_metadata,
+                                'section': f"section_{i+1}",
+                                'total_sections': len(sections),
+                                'source_type': 'text_representation'
                             }
-                        }
-                    })
-                
+                        )
+        
         return chunks
 
     def _load_existing_kb_texts(self, kb_path: Path) -> List[Dict]:
