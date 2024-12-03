@@ -728,13 +728,21 @@ Response Format:
                     elif role == 'assistant':
                         formatted_history.append(AIMessage(content=content))
 
-            # Get vectordb from chain
-            vectordb = chain.retriever.vectorstore if hasattr(chain, 'retriever') else None
+            # Get vectordb from chain or create new chain if needed
+            vectordb = None
+            if hasattr(chain, 'retriever'):
+                vectordb = chain.retriever.vectorstore
+            
             if not vectordb:
-                raise ValueError("No vector store available in chain")
+                # Try to load existing store
+                vectordb = self._load_existing_store(Path("tmp_content/knowledgebase/vector_store"))
+                if not vectordb:
+                    raise ValueError("No vector store available and could not load from disk")
+                # Create new chain with loaded store
+                chain = self.get_retrieval_chain(vectordb)
 
-            # Get relevant documents with enhanced parameters
-            relevant_docs = vectordb.similarity_search_with_score(
+            # Get relevant documents with enhanced parameters 
+            relevant_docs = vectordb.similarity_search_with_score( 
                 query,
                 k=8,  # Increased for better coverage
                 score_threshold=0.5,  # Slightly lower threshold for more results
