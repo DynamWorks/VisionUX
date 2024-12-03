@@ -474,11 +474,35 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
     def _create_vector_store(self, documents: List[Dict], store_path: Path) -> FAISS:
         """Create FAISS vector store from documents"""
-        vectordb = FAISS.from_texts(
-            texts=[doc["text"].strip() for doc in documents],
-            embedding=self.embeddings,
-            metadatas=[doc["metadata"] for doc in documents]
+        # Create embeddings for texts
+        texts = [doc["text"].strip() for doc in documents]
+        embeddings = self.embeddings.embed_documents(texts)
+        
+        # Initialize FAISS index
+        import faiss
+        dimension = len(embeddings[0])  # Get embedding dimension
+        index = faiss.IndexFlatL2(dimension)
+        
+        # Add embeddings to index
+        faiss.normalize_L2(embeddings)  # Normalize vectors
+        index.add(embeddings)
+        
+        # Create FAISS vectorstore
+        vectordb = FAISS(
+            embedding_function=self.embeddings,
+            index=index,
+            docstore=InMemoryDocstore({}),
+            index_to_docstore_id={i: f"doc_{i}" for i in range(len(texts))}
         )
+        
+        # Add documents to docstore
+        for i, (text, metadata) in enumerate(zip(texts, [doc["metadata"] for doc in documents])):
+            vectordb.docstore.add({
+                f"doc_{i}": Document(
+                    page_content=text,
+                    metadata=metadata
+                )
+            })
         
         store_path.parent.mkdir(parents=True, exist_ok=True)
         vectordb.save_local(str(store_path))
