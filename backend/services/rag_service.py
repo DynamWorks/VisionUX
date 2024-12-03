@@ -332,68 +332,18 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             # Get new analysis files
             analysis_files = self._get_new_analysis_files(metadata_path)
             
-            # If no analysis files exist, trigger scene analysis
+            # If no analysis files exist, use scene analysis tool
             if not analysis_files and not any(analysis_dir.glob("*.json")):
-                self.logger.info("No analysis files found - triggering scene analysis")
+                self.logger.info("No analysis files found - using scene analysis tool")
                 try:
-                    from backend.services import SceneAnalysisService
-                    scene_service = SceneAnalysisService()
+                    from backend.core.analysis_tools import SceneAnalysisTool
+                    scene_tool = SceneAnalysisTool(None)  # Pass None since we'll set params directly
                     
-                    # Get video path from results_path
-                    video_path = Path("tmp_content/uploads") / results_path.name
-                    if not video_path.exists():
-                        raise ValueError(f"Video file not found: {video_path}")
+                    # Trigger analysis
+                    result = scene_tool.analyze_video(results_path)
+                    if result:
+                        return self.create_knowledge_base(results_path)
                         
-                    # Create video capture
-                    cap = cv2.VideoCapture(str(video_path))
-                    if not cap.isOpened():
-                        raise ValueError("Failed to open video file")
-                        
-                    try:
-                        # Sample frames for analysis
-                        frames = []
-                        frame_numbers = []
-                        timestamps = []
-                        
-                        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                        fps = cap.get(cv2.CAP_PROP_FPS)
-                        interval = max(1, total_frames // 8)  # Sample 8 frames
-                        
-                        for i in range(8):
-                            frame_pos = i * interval
-                            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
-                            ret, frame = cap.read()
-                            if ret:
-                                frames.append(frame)
-                                frame_numbers.append(frame_pos)
-                                timestamps.append(frame_pos / fps if fps > 0 else 0)
-                    finally:
-                        cap.release()
-                        
-                    if not frames:
-                        raise ValueError("Failed to capture frames for analysis")
-                        
-                    # Perform scene analysis
-                    analysis = scene_service.analyze_scene(
-                        frames,
-                        context=str({
-                            'video_file': results_path.name,
-                            'source_type': 'video',
-                            'timestamp': time.time()
-                        }),
-                        frame_numbers=frame_numbers,
-                        timestamps=timestamps
-                    )
-                    
-                    # # Save analysis results
-                    # analysis_id = f"scene_analysis_{int(time.time())}"
-                    # from backend.content_manager import ContentManager
-                    # content_manager = ContentManager()
-                    # content_manager.save_analysis(analysis, analysis_id)
-                    
-                    # Retry creating knowledge base now that we have analysis
-                    return self.create_knowledge_base(results_path)
-                    
                 except Exception as e:
                     self.logger.error(f"Auto scene analysis failed: {e}")
                     return None
