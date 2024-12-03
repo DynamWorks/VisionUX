@@ -344,25 +344,26 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 self.logger.warning("No files were successfully processed")
                 return self._load_existing_store(store_path)
 
-            # Generate text representations if Gemini is available
-            text_representations = []
-            if self.gemini_enabled and self.gemini_model:
-                text_representations = self._generate_text_representations(processed_files)
-            else:
-                # Use raw analysis data if Gemini not available
-                text_representations = [{
-                    'text': str(file_data.get('data', {})),
-                    'metadata': file_data.get('metadata', {})
-                } for file_data in processed_files]
+            # # Generate text representations if Gemini is available
+            # text_representations = []
+            # if self.gemini_enabled and self.gemini_model:
+            #     text_representations = self._generate_text_representations(processed_files)
+            # else:
+            #     # Use raw analysis data if Gemini not available
+            #     text_representations = [{
+            #         'text': str(file_data.get('data', {})),
+            #         'metadata': file_data.get('metadata', {})
+            #     } for file_data in processed_files]
 
-            # Create chunks from text representations
-            chunks = self._create_chunks(text_representations)
 
             # Load existing knowledge base texts
             kb_texts = self._load_existing_kb_texts(kb_path)
 
+            # Create chunks from text representations
+            chunks = self._create_chunks(kb_texts)
+
             # Create vector store
-            vectordb = self._create_vector_store(kb_texts + chunks, store_path)
+            vectordb = self._create_vector_store(chunks, store_path)
 
             # Save metadata
             self._save_kb_metadata(metadata_path, len(chunks), len(analysis_files))
@@ -494,19 +495,20 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
     def _load_existing_kb_texts(self, kb_path: Path) -> List[Dict]:
         """Load existing knowledge base texts"""
-        kb_texts = []
+        kb_texts = '' #[]
         for text_file in kb_path.glob("*.json"):
             try:
                 with open(text_file) as f:
                     data = json.load(f)
-                    kb_texts.append({
-                        "text": data['text'],
-                        "metadata": {
-                            **data['metadata'],
-                            'source': str(text_file),
-                            'type': 'knowledge_base'
-                        }
-                    })
+                    # kb_texts.append({
+                    #     "text": data['text'],
+                    #     "metadata": {
+                    #         **data['metadata'],
+                    #         'source': str(text_file),
+                    #         'type': 'knowledge_base'
+                    #     }
+                    # })
+                    kb_texts = data['text'] + "=== Section Break ===" + kb_texts
             except Exception as e:
                 self.logger.error(f"Error reading KB file {text_file}: {e}")
                 
@@ -515,6 +517,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
     def _create_vector_store(self, documents: List[Dict], store_path: Path) -> FAISS:
         """Create FAISS vector store from documents"""
         # Create embeddings for texts
+        import pdb; pdb.set_trace()
         texts = [doc["text"].strip() for doc in documents]
         embeddings = self.embeddings.embed_documents(texts)
         
