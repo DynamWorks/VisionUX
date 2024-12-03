@@ -631,57 +631,55 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             
     def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQAWithSourcesChain:
         """Create retrieval chain with custom prompt"""
+        if not vectordb:
+            raise ValueError("Vector store is required to create retrieval chain")
+
+        # Configure retriever with better defaults
         retriever = vectordb.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs={
-                "k": 3,
-                "score_threshold": 0.7
+                "k": 5,  # Increased for better context
+                "score_threshold": 0.6,  # Slightly lower threshold
+                "fetch_k": 20  # Fetch more candidates
             }
         )
 
-        # Custom prompt template
-        prompt_template = """You are discussing video analysis results with a researcher or colleague.
-Use the following analysis context to answer questions about the video.
+        # Enhanced prompt template
+        prompt_template = """You are an AI assistant analyzing video content. Use the following analysis context to answer questions about the video.
 
-Analysis Context (Retrieved Passages):
+Context from Analysis:
 {summaries}
 
-Available Tools:
-- scene_analysis: Analyze the current video scene in detail
-- object_detection: Detect and identify objects in the video
-- edge_detection: Highlight edges and boundaries in the video
+Chat History:
+{chat_history}
 
-User Question: {question}
+Question: {question}
 
-Guidelines:
-1. Keep responses between 30-50 words
-2. Be clear and concise
-3. Reference specific frames/timestamps from the context
-4. Only use information from the retrieved passages above
-5. Express uncertainty when information is incomplete
-6. Expand beyond 50 words only when explicitly asked
-7. For relevant topics not covered in context, provide factual responses
-8. Politely decline unrelated questions
-9. If the user's query would benefit from using an available tool, suggest it
-10. If user confirms or requests to use a tool, include "confirmation": true and "tool": "<tool_name>" in your response
-11. If user requests unavailable tool, mention it may be added in future updates
+Instructions:
+1. Answer based on the analysis context above
+2. Be specific and reference timestamps/frames when available
+3. If information is incomplete, acknowledge uncertainty
+4. Suggest relevant tools when appropriate:
+   - scene_analysis: Detailed scene analysis
+   - object_detection: Identify and locate objects
+   - edge_detection: Highlight visual boundaries
 
-Format your response as a JSON object with these fields:
+Response Format:
 {
-    "answer": "Your natural response here",
-    "tool_suggestion": "tool_name" or null,
-    "confirmation": true/false,
-    "tool": "tool_name" or null,
-    "internal_notes": "Any processing notes or observations"
-}
+    "answer": "Your detailed response",
+    "confidence": "high/medium/low",
+    "tool_suggestion": "tool_name or null",
+    "requires_analysis": true/false,
+    "notes": "Additional context or observations"
+}"""
 
-Respond naturally but ensure the response can be parsed as valid JSON."""
-
+        # Create prompt with improved input variables
         PROMPT = PromptTemplate(
-            template=prompt_template, 
-            input_variables=["summaries", "question"]
+            template=prompt_template,
+            input_variables=["summaries", "question", "chat_history"]
         )
 
+        # Create chain with enhanced configuration
         return RetrievalQAWithSourcesChain.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
@@ -690,53 +688,64 @@ Respond naturally but ensure the response can be parsed as valid JSON."""
             chain_type_kwargs={
                 "prompt": PROMPT,
                 "document_variable_name": "summaries",
-                "verbose": True
+                "verbose": True,
+                "memory_key": "chat_history"
             }
         )
         
     def query_knowledge_base(self, query: str, chain: Optional[RetrievalQAWithSourcesChain] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
         try:
-            # Format chat history as context if provided
-            chat_context = ""
+            # Create chain if not provided
+            if not chain:
+                vectordb = self._load_existing_store(Path("tmp_content/knowledgebase/vector_store"))
+                if not vectordb:
+                    return {
+                        "answer": "No knowledge base found. Please analyze some content first.",
+                        "sources": [],
+                        "requires_analysis": True
+                    }
+                chain = self.get_retrieval_chain(vectordb)
+
+            # Format chat history
+            formatted_history = []
             if chat_history:
-                chat_context = "\nRecent Chat Context:\n"
-                for msg in chat_history[-5:]:  # Use last 5 messages
+                for msg in chat_history[-5:]:  # Last 5 messages
                     role = msg.get('role', 'unknown')
                     content = msg.get('content', '')
-                    chat_context += f"{role}: {content}\n"
+                    if role == 'user':
+                        formatted_history.append(HumanMessage(content=content))
+                    elif role == 'assistant':
+                        formatted_history.append(AIMessage(content=content))
 
-            # Combine query with chat context
-            enhanced_query = f"""
-Question: {query}
-
-{chat_context}
-"""
-            # Ensure chain is initialized
-            if not chain:
-                raise ValueError("RAG chain not initialized. Please create knowledge base first.")
-                
-            # Query the chain
             try:
-                # Use the chain's call method with proper input format
+                # Query the chain with proper input format
                 chain_response = chain({
-                    "question": enhanced_query,
-                    "chat_history": chat_context if chat_context else []
+                    "question": query,
+                    "chat_history": formatted_history
                 })
-                
-                # Extract answer and sources from response
+
+                # Process response
                 response = {
                     "answer": chain_response.get("answer", ""),
                     "sources": chain_response.get("sources", []),
-                    "source_documents": chain_response.get("source_documents", [])
+                    "source_documents": [
+                        {
+                            "content": doc.page_content,
+                            "metadata": doc.metadata
+                        }
+                        for doc in chain_response.get("source_documents", [])
+                    ]
                 }
-                
-                # Analyze query for tool suggestions
-                tool_suggestions = self._analyze_for_tools(enhanced_query, response["answer"])
+
+                # Add tool suggestions if relevant
+                tool_suggestions = self._analyze_for_tools(query, response["answer"])
                 if tool_suggestions:
-                    response['answer'] += "\n\n" + tool_suggestions
+                    response['answer'] += f"\n\n{tool_suggestions}"
                     response['suggested_tools'] = tool_suggestions
-                    
+
+                return response
+
             except Exception as e:
                 self.logger.error(f"Chain query error: {e}")
                 return {
