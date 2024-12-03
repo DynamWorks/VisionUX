@@ -340,7 +340,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     scene_tool = SceneAnalysisTool(None)  # Pass None since we'll set params directly
                     
                     # Trigger analysis
-                    result = scene_tool.analyze_video(results_path)
+                    result = scene_tool._run(results_path)
                     if result:
                         return self.create_knowledge_base(results_path)
                         
