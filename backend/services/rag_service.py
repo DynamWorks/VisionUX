@@ -718,91 +718,41 @@ Response Format:
                     elif role == 'assistant':
                         formatted_history.append(AIMessage(content=content))
 
-            try:
-                # Query the chain with proper input format
-                chain_response = chain({
-                    "question": query,
-                    "chat_history": formatted_history
-                })
+            # Query the chain with proper input format
+            chain_response = chain({
+                "question": query,
+                "chat_history": formatted_history
+            })
 
-                # Process response
-                response = {
-                    "answer": chain_response.get("answer", ""),
-                    "sources": chain_response.get("sources", []),
-                    "source_documents": [
-                        {
-                            "content": doc.page_content,
-                            "metadata": doc.metadata
-                        }
-                        for doc in chain_response.get("source_documents", [])
-                    ]
-                }
+            # Process response
+            response = {
+                "answer": chain_response.get("answer", "").strip(),
+                "sources": chain_response.get("sources", []),
+                "source_documents": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "score": getattr(doc, "score", None)
+                    }
+                    for doc in chain_response.get("source_documents", [])
+                ]
+            }
 
-                # Add tool suggestions if relevant
-                tool_suggestions = self._analyze_for_tools(query, response["answer"])
-                if tool_suggestions:
-                    response['answer'] += f"\n\n{tool_suggestions}"
-                    response['suggested_tools'] = tool_suggestions
+            # Add tool suggestions if relevant
+            tool_suggestions = self._analyze_for_tools(query, response["answer"])
+            if tool_suggestions:
+                response['answer'] += f"\n\n{tool_suggestions}"
+                response['suggested_tools'] = tool_suggestions
+                response['requires_confirmation'] = True
+                response['pending_action'] = tool_suggestions.split()[0]
 
-                return response
+            return response
 
-            except Exception as e:
-                self.logger.error(f"Chain query error: {e}")
-                return {
-                    "error": str(e),
-                    "answer": "I encountered an error processing your query. Please try again."
-                }
-            
-            # Validate response length
-            answer = response["answer"].strip()
-            word_count = len(answer.split())
-            
-            # if word_count < 30:
-            #     answer += " " + self.llm.predict("Please expand this response to at least 30 words while maintaining the same meaning: " + answer)
-            # elif word_count > 50:
-            #     answer = self.llm.predict("Summarize this in 50 words or less while keeping key information: " + answer)
-            
-            # Parse the JSON response
-            import json
-            try:
-                parsed_response = json.loads(answer)
-                
-                # Structure the complete response
-                return {
-                    "answer": parsed_response["answer"],
-                    "sources": response["sources"],
-                    "source_documents": [
-                        {
-                            "content": doc.page_content,
-                            "metadata": doc.metadata,
-                            "score": getattr(doc, "score", None)
-                        }
-                        for doc in response["source_documents"]
-                    ],
-                    "tool_suggestion": parsed_response.get("tool_suggestion"),
-                    "confirmation": parsed_response.get("confirmation", False),
-                    "tool": parsed_response.get("tool"),
-                    "internal_notes": parsed_response.get("internal_notes")
-                }
-            except json.JSONDecodeError:
-                # Fallback for non-JSON responses
-                return {
-                    "answer": answer,
-                    "sources": response["sources"],
-                    "source_documents": [
-                        {
-                            "content": doc.page_content,
-                            "metadata": doc.metadata,
-                            "score": getattr(doc, "score", None)
-                        }
-                        for doc in response["source_documents"]
-                    ]
-                }
         except Exception as e:
             self.logger.error(f"Error querying knowledge base: {str(e)}")
             return {
                 "error": str(e),
-                "answer": "Failed to process query"
+                "answer": "I encountered an error processing your query. Please try again."
             }
             
     def _hash_results(self, results_path: Path) -> str:
