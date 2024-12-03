@@ -727,29 +727,25 @@ Response Format:
                         formatted_history.append(HumanMessage(content=content))
                     elif role == 'assistant':
                         formatted_history.append(AIMessage(content=content))
-            import pdb; pdb.set_trace()
-            # Get relevant documents using vectordb directly
-            relevant_docs = vectordb.similarity_search_with_score(
-                query,
-                k=5,
-                score_threshold=0.6,
-                fetch_k=20
-            )
 
             # Get vectordb from chain
             vectordb = chain.retriever.vectorstore if hasattr(chain, 'retriever') else None
             if not vectordb:
                 raise ValueError("No vector store available in chain")
 
-            # Get relevant documents using vectordb directly
+            # Get relevant documents with enhanced parameters
             relevant_docs = vectordb.similarity_search_with_score(
                 query,
-                k=5,
-                score_threshold=0.6,
-                fetch_k=20
+                k=8,  # Increased for better coverage
+                score_threshold=0.5,  # Slightly lower threshold for more results
+                fetch_k=30,  # Fetch more candidates
+                filter=None  # No filtering by default
             )
 
-            # Query the chain with proper input format
+            # Sort by score and take top 5
+            relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
+
+            # Query the chain with proper input format and context
             chain_response = chain({
                 "input_documents": [doc[0] for doc in relevant_docs],
                 "question": query,
