@@ -1,6 +1,7 @@
 import os
 import time
 from pathlib import Path
+import cv2
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from google.generativeai import GenerativeModel
 import google.generativeai as genai
