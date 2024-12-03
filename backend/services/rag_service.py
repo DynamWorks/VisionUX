@@ -670,14 +670,7 @@ Instructions:
    - object_detection: Identify and locate objects
    - edge_detection: Highlight visual boundaries
 
-Response Format:
-{
-    "answer": "Your detailed response",
-    "confidence": "high/medium/low",
-    "tool_suggestion": "tool_name or null",
-    "requires_analysis": true/false,
-    "notes": "Additional context or observations"
-}"""
+Provide your response in natural language, focusing on being informative and helpful."""
 
         # Create prompt with improved input variables
         PROMPT = PromptTemplate(
