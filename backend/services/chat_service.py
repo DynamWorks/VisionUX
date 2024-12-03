@@ -77,9 +77,9 @@ class ChatService:
             if confirmed:
                 return self._execute_confirmed_tool(query)
 
-            # Initialize or update knowledge base
+            # Create or update knowledge base
             if not self._current_chain:
-                self._current_chain = self.rag_service.initialize_knowledge_base(video_path)
+                self._current_chain = self.rag_service.create_knowledge_base(Path(video_path))
                 if not self._current_chain:
                     return {
                         "rag_response": {
