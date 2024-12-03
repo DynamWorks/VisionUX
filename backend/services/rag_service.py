@@ -576,25 +576,31 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 index_to_docstore_id=index_to_id,
                 normalize_L2=True
             )
-        
-        # Save vector store
-        store_path.parent.mkdir(parents=True, exist_ok=True)
-        vectordb.save_local(str(store_path))
 
-        # Save metadata about the store
-        with open(store_path / 'metadata.json', 'w') as f:
-            json.dump({
-                'num_documents': len(texts),
-                'embedding_dim': dimension,
-                'created_at': time.time(),
-                'documents': [{
-                    'id': f"doc_{i}",
-                    'metadata': m
-                } for i, m in enumerate(metadatas)]
-            }, f, indent=2)
+            # Save vector store
+            store_path.parent.mkdir(parents=True, exist_ok=True)
+            vectordb.save_local(str(store_path))
 
-        self.logger.info(f"Created vector store with {len(texts)} documents")
-        return vectordb
+            # Save metadata about the store
+            with open(store_path / 'metadata.json', 'w') as f:
+                json.dump({
+                    'num_documents': len(texts),
+                    'embedding_dim': dimension,
+                    'created_at': time.time(),
+                    'documents': [{
+                        'id': f"doc_{i}",
+                        'metadata': m
+                    } for i, m in enumerate(metadatas)]
+                }, f, indent=2)
+
+            self.logger.info(f"Created vector store with {len(texts)} documents")
+            return vectordb
+
+        except Exception as e:
+            self.logger.error(f"Error creating vector store: {e}")
+            if store_path.exists():
+                shutil.rmtree(store_path)
+            return None
 
     except Exception as e:
         self.logger.error(f"Error creating vector store: {e}")
