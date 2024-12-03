@@ -648,7 +648,11 @@ Question: {query}
         """Load existing vector store if available"""
         try:
             if store_path.exists():
-                return FAISS.load_local(str(store_path), self.embeddings)
+                return FAISS.load_local(
+                    str(store_path), 
+                    self.embeddings,
+                    allow_dangerous_deserialization=True  # Only enable for trusted local files
+                )
             return None
         except Exception as e:
             self.logger.error(f"Error loading existing store: {e}")
