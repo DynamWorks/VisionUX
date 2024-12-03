@@ -753,9 +753,9 @@ Response Format:
             # Sort by score and take top 5
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
-            # Query the chain with proper input format and context
-            chain_response = chain({
-                "input_documents": [doc[0] for doc in relevant_docs],
+            # Query the chain with proper input format and context using invoke
+            chain_response = chain.invoke({
+                "summaries": [doc[0].page_content for doc in relevant_docs],
                 "question": query,
                 "chat_history": formatted_history
             })
@@ -763,7 +763,7 @@ Response Format:
             # Process response
             response = {
                 "answer": chain_response.get("answer", "").strip(),
-                "sources": chain_response.get("sources", []),
+                "sources": chain_response.get("source_documents", []),
                 "source_documents": [
                     {
                         "content": doc[0].page_content,
