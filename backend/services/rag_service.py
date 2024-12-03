@@ -409,9 +409,10 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             List of chunk dicts with text and metadata
         """
         chunks = []
-        chunk_size = 1000  # Base chunk size
-        min_chunk_size = 500  # Minimum chunk size
-        max_chunk_size = 1500  # Maximum chunk size
+        chunk_size = 500  # Smaller base chunk size
+        min_chunk_size = 300  # Smaller minimum
+        max_chunk_size = 800  # Smaller maximum
+        overlap = 100  # Add overlap between chunks
         
         def calculate_optimal_chunk_size(text: str) -> int:
             """Calculate optimal chunk size based on text characteristics"""
@@ -497,20 +498,19 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
     def _load_existing_kb_texts(self, kb_path: Path) -> List[Dict]:
         """Load existing knowledge base texts"""
-        kb_texts = '' #[]
+        kb_texts = []
         for text_file in kb_path.glob("*.json"):
             try:
                 with open(text_file) as f:
                     data = json.load(f)
-                    # kb_texts.append({
-                    #     "text": data['text'],
-                    #     "metadata": {
-                    #         **data['metadata'],
-                    #         'source': str(text_file),
-                    #         'type': 'knowledge_base'
-                    #     }
-                    # })
-                    kb_texts = data['text'] + "=== Section Break ===" + kb_texts
+                    kb_texts.append({
+                        "text": data['text'],
+                        "metadata": {
+                            **data['metadata'],
+                            'source': str(text_file),
+                            'type': 'knowledge_base'
+                        }
+                    })
             except Exception as e:
                 self.logger.error(f"Error reading KB file {text_file}: {e}")
                 
@@ -570,18 +570,29 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                     )
                 })
 
-            # Create FAISS vectorstore
-            vectordb = FAISS(
-                embedding_function=self.embeddings,
-                index=index,
-                docstore=docstore,
-                index_to_docstore_id=index_to_id,
-                normalize_L2=True
-            )
+            # Create FAISS vectorstore with error handling
+            try:
+                vectordb = FAISS(
+                    embedding_function=self.embeddings,
+                    index=index,
+                    docstore=docstore,
+                    index_to_docstore_id=index_to_id,
+                    normalize_L2=True
+                )
 
-            # Save vector store
-            store_path.parent.mkdir(parents=True, exist_ok=True)
-            vectordb.save_local(str(store_path))
+                # Verify the store was created correctly
+                if not vectordb.docstore or not vectordb.index:
+                    raise ValueError("Vector store creation failed - invalid store state")
+
+                # Save vector store with explicit path handling
+                store_path.parent.mkdir(parents=True, exist_ok=True)
+                if store_path.exists():
+                    shutil.rmtree(store_path)
+                vectordb.save_local(str(store_path))
+
+                # Verify save was successful
+                if not store_path.exists():
+                    raise ValueError("Vector store save failed - store directory not created")
 
             # Save metadata about the store
             with open(store_path / 'metadata.json', 'w') as f:
