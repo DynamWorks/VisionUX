@@ -533,11 +533,26 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         faiss.normalize_L2(embeddings_array)  # Normalize vectors
         index.add(embeddings_array)  # Add normalized vectors to index
         
+        # Create embeddings
+        embeddings = self.embeddings.embed_documents(texts)
+        
+        # Convert to numpy array and normalize
+        import numpy as np
+        embeddings_array = np.array(embeddings).astype('float32')
+        import faiss
+        faiss.normalize_L2(embeddings_array)
+        
+        # Create FAISS index
+        dimension = len(embeddings[0])
+        index = faiss.IndexFlatL2(dimension)
+        index.add(embeddings_array)
+        
         # Create FAISS vectorstore
-        vectordb = FAISS.from_embeddings(
-            text_embeddings=list(zip(texts, embeddings_array)),
-            embedding=self.embeddings,
-            normalize_L2=True
+        vectordb = FAISS(
+            embedding_function=self.embeddings,
+            index=index,
+            docstore=InMemoryDocstore({}),
+            index_to_docstore_id={i: f"doc_{i}" for i in range(len(texts))}
         )
         
         # Add documents to docstore
