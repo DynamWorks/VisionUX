@@ -534,11 +534,10 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         index.add(embeddings_array)  # Add normalized vectors to index
         
         # Create FAISS vectorstore
-        vectordb = FAISS(
-            embedding_function=self.embeddings,
-            index=index,
-            docstore=InMemoryDocstore({}),
-            index_to_docstore_id={i: f"doc_{i}" for i in range(len(texts))}
+        vectordb = FAISS.from_embeddings(
+            text_embeddings=list(zip(texts, embeddings_array)),
+            embedding=self.embeddings,
+            normalize_L2=True
         )
         
         # Add documents to docstore
