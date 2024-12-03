@@ -263,45 +263,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         # Combine all processed texts with clear section markers
         text_representation = "\n\n=== Section Break ===\n\n".join(processed_texts)
 
-        # Create chunks with metadata
-        chunks = []
-        sections = text_representation.split("=== Section Break ===")
-            
-        # Calculate optimal chunk size and overlap
-        avg_section_length = sum(len(s.strip()) for s in sections) / len(sections)
-        chunk_overlap = min(300, int(avg_section_length * 0.3))  # 30% overlap up to 300 chars
-        
-        for i, section in enumerate(sections):
-                # Skip empty sections
-                if not section.strip():
-                    continue
-                
-                chunk_text = section.strip()
-            
-                # Add context from previous/next sections for overlap
-                if i > 0:
-                    prev_section = sections[i-1].strip()
-                    chunk_text = prev_section[-chunk_overlap:] + "\n\n" + chunk_text
-                if i < len(sections) - 1:
-                    next_section = sections[i+1].strip()
-                    chunk_text = chunk_text + "\n\n" + next_section[:chunk_overlap]
-            
-                chunks.append({
-                    "text": chunk_text,
-                    "metadata": {
-                        'source': f"analysis_{i}",  # Use sequential identifier
-                        'section': f"section_{i+1}",
-                        'timestamp': time.time(),
-                        'type': 'analysis',
-                        'total_sections': len(sections),
-                        'chunk_stats': {
-                            'length': len(chunk_text),
-                            'overlap': chunk_overlap,
-                            'position': i + 1
-                        },
-                        'doc_stats': {}  # Initialize empty doc stats
-                    }
-                })
+        chunks = self._create_chunks_from_text(text_representation)
 
         # Validate results
         if not chunks:
@@ -413,6 +375,49 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 processed_files.add(file_hash)
 
         return new_files
+
+    def _create_chunks_from_text(self, text: str) -> List[Dict]:
+        """Create overlapping chunks from text with metadata"""
+        sections = text.split("=== Section Break ===")
+        
+        # Calculate optimal chunk size and overlap
+        avg_section_length = sum(len(s.strip()) for s in sections) / len(sections)
+        chunk_overlap = min(300, int(avg_section_length * 0.3))  # 30% overlap up to 300 chars
+        
+        chunks = []
+        for i, section in enumerate(sections):
+            # Skip empty sections
+            if not section.strip():
+                continue
+            
+            chunk_text = section.strip()
+            
+            # Add context from previous/next sections for overlap
+            if i > 0:
+                prev_section = sections[i-1].strip()
+                chunk_text = prev_section[-chunk_overlap:] + "\n\n" + chunk_text
+            if i < len(sections) - 1:
+                next_section = sections[i+1].strip()
+                chunk_text = chunk_text + "\n\n" + next_section[:chunk_overlap]
+            
+            chunks.append({
+                "text": chunk_text,
+                "metadata": {
+                    'source': f"analysis_{i}",
+                    'section': f"section_{i+1}",
+                    'timestamp': time.time(),
+                    'type': 'analysis',
+                    'total_sections': len(sections),
+                    'chunk_stats': {
+                        'length': len(chunk_text),
+                        'overlap': chunk_overlap,
+                        'position': i + 1
+                    },
+                    'doc_stats': {}
+                }
+            })
+            
+        return chunks
 
     def _create_chunks(self, text_representations: List[Dict]) -> List[Dict]:
         """Create chunks from text representations"""
