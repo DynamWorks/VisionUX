@@ -285,10 +285,6 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         if not processed_texts:
             self.logger.warning("No analysis files were successfully processed")
             return []
-                
-        # Validate results
-        if not processed_texts:
-            raise ValueError("No valid texts created")
 
         if not self.gemini_enabled or not self.gemini_model:
             raise ValueError("Gemini model not initialized")
