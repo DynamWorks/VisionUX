@@ -717,7 +717,7 @@ Response Format:
                         formatted_history.append(HumanMessage(content=content))
                     elif role == 'assistant':
                         formatted_history.append(AIMessage(content=content))
-
+            import pdb; pdb.set_trace()
             # Query the chain with proper input format
             chain_response = chain.invoke({
                 "question": query,
