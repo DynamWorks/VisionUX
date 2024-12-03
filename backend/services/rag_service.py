@@ -651,18 +651,12 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         )
 
         # Enhanced prompt template
-        prompt_template = """You are an AI assistant analyzing video content. Use the following analysis context to answer questions about the video.
+        prompt_template = """You are an AI assistant analyzing video content. Use the following input to answer questions about the video.
 
-Context from Analysis:
-{context}
-
-Chat History:
-{chat_history}
-
-Question: {question}
+{input}
 
 Instructions:
-1. Answer based on the analysis context above
+1. Answer based on the context above
 2. Be specific and reference timestamps/frames when available
 3. If information is incomplete, acknowledge uncertainty
 4. Suggest relevant tools when appropriate:
@@ -672,10 +666,10 @@ Instructions:
 
 Provide your response in natural language, focusing on being informative and helpful."""
 
-        # Create prompt with improved input variables
+        # Create prompt with single input variable
         PROMPT = PromptTemplate(
             template=prompt_template,
-            input_variables=["context", "question", "chat_history"]
+            input_variables=["input"]
         )
 
         # Create chain with enhanced configuration
@@ -746,11 +740,16 @@ Provide your response in natural language, focusing on being informative and hel
             # Sort by score and take top 5
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
-            # Query the chain with proper input format and context using invoke
+            # Combine context and query into single input
+            input_text = f"""Context: {"\n\n".join([doc[0].page_content for doc in relevant_docs])}
+
+Question: {query}
+
+Chat History: {formatted_history if formatted_history else "No previous chat history"}"""
+
+            # Query the chain with single input key
             chain_response = chain.invoke({
-                "context": "\n\n".join([doc[0].page_content for doc in relevant_docs]),
-                "question": query,
-                "chat_history": formatted_history
+                "input": input_text
             })
 
             # Process response
