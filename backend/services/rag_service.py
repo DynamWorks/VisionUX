@@ -681,7 +681,8 @@ Provide your response in natural language, focusing on being informative and hel
             memory=memory,
             chain_type_kwargs={
                 "prompt": PROMPT,
-                "verbose": True
+                "verbose": True,
+                "document_variable_name": "input"  # Match the input variable name
             }
         )
 
