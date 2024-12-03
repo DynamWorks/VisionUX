@@ -603,7 +603,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                         } for i, m in enumerate(metadatas)]
                 }, f, indent=2)
 
-            self.logger.info(f"Created vector store with {len(texts)} documents")
+                self.logger.info(f"Created vector store with {len(texts)} documents")
             return vectordb
 
         except Exception as e:
