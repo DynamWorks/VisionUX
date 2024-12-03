@@ -660,23 +660,24 @@ Question: {query}
                 
             # Query the chain
             try:
-                # Use the chain's run method instead of calling it directly
-                response = chain.run({"question": enhanced_query})
+                # Use the chain's invoke method with proper input format
+                chain_response = chain.invoke({
+                    "question": enhanced_query,
+                    "chat_history": chat_context if chat_context else []
+                })
                 
-                # Format response since run() returns just the answer string
-                formatted_response = {
-                    "answer": response,
-                    "sources": [],  # Initialize empty sources
-                    "source_documents": []  # Initialize empty source docs
+                # Extract answer and sources from response
+                response = {
+                    "answer": chain_response.get("answer", ""),
+                    "sources": chain_response.get("sources", []),
+                    "source_documents": chain_response.get("source_documents", [])
                 }
                 
                 # Analyze query for tool suggestions
-                tool_suggestions = self._analyze_for_tools(enhanced_query, response)
+                tool_suggestions = self._analyze_for_tools(enhanced_query, response["answer"])
                 if tool_suggestions:
-                    formatted_response['answer'] += "\n\n" + tool_suggestions
-                    formatted_response['suggested_tools'] = tool_suggestions
-                    
-                response = formatted_response
+                    response['answer'] += "\n\n" + tool_suggestions
+                    response['suggested_tools'] = tool_suggestions
                     
             except Exception as e:
                 self.logger.error(f"Chain query error: {e}")
