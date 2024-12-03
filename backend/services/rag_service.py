@@ -741,11 +741,15 @@ Provide your response in natural language, focusing on being informative and hel
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
             # Combine context and query into single input
-            input_text = f"""Context: {"\n\n".join([doc[0].page_content for doc in relevant_docs])}
-
-Question: {query}
-
-Chat History: {formatted_history if formatted_history else "No previous chat history"}"""
+            # Format context and input text
+            context_text = "\n\n".join([doc[0].page_content for doc in relevant_docs])
+            history_text = formatted_history if formatted_history else "No previous chat history"
+            
+            input_text = (
+                f"Context: {context_text}\n\n"
+                f"Question: {query}\n\n"
+                f"Chat History: {history_text}"
+            )
 
             # Query the chain with single input key
             chain_response = chain.invoke({
