@@ -376,84 +376,66 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
         return new_files
 
-    def _create_chunks_from_text(self, text: str) -> List[Dict]:
-        """Create overlapping chunks from text with metadata"""
-        sections = text.split("=== Section Break ===")
+    def _create_chunks(self, text_input: Union[str, List[Dict]], separator: str = "\n\n") -> List[Dict]:
+        """Create overlapping chunks from text input with metadata
         
-        # Calculate optimal chunk size and overlap
-        avg_section_length = sum(len(s.strip()) for s in sections) / len(sections)
-        chunk_overlap = min(300, int(avg_section_length * 0.3))  # 30% overlap up to 300 chars
+        Args:
+            text_input: Either a string or list of text representation dicts
+            separator: String to split sections (default paragraph break)
+            
+        Returns:
+            List of chunk dicts with text and metadata
+        """
+        chunks = []
         
-        chunks = []
-        for i, section in enumerate(sections):
-            # Skip empty sections
-            if not section.strip():
-                continue
-            
-            chunk_text = section.strip()
-            
-            # Add context from previous/next sections for overlap
-            if i > 0:
-                prev_section = sections[i-1].strip()
-                chunk_text = prev_section[-chunk_overlap:] + "\n\n" + chunk_text
-            if i < len(sections) - 1:
-                next_section = sections[i+1].strip()
-                chunk_text = chunk_text + "\n\n" + next_section[:chunk_overlap]
-            
-            chunks.append({
-                "text": chunk_text,
-                "metadata": {
-                    'source': f"analysis_{i}",
-                    'section': f"section_{i+1}",
-                    'timestamp': time.time(),
-                    'type': 'analysis',
-                    'total_sections': len(sections),
-                    'chunk_stats': {
-                        'length': len(chunk_text),
-                        'overlap': chunk_overlap,
-                        'position': i + 1
-                    },
-                    'doc_stats': {}
-                }
-            })
-            
-        return chunks
-
-    def _create_chunks(self, text_representations: List[Dict]) -> List[Dict]:
-        """Create chunks from text representations"""
-        chunks = []
-        for text_rep in text_representations:
-            sections = text_rep['text'].split('\n\n')
-            
-            # Calculate chunk parameters
-            avg_length = sum(len(s) for s in sections) / len(sections)
-            chunk_overlap = min(200, int(avg_length * 0.2))
-            
-            for i, section in enumerate(sections):
-                if not section.strip():
-                    continue
-                    
-                chunk_text = section.strip()
+        # Handle single text string
+        if isinstance(text_input, str):
+            sections = text_input.split("=== Section Break ===" if "=== Section Break ===" in text_input else separator)
+            base_metadata = {
+                'type': 'analysis',
+                'timestamp': time.time()
+            }
+        # Handle list of text representations
+        else:
+            text_reps = text_input
+            for text_rep in text_reps:
+                sections = text_rep['text'].split(separator)
+                base_metadata = text_rep.get('metadata', {})
                 
-                # Add overlap context
-                if i > 0:
-                    chunk_text = sections[i-1][-chunk_overlap:] + "\n\n" + chunk_text
-                if i < len(sections) - 1:
-                    chunk_text = chunk_text + "\n\n" + sections[i+1][:chunk_overlap]
+                if not any(sections):
+                    continue
+                
+                # Calculate optimal chunk parameters
+                avg_length = sum(len(s.strip()) for s in sections) / len(sections)
+                chunk_overlap = min(300, int(avg_length * 0.3))  # 30% overlap up to 300 chars
+                
+                for i, section in enumerate(sections):
+                    if not section.strip():
+                        continue
+                        
+                    chunk_text = section.strip()
                     
-                chunks.append({
-                    "text": chunk_text,
-                    "metadata": {
-                        **text_rep['metadata'],
-                        'section': f"section_{i+1}",
-                        'total_sections': len(sections),
-                        'chunk_stats': {
-                            'length': len(chunk_text),
-                            'overlap': chunk_overlap,
-                            'position': i + 1
+                    # Add context from adjacent sections
+                    if i > 0:
+                        chunk_text = sections[i-1][-chunk_overlap:].strip() + "\n\n" + chunk_text
+                    if i < len(sections) - 1:
+                        chunk_text = chunk_text + "\n\n" + sections[i+1][:chunk_overlap].strip()
+                    
+                    # Create chunk with metadata
+                    chunks.append({
+                        "text": chunk_text,
+                        "metadata": {
+                            **base_metadata,
+                            'section': f"section_{i+1}",
+                            'total_sections': len(sections),
+                            'chunk_stats': {
+                                'length': len(chunk_text),
+                                'overlap': chunk_overlap,
+                                'position': i + 1,
+                                'source_type': 'single_text' if isinstance(text_input, str) else 'text_representation'
+                            }
                         }
-                    }
-                })
+                    })
                 
         return chunks
 
