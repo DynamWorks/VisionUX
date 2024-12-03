@@ -651,9 +651,11 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         )
 
         # Enhanced prompt template
-        prompt_template = """You are an AI assistant analyzing video content. Use the following input to answer questions about the video.
+        prompt_template = """You are an AI assistant analyzing video content. Use the following context to answer questions about the video.
 
-{input}
+{context}
+
+Question: {question}
 
 Instructions:
 1. Answer based on the context above
@@ -666,10 +668,10 @@ Instructions:
 
 Provide your response in natural language, focusing on being informative and helpful."""
 
-        # Create prompt with single input variable
+        # Create prompt with context and question variables
         PROMPT = PromptTemplate(
             template=prompt_template,
-            input_variables=["input"]
+            input_variables=["context", "question"]
         )
 
         # Create chain with enhanced configuration
@@ -751,9 +753,9 @@ Provide your response in natural language, focusing on being informative and hel
                 f"Chat History: {history_text}"
             )
 
-            # Query the chain with single input key
+            # Query the chain with question key
             chain_response = chain.invoke({
-                "input": input_text
+                "question": input_text
             })
 
             # Process response
