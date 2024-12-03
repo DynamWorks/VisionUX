@@ -719,7 +719,7 @@ Response Format:
                         formatted_history.append(AIMessage(content=content))
 
             # Query the chain with proper input format
-            chain_response = chain({
+            chain_response = chain.invoke({
                 "question": query,
                 "chat_history": formatted_history
             })
