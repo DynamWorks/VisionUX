@@ -687,7 +687,7 @@ Provide your response in natural language, focusing on being informative and hel
             memory=memory,
             chain_type_kwargs={
                 "prompt": PROMPT,
-                "document_variable_name": "summaries",
+                "document_variable_name": "context",
                 "verbose": True
             }
         )
