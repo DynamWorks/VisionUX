@@ -7,11 +7,11 @@ from google.generativeai import GenerativeModel
 import google.generativeai as genai
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from backend.utils.config import Config
-from langchain.vectorstores.faiss import FAISS
-from langchain.docstore.in_memory import InMemoryDocstore
+import faiss
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
 from langchain.chains import RetrievalQAWithSourcesChain
-import faiss
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.prompts import PromptTemplate
@@ -525,7 +525,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         embeddings_array = np.array(embeddings).astype('float32')
         
         # Initialize FAISS index
-        import faiss
+        #import faiss
         dimension = len(embeddings[0])  # Get embedding dimension
         index = faiss.IndexFlatL2(dimension)
         
