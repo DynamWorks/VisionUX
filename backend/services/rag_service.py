@@ -517,9 +517,12 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
     def _create_vector_store(self, documents: List[Dict], store_path: Path) -> FAISS:
         """Create FAISS vector store from documents"""
         # Create embeddings for texts
-        import pdb; pdb.set_trace()
         texts = [doc["text"].strip() for doc in documents]
         embeddings = self.embeddings.embed_documents(texts)
+        
+        # Convert embeddings to numpy array
+        import numpy as np
+        embeddings_array = np.array(embeddings).astype('float32')
         
         # Initialize FAISS index
         import faiss
@@ -527,8 +530,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         index = faiss.IndexFlatL2(dimension)
         
         # Add embeddings to index
-        faiss.normalize_L2(embeddings)  # Normalize vectors
-        index.add(embeddings)
+        faiss.normalize_L2(embeddings_array)  # Normalize vectors
+        index.add(embeddings_array)  # Add normalized vectors to index
         
         # Create FAISS vectorstore
         vectordb = FAISS(
