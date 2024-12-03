@@ -725,9 +725,17 @@ Response Format:
                     elif role == 'assistant':
                         formatted_history.append(AIMessage(content=content))
             import pdb; pdb.set_trace()
+            # Get relevant documents using vectordb directly
+            relevant_docs = vectordb.similarity_search_with_score(
+                query,
+                k=5,
+                score_threshold=0.6,
+                fetch_k=20
+            )
+
             # Query the chain with proper input format
             chain_response = chain({
-                "input_documents": chain.retriever.get_relevant_documents(query),
+                "input_documents": [doc[0] for doc in relevant_docs],
                 "question": query,
                 "chat_history": formatted_history
             })
