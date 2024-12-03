@@ -114,15 +114,18 @@ class RAGService:
             for file_path in new_files:
                 try:
                     with open(file_path) as f:
-                        data = json.load(f)
-                    processed_data.append({
-                        'data': data,
-                        'metadata': {
-                            'file_path': str(file_path),
-                            'timestamp': file_path.stat().st_mtime,
-                            'type': 'analysis'
-                        }
-                    })
+                        file_data = json.load(f)
+                    if isinstance(file_data, dict):
+                        processed_data.append({
+                            'data': file_data,
+                            'metadata': {
+                                'file_path': str(file_path),
+                                'timestamp': file_path.stat().st_mtime,
+                                'type': 'analysis'
+                            }
+                        })
+                    else:
+                        self.logger.warning(f"Invalid data format in {file_path}")
                 except Exception as e:
                     self.logger.warning(f"Error processing {file_path}: {e}")
                     continue
@@ -602,7 +605,7 @@ Respond naturally but ensure the response can be parsed as valid JSON."""
             input_variables=["summaries", "question"]
         )
 
-        chain = RetrievalQAWithSourcesChain.from_chain_type(
+        return RetrievalQAWithSourcesChain.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
             retriever=retriever,
@@ -613,8 +616,6 @@ Respond naturally but ensure the response can be parsed as valid JSON."""
                 "verbose": True
             }
         )
-        
-        return chain
         
     def query_knowledge_base(self, query: str, chain: Optional[RetrievalQAWithSourcesChain] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
