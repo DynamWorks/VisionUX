@@ -698,6 +698,9 @@ Response Format:
                 "verbose": True
             }
         )
+
+        # Store chain reference
+        self._current_chain = chain
         return chain
         
     def query_knowledge_base(self, query: str, chain: Optional[RetrievalQAWithSourcesChain] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
