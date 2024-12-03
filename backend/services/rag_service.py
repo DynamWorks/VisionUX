@@ -567,44 +567,43 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 })
 
             # Create FAISS vectorstore with error handling
-            try:
-                vectordb = FAISS(
-                    embedding_function=self.embeddings,
-                    index=index,
-                    docstore=docstore,
-                    index_to_docstore_id=index_to_id,
-                    normalize_L2=True
-                )
+            vectordb = FAISS(
+                embedding_function=self.embeddings,
+                index=index,
+                docstore=docstore,
+                index_to_docstore_id=index_to_id,
+                normalize_L2=True
+            )
 
-                # Verify the store was created correctly
-                if not vectordb.docstore or not vectordb.index:
-                    raise ValueError("Vector store creation failed - invalid store state")
+            # Verify the store was created correctly
+            if not vectordb.docstore or not vectordb.index:
+                raise ValueError("Vector store creation failed - invalid store state")
 
-                # Save vector store with explicit path handling
-                store_path.parent.mkdir(parents=True, exist_ok=True)
-                if store_path.exists():
-                    shutil.rmtree(store_path)
-                vectordb.save_local(str(store_path))
+            # Save vector store with explicit path handling
+            store_path.parent.mkdir(parents=True, exist_ok=True)
+            if store_path.exists():
+                shutil.rmtree(store_path)
+            vectordb.save_local(str(store_path))
 
-                # Verify save was successful
-                if not store_path.exists():
-                    raise ValueError("Vector store save failed - store directory not created")
+            # Verify save was successful
+            if not store_path.exists():
+                raise ValueError("Vector store save failed - store directory not created")
 
-                # Save metadata about the store
-                metadata_path = os.path.join(store_path, 'metadata.json')
-                with open(metadata_path, 'w') as f:
-                    json.dump({
-                        'num_documents': len(texts),
-                        'embedding_dim': dimension,
-                        'created_at': time.time(),
-                        'documents': [{
-                            'id': f"doc_{i}",
-                            'metadata': m
-                        } for i, m in enumerate(metadatas)]
+            # Save metadata about the store
+            metadata_path = os.path.join(store_path, 'metadata.json')
+            with open(metadata_path, 'w') as f:
+                json.dump({
+                    'num_documents': len(texts),
+                    'embedding_dim': dimension,
+                    'created_at': time.time(),
+                    'documents': [{
+                        'id': f"doc_{i}",
+                        'metadata': m
+                    } for i, m in enumerate(metadatas)]
                 }, f, indent=2)
 
-                self.logger.info(f"Created vector store with {len(texts)} documents")
-                return vectordb
+            self.logger.info(f"Created vector store with {len(texts)} documents")
+            return vectordb
 
         except Exception as e:
             self.logger.error(f"Error creating vector store: {e}")
