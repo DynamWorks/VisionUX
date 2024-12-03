@@ -21,6 +21,8 @@ import logging
 import hashlib
 from typing import List, Dict, Optional, Any, Tuple, Union
 from datetime import datetime
+import numpy as np
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -601,12 +603,6 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             if store_path.exists():
                 shutil.rmtree(store_path)
             return None
-
-    except Exception as e:
-        self.logger.error(f"Error creating vector store: {e}")
-        if store_path.exists():
-            shutil.rmtree(store_path)
-        return None
 
     def _save_kb_metadata(self, metadata_path: Path, num_chunks: int, num_files: int):
         """Save knowledge base metadata"""
