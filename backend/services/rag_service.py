@@ -726,7 +726,8 @@ Response Format:
                         formatted_history.append(AIMessage(content=content))
             import pdb; pdb.set_trace()
             # Query the chain with proper input format
-            chain_response = chain.invoke({
+            chain_response = chain({
+                "input_documents": chain.retriever.get_relevant_documents(query),
                 "question": query,
                 "chat_history": formatted_history
             })
