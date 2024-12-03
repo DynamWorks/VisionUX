@@ -284,20 +284,15 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             self.logger.warning("No analysis files were successfully processed")
             return []
                 
-        # Combine all processed texts with clear section markers
-        text_representation = "\n\n=== Section Break ===\n\n".join(processed_texts)
-
-        chunks = self._create_chunks_from_text(text_representation)
-
         # Validate results
-        if not chunks:
-            raise ValueError("No valid chunks created")
+        if not processed_texts:
+            raise ValueError("No valid texts created")
 
         if not self.gemini_enabled or not self.gemini_model:
             raise ValueError("Gemini model not initialized")
 
-        self.logger.info(f"Created {len(chunks)} chunks")
-        return chunks
+        self.logger.info(f"Created {len(processed_texts)} text representations")
+        return processed_texts
 
     def create_knowledge_base(self, results_path: Path) -> Optional[FAISS]:
         """Create or update vector store from analysis results"""
