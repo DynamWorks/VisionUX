@@ -644,6 +644,16 @@ Question: {query}
             file_hash = hashlib.md5(f.read()).hexdigest()
         return file_hash[:10]  # Use first 10 chars for readability
         
+    def _load_existing_store(self, store_path: Path) -> Optional[FAISS]:
+        """Load existing vector store if available"""
+        try:
+            if store_path.exists():
+                return FAISS.load_local(str(store_path), self.embeddings)
+            return None
+        except Exception as e:
+            self.logger.error(f"Error loading existing store: {e}")
+            return None
+
     def _is_store_current(self, store_path: Path, results_hash: str) -> bool:
         """Check if vector store exists and matches results file"""
         metadata_path = store_path / 'metadata.json'
