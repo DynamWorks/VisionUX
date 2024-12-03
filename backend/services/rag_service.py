@@ -514,59 +514,93 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 
         return kb_texts
 
-    def _create_vector_store(self, documents: List[Dict], store_path: Path) -> FAISS:
-        """Create FAISS vector store from documents"""
-        # Create embeddings for texts
-        texts = [doc["text"].strip() for doc in documents]
-        embeddings = self.embeddings.embed_documents(texts)
+    def _create_vector_store(self, documents: List[Dict], store_path: Path) -> Optional[FAISS]:
+        """Create FAISS vector store from documents with validation and error handling"""
+        try:
+            if not documents:
+                raise ValueError("No documents provided for vector store creation")
+
+            # Extract texts and metadata
+            texts = []
+            metadatas = []
+            for doc in documents:
+                if not isinstance(doc, dict) or "text" not in doc:
+                    continue
+                texts.append(doc["text"].strip())
+                metadatas.append(doc.get("metadata", {}))
+
+            if not texts:
+                raise ValueError("No valid texts found in documents")
+
+            # Create embeddings with batching
+            batch_size = 32
+            all_embeddings = []
+            for i in range(0, len(texts), batch_size):
+                batch_texts = texts[i:i + batch_size]
+                batch_embeddings = self.embeddings.embed_documents(batch_texts)
+                all_embeddings.extend(batch_embeddings)
+
+            # Convert to numpy array and normalize
+            embeddings_array = np.array(all_embeddings).astype('float32')
+            faiss.normalize_L2(embeddings_array)
+
+            # Create FAISS index
+            dimension = len(embeddings_array[0])
+            index = faiss.IndexFlatL2(dimension)
+            index.add(embeddings_array)
+
+            # Create document store with metadata
+            docstore = InMemoryDocstore({})
+            index_to_id = {}
+            
+            for i, (text, metadata) in enumerate(zip(texts, metadatas)):
+                doc_id = f"doc_{i}"
+                index_to_id[i] = doc_id
+                docstore.add({
+                    doc_id: Document(
+                        page_content=text,
+                        metadata={
+                            **metadata,
+                            'doc_id': doc_id,
+                            'index': i,
+                            'embedding_dim': dimension
+                        }
+                    )
+                })
+
+            # Create FAISS vectorstore
+            vectordb = FAISS(
+                embedding_function=self.embeddings,
+                index=index,
+                docstore=docstore,
+                index_to_docstore_id=index_to_id,
+                normalize_L2=True
+            )
         
-        # Convert embeddings to numpy array
-        import numpy as np
-        embeddings_array = np.array(embeddings).astype('float32')
-        
-        # Initialize FAISS index
-        #import faiss
-        dimension = len(embeddings[0])  # Get embedding dimension
-        index = faiss.IndexFlatL2(dimension)
-        
-        # Add embeddings to index
-        faiss.normalize_L2(embeddings_array)  # Normalize vectors
-        index.add(embeddings_array)  # Add normalized vectors to index
-        
-        # Create embeddings
-        embeddings = self.embeddings.embed_documents(texts)
-        
-        # Convert to numpy array and normalize
-        import numpy as np
-        embeddings_array = np.array(embeddings).astype('float32')
-        import faiss
-        faiss.normalize_L2(embeddings_array)
-        
-        # Create FAISS index
-        dimension = len(embeddings[0])
-        index = faiss.IndexFlatL2(dimension)
-        index.add(embeddings_array)
-        
-        # Create FAISS vectorstore
-        vectordb = FAISS(
-            embedding_function=self.embeddings,
-            index=index,
-            docstore=InMemoryDocstore({}),
-            index_to_docstore_id={i: f"doc_{i}" for i in range(len(texts))}
-        )
-        
-        # Add documents to docstore
-        for i, (text, metadata) in enumerate(zip(texts, [doc["metadata"] for doc in documents])):
-            vectordb.docstore.add({
-                f"doc_{i}": Document(
-                    page_content=text,
-                    metadata=metadata
-                )
-            })
-        
+        # Save vector store
         store_path.parent.mkdir(parents=True, exist_ok=True)
         vectordb.save_local(str(store_path))
+
+        # Save metadata about the store
+        with open(store_path / 'metadata.json', 'w') as f:
+            json.dump({
+                'num_documents': len(texts),
+                'embedding_dim': dimension,
+                'created_at': time.time(),
+                'documents': [{
+                    'id': f"doc_{i}",
+                    'metadata': m
+                } for i, m in enumerate(metadatas)]
+            }, f, indent=2)
+
+        self.logger.info(f"Created vector store with {len(texts)} documents")
         return vectordb
+
+    except Exception as e:
+        self.logger.error(f"Error creating vector store: {e}")
+        if store_path.exists():
+            shutil.rmtree(store_path)
+        return None
 
     def _save_kb_metadata(self, metadata_path: Path, num_chunks: int, num_files: int):
         """Save knowledge base metadata"""
