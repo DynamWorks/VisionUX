@@ -327,8 +327,15 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
 
             # Get new analysis files
             analysis_files = self._get_new_analysis_files(metadata_path)
+            
+            # If no analysis files exist at all, return None to trigger scene analysis
+            if not analysis_files and not any(analysis_dir.glob("*.json")):
+                self.logger.info("No analysis files found - scene analysis needed")
+                return None
+                
+            # If no new files but store exists, try loading existing store
             if not analysis_files:
-                self.logger.warning("No new analysis files found")
+                self.logger.info("No new analysis files - checking existing store")
                 if store_path.exists():
                     return self._load_existing_store(store_path)
                 else:
