@@ -382,11 +382,11 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                         timestamps=timestamps
                     )
                     
-                    # Save analysis results
-                    analysis_id = f"scene_analysis_{int(time.time())}"
-                    from backend.content_manager import ContentManager
-                    content_manager = ContentManager()
-                    content_manager.save_analysis(analysis, analysis_id)
+                    # # Save analysis results
+                    # analysis_id = f"scene_analysis_{int(time.time())}"
+                    # from backend.content_manager import ContentManager
+                    # content_manager = ContentManager()
+                    # content_manager.save_analysis(analysis, analysis_id)
                     
                     # Retry creating knowledge base now that we have analysis
                     return self.create_knowledge_base(results_path)
