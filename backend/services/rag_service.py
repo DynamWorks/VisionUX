@@ -747,7 +747,7 @@ Provide your response in natural language, focusing on being informative and hel
             chain_response = chain.invoke({
                 "question": enhanced_query
             })
-
+            import pdb;pdb.set_trace()
             # Process response - chain returns dict directly
             response = {
                 "answer": chain_response["answer"].strip(),
