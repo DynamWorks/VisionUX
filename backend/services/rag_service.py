@@ -12,9 +12,10 @@ from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
 from langchain.chains import RetrievalQAWithSourcesChain
-from langchain.memory.buffer import ConversationBufferMemory
-from langchain.chains import RetrievalQAWithSourcesChain
+# from langchain.chains import StuffDocumentsChain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationBufferMemory
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import json
 import logging
@@ -644,21 +645,15 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             }
         )
 
-        # Create memory for chat history
-        memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
-
         # Enhanced prompt template
-        prompt_template = """You are an AI assistant analyzing video content. Use the following context to answer questions about the video.
+        prompt_template = """You are an AI assistant analyzing video content. Use the following pieces of information to answer the user's question about the video.
 
-{context}
+Context: {context}
 
 Question: {question}
 
 Instructions:
-1. Answer based on the context above
+1. Answer based primarily on the context provided
 2. Be specific and reference timestamps/frames when available
 3. If information is incomplete, acknowledge uncertainty
 4. Suggest relevant tools when appropriate:
@@ -674,18 +669,18 @@ Provide your response in natural language, focusing on being informative and hel
             input_variables=["context", "question"]
         )
 
-        # Create chain with enhanced configuration
-        chain = RetrievalQAWithSourcesChain.from_chain_type(
+        # Create document chain using new constructor
+        combine_docs_chain = create_stuff_documents_chain(
             llm=self.llm,
-            chain_type="stuff",
+            prompt=PROMPT,
+            document_variable_name="context"
+        )
+
+        # Create retrieval chain with explicit document chain
+        chain = RetrievalQAWithSourcesChain(
+            combine_documents_chain=combine_docs_chain,
             retriever=retriever,
-            return_source_documents=True,
-            memory=memory,
-            chain_type_kwargs={
-                "prompt": PROMPT,
-                "verbose": True,
-                "document_variable_name": "input"  # Match the input variable name
-            }
+            return_source_documents=True
         )
 
         # Store chain reference
@@ -707,15 +702,16 @@ Provide your response in natural language, focusing on being informative and hel
                 chain = self.get_retrieval_chain(vectordb)
 
             # Format chat history
-            formatted_history = []
+            # Process chat history into a string format
+            chat_history_str = ""
             if chat_history:
                 for msg in chat_history[-5:]:  # Last 5 messages
                     role = msg.get('role', 'unknown')
                     content = msg.get('content', '')
                     if role == 'user':
-                        formatted_history.append(HumanMessage(content=content))
+                        chat_history_str += f"Human: {content}\n"
                     elif role == 'assistant':
-                        formatted_history.append(AIMessage(content=content))
+                        chat_history_str += f"Assistant: {content}\n"
 
             # Get vectordb from chain or create new chain if needed
             vectordb = None
@@ -730,32 +726,26 @@ Provide your response in natural language, focusing on being informative and hel
                 # Create new chain with loaded store
                 chain = self.get_retrieval_chain(vectordb)
 
-            # Get relevant documents with enhanced parameters 
-            relevant_docs = vectordb.similarity_search_with_score( 
+            # Use consistent search parameters with the retriever config
+            relevant_docs = vectordb.similarity_search_with_score(
                 query,
-                k=8,  # Increased for better coverage
-                score_threshold=0.5,  # Slightly lower threshold for more results
-                fetch_k=30,  # Fetch more candidates
-                filter=None  # No filtering by default
+                k=5,  # Match retriever config
+                score_threshold=0.6,  # Match retriever config
+                fetch_k=20,  # Match retriever config
+                filter=None
             )
 
             # Sort by score and take top 5
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
-            # Combine context and query into single input
-            # Format context and input text
-            context_text = "\n\n".join([doc[0].page_content for doc in relevant_docs])
-            history_text = formatted_history if formatted_history else "No previous chat history"
+            # Query the chain with the original question and chat history string
+            # Incorporate chat history into the question if available
+            enhanced_query = query
+            if chat_history_str:
+                enhanced_query = f"Given this chat history:\n{chat_history_str}\n\nNew question: {query}"
             
-            input_text = (
-                f"Context: {context_text}\n\n"
-                f"Question: {query}\n\n"
-                f"Chat History: {history_text}"
-            )
-
-            # Query the chain with question key
             chain_response = chain.invoke({
-                "question": input_text
+                "question": enhanced_query
             })
 
             # Process response
