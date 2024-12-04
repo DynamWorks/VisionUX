@@ -632,6 +632,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             
     def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQAWithSourcesChain:
         """Create retrieval chain with custom prompt"""
+        import pdb; pdb.set_trace()
         if not vectordb:
             raise ValueError("Vector store is required to create retrieval chain")
 
