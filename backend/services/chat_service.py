@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from backend.content_manager import ContentManager
 from .rag_service import RAGService
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.runnables import RunnableSequence
 import json
 import time
 import numpy as np
