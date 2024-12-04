@@ -94,6 +94,11 @@ class ChatService:
 
             # Query knowledge base
             try:
+                # Ensure we're using the new LCEL chain correctly
+                if not isinstance(self._current_chain, RunnableSequence):
+                    # Create new chain if needed
+                    self._current_chain = self.rag_service.create_knowledge_base(Path(video_path))
+                
                 rag_response = self.rag_service.query_knowledge_base(
                     query=query,
                     chain=self._current_chain,
