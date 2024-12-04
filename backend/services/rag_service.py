@@ -749,7 +749,7 @@ Provide your response in natural language, focusing on being informative and hel
                 enhanced_query = f"Given this chat history:\n{chat_history_str}\n\nNew question: {query}"
             
             chain_response = chain.invoke({
-                "question": enhanced_query
+                "query": enhanced_query
             })
 
             # Process response from RunnableSequence
