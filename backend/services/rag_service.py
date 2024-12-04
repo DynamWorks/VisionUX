@@ -633,7 +633,6 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             
     def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQA:
         """Create retrieval chain with custom prompt"""
-        import pdb; pdb.set_trace()
         if not vectordb:
             raise ValueError("Vector store is required to create retrieval chain")
 
@@ -740,7 +739,7 @@ Provide your response in natural language, focusing on being informative and hel
                 fetch_k=20,  # Match retriever config
                 filter=None
             )
-
+            import pdb; pdb.set_trace()
             # Sort by score and take top 5
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
