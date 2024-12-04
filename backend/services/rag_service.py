@@ -11,7 +11,8 @@ import faiss
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
-from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain_core.runnables import RunnableSequence
 # from langchain.chains import StuffDocumentsChain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.prompts import PromptTemplate
@@ -677,11 +678,15 @@ Provide your response in natural language, focusing on being informative and hel
             document_variable_name="context"
         )
 
-        # Create retrieval chain with explicit document chain
-        chain = RetrievalQAWithSourcesChain(
-            combine_documents_chain=combine_docs_chain,
+        # Create retrieval chain using LCEL
+        chain = RetrievalQA.from_chain_type(
+            llm=self.llm,
+            chain_type="stuff",
             retriever=retriever,
-            return_source_documents=True
+            return_source_documents=True,
+            chain_type_kwargs={
+                "prompt": PROMPT
+            }
         )
 
         # Store chain reference
