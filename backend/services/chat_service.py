@@ -74,9 +74,9 @@ class ChatService:
     def process_chat(self, query: str, video_path: str, use_swarm: bool = False, confirmed: bool = False) -> Dict:
         """Process chat query using RAG and handle tool execution"""
         try:
-            # Handle tool confirmation
-            if confirmed:
-                return self._execute_confirmed_tool(query)
+            # Handle tool confirmation 
+            if confirmed and hasattr(self, '_pending_tool'):
+                return self._execute_confirmed_tool(self._pending_tool)
 
             # Create or update knowledge base
             if not self._current_chain:
@@ -103,8 +103,24 @@ class ChatService:
                 rag_response = self.rag_service.query_knowledge_base(
                     query=query,
                     chain=self._current_chain,
-                    chat_history=chat_history[-5:] if chat_history else None
+                    chat_history=chat_history[-5:] if chat_history else None,
+                    tools=self.tools
                 )
+
+                # Check for tool calls in response
+                if 'tool_calls' in rag_response:
+                    tool_name = rag_response['tool_calls'][0]['function']['name']
+                    tool_args = rag_response['tool_calls'][0]['function']['arguments']
+                    
+                    # Store pending tool
+                    self._pending_tool = {
+                        'name': tool_name,
+                        'args': tool_args
+                    }
+                    
+                    # Update response to request confirmation
+                    rag_response['answer'] += f"\n\nWould you like me to execute {tool_name}?"
+                    rag_response['requires_confirmation'] = True
 
                 # Check for tool suggestions
                 tool_suggestions = self._analyze_for_tools(query, rag_response.get('answer', ''))
@@ -132,24 +148,31 @@ class ChatService:
             self.logger.error(f"Chat processing failed: {e}")
             return self._format_error_response(str(e), query)
 
-    def _execute_confirmed_tool(self, tool_name: str) -> Dict:
+    def _execute_confirmed_tool(self, tool_info: Dict) -> Dict:
         """Execute a confirmed tool action"""
+        tool_name = tool_info['name']
+        tool_args = tool_info.get('args', {})
+        
         for tool in self.tools:
             if tool.name == tool_name:
                 try:
-                    result = tool.run()
+                    result = tool.run(**tool_args)
+                    # Clear pending tool after execution
+                    self._pending_tool = None
                     return {
                         "rag_response": {
                             "answer": f"Tool execution complete: {result}",
                             "sources": []
                         },
                         "action_executed": {
-                            "action": tool.name,
+                            "action": tool_name,
+                            "args": tool_args,
                             "status": "completed",
                             "timestamp": time.time()
                         }
                     }
                 except Exception as e:
+                    self._pending_tool = None
                     return {"error": f"Tool execution failed: {str(e)}"}
         return {"error": f"Tool {tool_name} not found"}
 

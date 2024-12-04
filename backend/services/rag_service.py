@@ -696,7 +696,9 @@ Provide your response in natural language, focusing on being informative and hel
         self._current_chain = chain
         return chain
         
-    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQA] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
+    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQA] = None, 
+                           chat_history: Optional[List[Dict]] = None,
+                           tools: Optional[List] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
         try:
             # Create chain if not provided
@@ -746,14 +748,32 @@ Provide your response in natural language, focusing on being informative and hel
             # Sort by score and take top 5
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
-            # Query the chain with the original question and chat history string
+            # Prepare tools for the model
+            tool_descriptions = []
+            if tools:
+                for tool in tools:
+                    tool_descriptions.append({
+                        "type": "function",
+                        "function": {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": tool.args_schema if hasattr(tool, 'args_schema') else {}
+                        }
+                    })
+
+            # Query the chain with tools
             enhanced_query = query
             if chat_history_str:
                 enhanced_query = f"Given this chat history:\n{chat_history_str}\n\nNew question: {query}"
             
             chain_response = chain.invoke({
-                "query": enhanced_query
+                "query": enhanced_query,
+                "tools": tool_descriptions
             })
+
+            # Check for tool calls in response
+            if hasattr(chain_response, 'tool_calls') and chain_response.tool_calls:
+                response['tool_calls'] = chain_response.tool_calls
 
             # Process response from RunnableSequence
             response = {
