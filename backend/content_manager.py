@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Optional, Dict, List
 import time
+import numpy as np
 
 class ContentManager:
     """Manages temporary content storage for API outputs and user files"""
