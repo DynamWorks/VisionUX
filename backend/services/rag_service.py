@@ -771,12 +771,18 @@ Provide your response in natural language, focusing on being informative and hel
                 "tools": tool_descriptions
             })
 
+            # Process response from RunnableSequence
+            response = {
+                "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
+                "sources": getattr(chain_response, 'source_documents', []),
+            }
+
             # Check for tool calls in response
             if hasattr(chain_response, 'tool_calls') and chain_response.tool_calls:
                 response['tool_calls'] = chain_response.tool_calls
 
-            # Process response from RunnableSequence
-            response = {
+            # Add source documents
+            response.update({
                 "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
                 "sources": getattr(chain_response, 'source_documents', []),
                 "source_documents": [
