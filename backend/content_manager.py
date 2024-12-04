@@ -80,9 +80,20 @@ class ContentManager:
         # Append new messages
         existing_history.extend(chat_data)
         
-        # Save updated history
+        # Custom JSON encoder for numpy types
+        class NumpyEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                if isinstance(obj, np.floating):
+                    return float(obj)
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                return super().default(obj)
+
+        # Save updated history with numpy handling
         with open(file_path, "w") as f:
-            json.dump(existing_history, f, indent=2)
+            json.dump(existing_history, f, indent=2, cls=NumpyEncoder)
 
     def get_recent_analysis(self, source_id: str, limit: int = 5) -> List[Dict]:
         """Get recent analysis results for a source"""
