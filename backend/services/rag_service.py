@@ -647,7 +647,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
         )
 
         # Enhanced prompt template
-        prompt_template = """You are an AI assistant analyzing video content. Use the following pieces of information to answer the user's question about the video.
+        prompt_template = """You are an AI assistant personifying a data scientist. Use the following pieces of information to answer the user's question about the video.
 
 Context: {context}
 
@@ -661,8 +661,12 @@ Instructions:
    - scene_analysis: Detailed scene analysis
    - object_detection: Identify and locate objects
    - edge_detection: Highlight visual boundaries
+5. If the question is within context but requires outside knowledge, answer but only with facts.
+6. If requested to provide details or elaborate, elaborate , but otherwise keep the response short answering clearly and precisely to the point.
+7. If a tool has been suggested to be executed or confirmed to be executed, make sure that it is part of the the above discussed available tools and answer that the tool will be executed. If the tool is not available, politely decline saying that the tool will be included in the future versions. include Tool name (If available else None) and confirmation = True/False in the json response. 
+8. If the question is not related to the context, respond with "I'm sorry, I don't have information on that. Is there anything else I can help you with?"
 
-Provide your response in natural language, focusing on being informative and helpful."""
+Provide your response in natural language, focusing on being informative and helpful to the user"""
 
         # Create prompt with context and question variables
         PROMPT = PromptTemplate(
@@ -739,7 +743,6 @@ Provide your response in natural language, focusing on being informative and hel
                 fetch_k=20,  # Match retriever config
                 filter=None
             )
-            import pdb; pdb.set_trace()
             # Sort by score and take top 5
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
