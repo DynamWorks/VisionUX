@@ -748,10 +748,10 @@ Provide your response in natural language, focusing on being informative and hel
                 "question": enhanced_query
             })
 
-            # Process response
+            # Process response - chain returns dict directly
             response = {
-                "answer": chain_response.get("answer", "").strip(),
-                "sources": chain_response.get("source_documents", []),
+                "answer": chain_response["answer"].strip(),
+                "sources": chain_response["source_documents"],
                 "source_documents": [
                     {
                         "content": doc[0].page_content,
