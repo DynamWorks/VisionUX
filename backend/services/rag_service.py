@@ -739,7 +739,6 @@ Provide your response in natural language, focusing on being informative and hel
             relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
             # Query the chain with the original question and chat history string
-            # Incorporate chat history into the question if available
             enhanced_query = query
             if chat_history_str:
                 enhanced_query = f"Given this chat history:\n{chat_history_str}\n\nNew question: {query}"
@@ -747,11 +746,11 @@ Provide your response in natural language, focusing on being informative and hel
             chain_response = chain.invoke({
                 "question": enhanced_query
             })
-            import pdb;pdb.set_trace()
-            # Process response - chain returns dict directly
+
+            # Process response from RunnableSequence
             response = {
-                "answer": chain_response["answer"].strip(),
-                "sources": chain_response["source_documents"],
+                "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
+                "sources": getattr(chain_response, 'source_documents', []),
                 "source_documents": [
                     {
                         "content": doc[0].page_content,
