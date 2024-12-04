@@ -631,7 +631,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 'version': '1.0'
             }, f, indent=2)
             
-    def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQAWithSourcesChain:
+    def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQA:
         """Create retrieval chain with custom prompt"""
         import pdb; pdb.set_trace()
         if not vectordb:
@@ -693,7 +693,7 @@ Provide your response in natural language, focusing on being informative and hel
         self._current_chain = chain
         return chain
         
-    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQAWithSourcesChain] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
+    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQA] = None, chat_history: Optional[List[Dict]] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
         try:
             # Create chain if not provided
