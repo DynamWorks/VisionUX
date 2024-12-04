@@ -793,7 +793,7 @@ Provide your response in natural language, focusing on being informative and hel
                     }
                     for doc in relevant_docs
                 ]
-            }
+            })
 
             # Add tool suggestions if relevant
             tool_suggestions = self._analyze_for_tools(query, response["answer"])
