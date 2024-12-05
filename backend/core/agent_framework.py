@@ -244,36 +244,82 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         }
             
         def confirm_action(state: AgentState) -> AgentState:
-            """Get confirmation for action"""
+            """Get confirmation for action with tool description"""
+            if not isinstance(state, dict):
+                logger.error("Invalid state type")
+                return {**state, "response": "Internal error: invalid state"}
+
             if state.get('confirmed'):
                 return {**state, "response": 'Action confirmed'}
                 
-            tool_name = self._get_relevant_tool(state['query'])
-            confirmation_msg = f"Would you like me to run {tool_name} analysis now?"
+            tool_name = self._get_relevant_tool(state.get('query', ''))
+            if not tool_name:
+                return {**state, "response": "No relevant tool found for this query"}
+                
+            tool = self._get_tool(tool_name)
+            if not tool:
+                return {**state, "response": f"Tool {tool_name} is not available"}
+                
+            confirmation_msg = (
+                f"Would you like me to run {tool_name} analysis now?\n"
+                f"This will: {tool.description}"
+            )
+            
             return {
                 **state,
                 "response": confirmation_msg,
-                "pending_action": tool_name
+                "pending_action": tool_name,
+                "tool_description": tool.description
             }
             
         def execute_action(state: AgentState) -> AgentState:
-            """Execute confirmed action"""
+            """Execute confirmed action with input validation"""
+            if not isinstance(state, dict):
+                logger.error("Invalid state type")
+                return {**state, "response": "Internal error: invalid state"}
+
             if not state.get('confirmed'):
                 return {**state, "response": 'Action not confirmed'}
                 
-            tool = self._get_tool(state['pending_action'])
+            tool_name = state.get('pending_action')
+            if not tool_name:
+                logger.error("No pending action in state")
+                return {**state, "response": "No action specified"}
+                
+            tool = self._get_tool(tool_name)
             if not tool:
+                logger.error(f"Tool not found: {tool_name}")
                 return {
                     **state,
-                    "response": f"Sorry, {state['pending_action']} is not available"
+                    "response": f"Sorry, {tool_name} is not available"
                 }
                 
             try:
-                result = tool.run(state.get('tool_input', {}))
-                return {**state, "response": f"Action completed: {result}"}
+                # Validate tool inputs
+                tool_input = state.get('tool_input', {})
+                if hasattr(tool, 'validate_inputs'):
+                    tool_input = tool.validate_inputs(tool_input)
+                
+                # Execute tool
+                result = tool.run(tool_input)
+                
+                # Update state with result
+                return {
+                    **state, 
+                    "response": f"Action completed: {result}",
+                    "tool_result": result,
+                    "execution_timestamp": time.time()
+                }
+            except ValueError as ve:
+                logger.warning(f"Tool input validation error: {ve}")
+                return {**state, "response": f"Invalid input: {str(ve)}"}
             except Exception as e:
-                logger.error(f"Tool execution error: {e}")
-                return {**state, "response": f"Error executing action: {str(e)}"}
+                logger.error(f"Tool execution error: {e}", exc_info=True)
+                return {
+                    **state, 
+                    "response": f"Error executing action: {str(e)}",
+                    "error": str(e)
+                }
                 
         return self.workflow
 
