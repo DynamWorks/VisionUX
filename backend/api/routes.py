@@ -4,7 +4,8 @@ import cv2
 import logging
 import os
 from pathlib import Path
-from flask import Blueprint, request, jsonify, Response, send_file, current_app, send_from_directory, json
+from flask import Blueprint, request, jsonify, Response, send_file, current_app, send_from_directory
+import json
 import shutil
 import logging
 import numpy as np
@@ -272,21 +273,21 @@ def chat_analysis():
         #     video_name if video_name else f"chat_{int(time.time())}"
         # )
 
-        # Custom JSON encoder for numpy types
-        class NumpyEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, np.integer):
-                    return int(obj)
-                if isinstance(obj, np.floating):
-                    return float(obj)
-                if isinstance(obj, np.ndarray):
-                    return obj.tolist()
-                return super().default(obj)
-                
-        return Response(
-            json.dumps(response, cls=NumpyEncoder),
-            mimetype='application/json'
-        )
+        # Convert numpy types to Python native types
+        def convert_numpy(obj):
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: convert_numpy(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_numpy(i) for i in obj]
+            return obj
+
+        return jsonify(convert_numpy(response))
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
