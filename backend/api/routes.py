@@ -263,13 +263,13 @@ def chat_analysis():
             data['video_path'],
             use_swarm=data.get('use_swarm', False)
         )
-
-        video_name = data.get('video_path')
-        content_manager.save_chat_history(
-            [{'role': 'user', 'content': data['prompt']},
-             {'role': 'assistant', 'content': response.get('rag_response', '')}],
-            video_name if video_name else f"chat_{int(time.time())}"
-        )
+        import pdb; pdb.set_trace()
+        # video_name = data.get('video_path')
+        # content_manager.save_chat_history(
+        #     [{'role': 'user', 'content': data['prompt']},
+        #      {'role': 'assistant', 'content': response.get('rag_response', '')}],
+        #     video_name if video_name else f"chat_{int(time.time())}"
+        # )
 
         return jsonify(response)
 
