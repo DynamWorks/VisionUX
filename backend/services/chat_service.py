@@ -102,34 +102,30 @@ class ChatService:
                 config={'checkpointer': checkpointer}
             )
 
-                # Check for tool suggestions
-                tool_suggestion = self._analyze_for_tools(query, rag_response.get('answer', ''))
-                
-                response = {
-                    "answer": rag_response.get('answer', ''),
-                    "sources": rag_response.get('sources', []),
-                    "timestamp": time.time(),
-                    "chat_messages": [
-                        {"role": "user", "content": query},
-                        {"role": "assistant", "content": rag_response.get('answer', '')}
-                    ]
-                }
+            # Process workflow result
+            response = {
+                "answer": result.get('final_response', ''),
+                "sources": result.get('retriever_result', []),
+                "timestamp": time.time(),
+                "chat_messages": result.get('messages', [])
+            }
 
-                if tool_suggestion:
-                    self._pending_tool = tool_suggestion
-                    response.update({
-                        "suggested_tool": tool_suggestion['name'],
-                        "tool_description": tool_suggestion['description'],
-                        "requires_confirmation": True,
-                        "answer": f"{response['answer']}\n\nWould you like me to {tool_suggestion['description']}?"
-                    })
+            # Add tool suggestion if present
+            if result.get('suggested_tool'):
+                response.update({
+                    "suggested_tool": result['suggested_tool'],
+                    "tool_description": result.get('tool_description', ''),
+                    "requires_confirmation": True,
+                    "answer": f"{response['answer']}\n\nWould you like me to {result.get('tool_description', '')}?"
+                })
+                if response['chat_messages']:
                     response['chat_messages'][-1]['content'] = response['answer']
 
-                return response
+            return response
 
-            except Exception as e:
-                self.logger.error(f"RAG query error: {e}")
-                return self._format_error_response(str(e), query)
+        except Exception as e:
+            self.logger.error(f"Chat processing error: {e}")
+            return self._format_error_response(str(e), query)
 
         except Exception as e:
             self.logger.error(f"Chat processing failed: {e}")
