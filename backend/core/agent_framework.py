@@ -194,6 +194,29 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 ]
             }
         
+    def _suggest_tool_with_checkpoint(self, state: AgentState) -> AgentState:
+        """Suggest tool with checkpoint handling"""
+        try:
+            # Load checkpoint if exists
+            checkpointer = state.get('config', {}).get('checkpointer')
+            if checkpointer:
+                checkpoint = checkpointer.get_checkpoint(f"suggest_{state['state_id']}")
+                if checkpoint:
+                    return checkpoint
+
+            # Execute tool suggestion
+            result = self._suggest_tool(state)
+
+            # Save checkpoint
+            if checkpointer:
+                checkpointer.save_checkpoint(f"suggest_{state['state_id']}", result)
+                result['last_checkpoint'] = time.time()
+
+            return result
+        except Exception as e:
+            self.logger.error(f"Tool suggestion error: {e}")
+            return {**state, 'error': str(e)}
+
     def _suggest_tool(self, state: AgentState) -> AgentState:
         """Analyze query and suggest appropriate tool"""
         # Create tool suggestion prompt
