@@ -337,6 +337,29 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             ]
         }
         
+    def _generate_response_with_checkpoint(self, state: AgentState) -> AgentState:
+        """Generate response with checkpoint handling"""
+        try:
+            # Load checkpoint if exists
+            checkpointer = state.get('config', {}).get('checkpointer')
+            if checkpointer:
+                checkpoint = checkpointer.get_checkpoint(f"response_{state['state_id']}")
+                if checkpoint:
+                    return checkpoint
+
+            # Execute response generation
+            result = self._generate_response(state)
+
+            # Save checkpoint
+            if checkpointer:
+                checkpointer.save_checkpoint(f"response_{state['state_id']}", result)
+                result['last_checkpoint'] = time.time()
+
+            return result
+        except Exception as e:
+            self.logger.error(f"Response generation error: {e}")
+            return {**state, 'error': str(e)}
+
     def _generate_response(self, state: AgentState) -> AgentState:
         """Generate final response combining retriever and tool results"""
         if state.get("error"):
