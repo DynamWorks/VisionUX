@@ -84,6 +84,25 @@ class RAGService:
             length_function=len,
             separators=["\n\n", "\n", " ", ""]
         )
+        
+        # Initialize retriever with default empty FAISS store
+        dimension = 1536  # OpenAI embedding dimension
+        index = faiss.IndexFlatL2(dimension)
+        docstore = InMemoryDocstore({})
+        self.vectorstore = FAISS(
+            self.embeddings.embed_query,
+            index,
+            docstore,
+            {}
+        )
+        self.retriever = self.vectorstore.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={
+                "k": 5,
+                "score_threshold": 0.6,
+                "fetch_k": 20
+            }
+        )
         self.memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True
