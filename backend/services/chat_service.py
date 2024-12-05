@@ -36,9 +36,13 @@ class ChatService:
             ChatTool(self)
         ]
         
+        # Initialize RAG service first to get retriever
+        self.rag_service = RAGService(user_id=user_id, project_id=project_id)
+        
         self.agent = VideoAnalysisAgent(
             llm=self.rag_service.llm,
-            tools=self.tools
+            tools=self.tools,
+            retriever=self.rag_service.retriever
         )
         
     def _get_context_from_tmp(self) -> List[Dict]:
