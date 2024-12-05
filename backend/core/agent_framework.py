@@ -26,6 +26,10 @@ class AgentState(TypedDict):
     requires_confirmation: bool     # Whether tool execution needs confirmation
     confirmed: bool                # Whether user confirmed tool execution
     final_response: Optional[str]   # Final response to return to user
+    video_path: str               # Path to current video
+    state_id: str                 # Unique state identifier
+    last_checkpoint: float        # Last checkpoint timestamp
+    execution_history: List[Dict] # History of tool executions
 
 class VideoAnalysisAgent:
     """Agent for handling video analysis queries and actions"""

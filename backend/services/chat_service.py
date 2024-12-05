@@ -72,40 +72,35 @@ class ChatService:
         return required_functions
         
     def process_chat(self, query: str, video_path: str, confirmed: bool = False, tool_input: Dict = None) -> Dict:
-        """Process chat query using RAG and handle tool execution"""
+        """Process chat query through agent workflow with state persistence"""
         try:
-            # Handle tool confirmation and execution
-            if confirmed and hasattr(self, '_pending_tool'):
-                result = self._execute_confirmed_tool(self._pending_tool)
-                self._pending_tool = None  # Clear pending tool after execution
-                return result
-
-            # Create or update knowledge base
-            if not self._current_chain:
-                self._current_chain = self.rag_service.create_knowledge_base(Path(video_path))
-                if not self._current_chain:
-                    return {
-                        "answer": "I need to analyze the video first. Would you like me to run a scene analysis?",
-                        "requires_analysis": True,
-                        "suggested_tool": "scene_analysis",
-                        "requires_confirmation": True,
-                        "chat_messages": [
-                            {"role": "assistant", "content": "I need to analyze the video first. Would you like me to run a scene analysis?"}
-                        ]
-                    }
-
-            # Get chat history
+            # Load or initialize agent state
+            state_path = Path("tmp_content/agent_state") / f"{video_path}_state.json"
+            state = self._load_agent_state(state_path)
+            
+            # Update state with new query
+            state.update({
+                'current_query': query,
+                'confirmed': confirmed,
+                'tool_input': tool_input,
+                'video_path': video_path
+            })
+            
+            # Get chat history for context
             chat_history = self._get_chat_history(video_path)
-
-            # Query knowledge base with tool awareness
-            try:
-                rag_response = self.rag_service.query_knowledge_base(
-                    query=query,
-                    chain=self._current_chain,
-                    chat_history=chat_history[-5:] if chat_history else None,
-                    tools=self.tools,
-                    results_path=Path(video_path)
-                )
+            state['messages'] = chat_history
+            
+            # Initialize checkpointer for persistence
+            from langgraph.checkpoint import LocalFileCheckpointer
+            checkpointer = LocalFileCheckpointer(
+                Path("tmp_content/checkpoints") / video_path
+            )
+            
+            # Run agent workflow with state persistence
+            result = self.agent.workflow.invoke(
+                state,
+                config={'checkpointer': checkpointer}
+            )
 
                 # Check for tool suggestions
                 tool_suggestion = self._analyze_for_tools(query, rag_response.get('answer', ''))
