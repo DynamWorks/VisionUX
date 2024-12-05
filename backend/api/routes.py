@@ -274,20 +274,20 @@ def chat_analysis():
         # )
 
         # Convert numpy types to Python native types
-        def convert_numpy(obj):
-            if isinstance(obj, np.integer):
-                return int(obj)
-            elif isinstance(obj, np.floating):
-                return float(obj)
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, dict):
-                return {k: convert_numpy(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_numpy(i) for i in obj]
-            return obj
+        # def convert_numpy(obj):
+        #     if isinstance(obj, np.integer):
+        #         return int(obj)
+        #     elif isinstance(obj, np.floating):
+        #         return float(obj)
+        #     elif isinstance(obj, np.ndarray):
+        #         return obj.tolist()
+        #     elif isinstance(obj, dict):
+        #         return {k: convert_numpy(v) for k, v in obj.items()}
+        #     elif isinstance(obj, list):
+        #         return [convert_numpy(i) for i in obj]
+        #     return obj
 
-        return jsonify(convert_numpy(response))
+        return jsonify(response['result']) #(convert_numpy(response['result']))
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)

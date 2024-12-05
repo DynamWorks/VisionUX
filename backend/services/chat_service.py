@@ -96,17 +96,16 @@ class ChatService:
             # Query knowledge base
             try:
                 # Ensure we're using the new LCEL chain correctly
-                if not isinstance(self._current_chain, RunnableSequence):
-                    # Create new chain if needed
-                    self._current_chain = self.rag_service.create_knowledge_base(Path(video_path))
-                
                 rag_response = self.rag_service.query_knowledge_base(
                     query=query,
                     chain=self._current_chain,
                     chat_history=chat_history[-5:] if chat_history else None,
-                    tools=self.tools
+                    tools=self.tools,
+                    results_path=Path(video_path)
                 )
 
+                import pdb; pdb.set_trace()
+                
                 # Check for tool calls in response
                 if 'tool_calls' in rag_response:
                     tool_name = rag_response['tool_calls'][0]['function']['name']
@@ -122,18 +121,18 @@ class ChatService:
                     rag_response['answer'] += f"\n\nWould you like me to execute {tool_name}?"
                     rag_response['requires_confirmation'] = True
 
-                # Check for tool suggestions
-                tool_suggestions = self._analyze_for_tools(query, rag_response.get('answer', ''))
-                if tool_suggestions:
-                    rag_response['answer'] += f"\n\n{tool_suggestions}"
-                    rag_response.update({
-                        "requires_confirmation": True,
-                        "pending_action": tool_suggestions.split()[0]
-                    })
+                # # Check for tool suggestions
+                # tool_suggestions = self._analyze_for_tools(query, rag_response.get('answer', ''))
+                # if tool_suggestions:
+                #     rag_response['answer'] += f"\n\n{tool_suggestions}"
+                #     rag_response.update({
+                #         "requires_confirmation": True,
+                #         "pending_action": tool_suggestions.split()[0]
+                #     })
 
                 # Save chat history
                 self._save_chat_message(video_path, query, rag_response.get('answer', ''))
-
+                self._save_chat_message(video_path, query, rag_response )
                 return {
                     "query": query,
                     "timestamp": time.time(),
