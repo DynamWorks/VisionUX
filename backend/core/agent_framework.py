@@ -149,11 +149,27 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         """Core retrieval logic"""
         query = state["current_query"]
         chat_history = state.get("messages", [])
+        video_path = state.get("video_path")
         
-        # Get retriever response
+        # Create/update knowledge base
         try:
-            result = self.retriever.get_relevant_documents(query)
-            retriever_response = result[0].page_content if result else None
+            vectordb = self.rag_service.create_knowledge_base(Path(video_path))
+            if not vectordb:
+                return {
+                    **state,
+                    "error": "Failed to create/update knowledge base",
+                    "messages": chat_history + [
+                        {"role": "user", "content": query}
+                    ]
+                }
+            
+            # Query knowledge base
+            result = self.rag_service.query_knowledge_base(
+                query=query,
+                chat_history=chat_history
+            )
+            
+            retriever_response = result.get('answer') if result else None
             
             # Check if query suggests tool usage
             tool_suggestion = self._analyze_for_tool_suggestion(query, retriever_response)
