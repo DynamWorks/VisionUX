@@ -631,7 +631,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 'version': '1.0'
             }, f, indent=2)
             
-    def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQA:
+    def get_retrieval_chain(self, vectordb: FAISS, results_path: Path) -> RetrievalQA:
         """Create retrieval chain with custom prompt"""
         if not vectordb:
             raise ValueError("Vector store is required to create retrieval chain")
@@ -673,17 +673,30 @@ Provide your response in natural language, focusing on being informative and hel
             template=prompt_template,
             input_variables=["context", "question"]
         )
-
-        # Create document chain using new constructor
-        combine_docs_chain = create_stuff_documents_chain(
-            llm=self.llm,
-            prompt=PROMPT,
-            document_variable_name="context"
+        # Initialize agent with tools
+        from backend.core.analysis_tools import (
+            SceneAnalysisTool, ObjectDetectionTool, 
+            EdgeDetectionTool, ChatTool
         )
+        from backend.services import scene_service, cv_service
+        
+        tools = [
+            SceneAnalysisTool(None)._run(results_path),
+            ObjectDetectionTool(None)._run(),
+            EdgeDetectionTool(None)._run,
+            ChatTool(self)._run()
+        ]
+        llm_with_tools = self.llm.bind_tools([tools])
+        # # Create document chain using new constructor
+        # combine_docs_chain = create_stuff_documents_chain(
+        #     llm=llm_with_tools,
+        #     prompt=PROMPT,
+        #     document_variable_name="context"
+        # )
 
         # Create retrieval chain using LCEL
         chain = RetrievalQA.from_chain_type(
-            llm=self.llm,
+            llm=llm_with_tools, #self.llm,
             chain_type="stuff",
             retriever=retriever,
             return_source_documents=True,
@@ -696,7 +709,7 @@ Provide your response in natural language, focusing on being informative and hel
         self._current_chain = chain
         return chain
         
-    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQA] = None, 
+    def query_knowledge_base(self, query: str, results_path: Path, chain: Optional[RetrievalQA] = None, 
                            chat_history: Optional[List[Dict]] = None,
                            tools: Optional[List] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
@@ -710,7 +723,7 @@ Provide your response in natural language, focusing on being informative and hel
                         "sources": [],
                         "requires_analysis": True
                     }
-                chain = self.get_retrieval_chain(vectordb)
+                chain = self.get_retrieval_chain(vectordb, results_path)
 
             # Format chat history
             # Process chat history into a string format
@@ -735,31 +748,31 @@ Provide your response in natural language, focusing on being informative and hel
                 if not vectordb:
                     raise ValueError("No vector store available and could not load from disk")
                 # Create new chain with loaded store
-                chain = self.get_retrieval_chain(vectordb)
+                chain = self.get_retrieval_chain(vectordb, results_path)
 
-            # Use consistent search parameters with the retriever config
-            relevant_docs = vectordb.similarity_search_with_score(
-                query,
-                k=5,  # Match retriever config
-                score_threshold=0.6,  # Match retriever config
-                fetch_k=20,  # Match retriever config
-                filter=None
-            )
-            # Sort by score and take top 5
-            relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
+            # # Use consistent search parameters with the retriever config
+            # relevant_docs = vectordb.similarity_search_with_score(
+            #     query,
+            #     k=5,  # Match retriever config
+            #     score_threshold=0.6,  # Match retriever config
+            #     fetch_k=20,  # Match retriever config
+            #     filter=None
+            # )
+            # # Sort by score and take top 5
+            # relevant_docs = sorted(relevant_docs, key=lambda x: x[1])[:5]
 
-            # Prepare tools for the model
-            tool_descriptions = []
-            if tools:
-                for tool in tools:
-                    tool_descriptions.append({
-                        "type": "function",
-                        "function": {
-                            "name": tool.name,
-                            "description": tool.description,
-                            "parameters": tool.args_schema if hasattr(tool, 'args_schema') else {}
-                        }
-                    })
+            # # Prepare tools for the model
+            # tool_descriptions = []
+            # if tools:
+            #     for tool in tools:
+            #         tool_descriptions.append({
+            #             "type": "function",
+            #             "function": {
+            #                 "name": tool.name,
+            #                 "description": tool.description,
+            #                 "parameters": tool.args_schema if hasattr(tool, 'args_schema') else {}
+            #             }
+            #         })
 
             # Query the chain with tools
             enhanced_query = query
@@ -767,43 +780,43 @@ Provide your response in natural language, focusing on being informative and hel
                 enhanced_query = f"Given this chat history:\n{chat_history_str}\n\nNew question: {query}"
             
             chain_response = chain.invoke({
-                "query": enhanced_query,
-                "tools": tool_descriptions
+                "query": enhanced_query #,
+                # "tools": tool_descriptions
             })
 
-            # Process response from RunnableSequence
-            response = {
-                "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
-                "sources": getattr(chain_response, 'source_documents', []),
-            }
+            # # Process response from RunnableSequence
+            # response = {
+            #     "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
+            #     "sources": getattr(chain_response, 'source_documents', []),
+            # }
 
-            # Check for tool calls in response
-            if hasattr(chain_response, 'tool_calls') and chain_response.tool_calls:
-                response['tool_calls'] = chain_response.tool_calls
+            # # Check for tool calls in response
+            # if hasattr(chain_response, 'tool_calls') and chain_response.tool_calls:
+            #     response['tool_calls'] = chain_response.tool_calls
 
-            # Add source documents
-            response.update({
-                "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
-                "sources": getattr(chain_response, 'source_documents', []),
-                "source_documents": [
-                    {
-                        "content": doc[0].page_content,
-                        "metadata": doc[0].metadata,
-                        "score": doc[1]  # Include similarity score
-                    }
-                    for doc in relevant_docs
-                ]
-            })
+            # # Add source documents
+            # response.update({
+            #     "answer": chain_response.answer.strip() if hasattr(chain_response, 'answer') else str(chain_response),
+            #     "sources": getattr(chain_response, 'source_documents', []),
+            #     "source_documents": [
+            #         {
+            #             "content": doc[0].page_content,
+            #             "metadata": doc[0].metadata,
+            #             "score": doc[1]  # Include similarity score
+            #         }
+            #         for doc in relevant_docs
+            #     ]
+            # })
 
-            # Add tool suggestions if relevant
-            tool_suggestions = self._analyze_for_tools(query, response["answer"])
-            if tool_suggestions:
-                response['answer'] += f"\n\n{tool_suggestions}"
-                response['suggested_tools'] = tool_suggestions
-                response['requires_confirmation'] = True
-                response['pending_action'] = tool_suggestions.split()[0]
+            # # Add tool suggestions if relevant
+            # tool_suggestions = self._analyze_for_tools(query, response["answer"])
+            # if tool_suggestions:
+            #     response['answer'] += f"\n\n{tool_suggestions}"
+            #     response['suggested_tools'] = tool_suggestions
+            #     response['requires_confirmation'] = True
+            #     response['pending_action'] = tool_suggestions.split()[0]
 
-            return response
+            return chain_response
 
         except Exception as e:
             self.logger.error(f"Error querying knowledge base: {str(e)}")
