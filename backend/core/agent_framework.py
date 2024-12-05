@@ -242,23 +242,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "requires_confirmation": result.get("requires_confirmation", False),
             "chat_history": result["messages"]
         }
-            
-            # Check for explicit action requests first
-            query_lower = state['query'].lower()
-            for action in ['run', 'analyze']:
-                if any(kw in query_lower for kw in action_keywords[action]):
-                    intent = action
-                    break
-                    
-            # If no explicit action, use RAG by default
-            if intent == 'rag':
-                # Add suggestion for relevant analysis if appropriate
-                if any(kw in query_lower for kw in ['object', 'person', 'activity', 'movement']):
-                    state['suggest_analysis'] = True
-                    
-            return {**state, "intent": intent}
-            
-        def handle_rag_request(state: AgentState) -> AgentState:
             """Handle RAG-based query"""
             try:
                 # Get RAG response
