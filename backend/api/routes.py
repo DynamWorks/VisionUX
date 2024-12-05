@@ -4,9 +4,10 @@ import cv2
 import logging
 import os
 from pathlib import Path
-from flask import Blueprint, request, jsonify, Response, send_file, current_app, send_from_directory
+from flask import Blueprint, request, jsonify, Response, send_file, current_app, send_from_directory, json
 import shutil
 import logging
+import numpy as np
 
 from backend.utils.video_streaming.stream_manager import StreamManager
 from backend.services import SceneAnalysisService, ChatService
@@ -271,7 +272,21 @@ def chat_analysis():
         #     video_name if video_name else f"chat_{int(time.time())}"
         # )
 
-        return jsonify(response)
+        # Custom JSON encoder for numpy types
+        class NumpyEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                if isinstance(obj, np.floating):
+                    return float(obj)
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                return super().default(obj)
+                
+        return Response(
+            json.dumps(response, cls=NumpyEncoder),
+            mimetype='application/json'
+        )
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
