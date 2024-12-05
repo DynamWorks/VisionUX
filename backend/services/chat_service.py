@@ -71,31 +71,34 @@ class ChatService:
                 
         return required_functions
         
-    def process_chat(self, query: str, video_path: str, use_swarm: bool = False, confirmed: bool = False) -> Dict:
+    def process_chat(self, query: str, video_path: str, confirmed: bool = False, tool_input: Dict = None) -> Dict:
         """Process chat query using RAG and handle tool execution"""
         try:
-            # Handle tool confirmation 
+            # Handle tool confirmation and execution
             if confirmed and hasattr(self, '_pending_tool'):
-                return self._execute_confirmed_tool(self._pending_tool)
+                result = self._execute_confirmed_tool(self._pending_tool)
+                self._pending_tool = None  # Clear pending tool after execution
+                return result
 
             # Create or update knowledge base
             if not self._current_chain:
                 self._current_chain = self.rag_service.create_knowledge_base(Path(video_path))
                 if not self._current_chain:
                     return {
-                        "rag_response": {
-                            "answer": "I need to analyze the video first. Would you like me to run a scene analysis?",
-                            "sources": []
-                        },
-                        "requires_analysis": True
+                        "answer": "I need to analyze the video first. Would you like me to run a scene analysis?",
+                        "requires_analysis": True,
+                        "suggested_tool": "scene_analysis",
+                        "requires_confirmation": True,
+                        "chat_messages": [
+                            {"role": "assistant", "content": "I need to analyze the video first. Would you like me to run a scene analysis?"}
+                        ]
                     }
 
             # Get chat history
             chat_history = self._get_chat_history(video_path)
 
-            # Query knowledge base
+            # Query knowledge base with tool awareness
             try:
-                # Ensure we're using the new LCEL chain correctly
                 rag_response = self.rag_service.query_knowledge_base(
                     query=query,
                     chain=self._current_chain,
@@ -104,40 +107,30 @@ class ChatService:
                     results_path=Path(video_path)
                 )
 
-                import pdb; pdb.set_trace()
+                # Check for tool suggestions
+                tool_suggestion = self._analyze_for_tools(query, rag_response.get('answer', ''))
                 
-                # Check for tool calls in response
-                if 'tool_calls' in rag_response:
-                    tool_name = rag_response['tool_calls'][0]['function']['name']
-                    tool_args = rag_response['tool_calls'][0]['function']['arguments']
-                    
-                    # Store pending tool
-                    self._pending_tool = {
-                        'name': tool_name,
-                        'args': tool_args
-                    }
-                    
-                    # Update response to request confirmation
-                    rag_response['answer'] += f"\n\nWould you like me to execute {tool_name}?"
-                    rag_response['requires_confirmation'] = True
-
-                # # Check for tool suggestions
-                # tool_suggestions = self._analyze_for_tools(query, rag_response.get('answer', ''))
-                # if tool_suggestions:
-                #     rag_response['answer'] += f"\n\n{tool_suggestions}"
-                #     rag_response.update({
-                #         "requires_confirmation": True,
-                #         "pending_action": tool_suggestions.split()[0]
-                #     })
-
-                # Save chat history
-                self._save_chat_message(video_path, query, rag_response.get('answer', ''))
-                self._save_chat_message(video_path, query, rag_response )
-                return {
-                    "query": query,
+                response = {
+                    "answer": rag_response.get('answer', ''),
+                    "sources": rag_response.get('sources', []),
                     "timestamp": time.time(),
-                    "rag_response": rag_response
+                    "chat_messages": [
+                        {"role": "user", "content": query},
+                        {"role": "assistant", "content": rag_response.get('answer', '')}
+                    ]
                 }
+
+                if tool_suggestion:
+                    self._pending_tool = tool_suggestion
+                    response.update({
+                        "suggested_tool": tool_suggestion['name'],
+                        "tool_description": tool_suggestion['description'],
+                        "requires_confirmation": True,
+                        "answer": f"{response['answer']}\n\nWould you like me to {tool_suggestion['description']}?"
+                    })
+                    response['chat_messages'][-1]['content'] = response['answer']
+
+                return response
 
             except Exception as e:
                 self.logger.error(f"RAG query error: {e}")
@@ -156,24 +149,50 @@ class ChatService:
             if tool.name == tool_name:
                 try:
                     result = tool.run(**tool_args)
-                    # Clear pending tool after execution
-                    self._pending_tool = None
-                    return {
-                        "rag_response": {
-                            "answer": f"Tool execution complete: {result}",
-                            "sources": []
+                    response = {
+                        "answer": f"I've completed the {tool_name}: {result}",
+                        "tool_executed": {
+                            "name": tool_name,
+                            "description": tool_info['description'],
+                            "result": result
                         },
-                        "action_executed": {
-                            "action": tool_name,
-                            "args": tool_args,
-                            "status": "completed",
-                            "timestamp": time.time()
-                        }
+                        "timestamp": time.time(),
+                        "chat_messages": [
+                            {"role": "system", "content": f"Executing {tool_name}..."},
+                            {"role": "assistant", "content": f"I've completed the {tool_name}: {result}"}
+                        ]
                     }
+                    
+                    # Check if we need another tool
+                    next_tool = self._analyze_for_tools(result, "")
+                    if next_tool:
+                        self._pending_tool = next_tool
+                        response.update({
+                            "suggested_tool": next_tool['name'],
+                            "tool_description": next_tool['description'],
+                            "requires_confirmation": True,
+                            "answer": f"{response['answer']}\n\nWould you like me to {next_tool['description']}?"
+                        })
+                        
+                    return response
+                    
                 except Exception as e:
-                    self._pending_tool = None
-                    return {"error": f"Tool execution failed: {str(e)}"}
-        return {"error": f"Tool {tool_name} not found"}
+                    error_msg = f"Tool execution failed: {str(e)}"
+                    return {
+                        "error": error_msg,
+                        "chat_messages": [
+                            {"role": "system", "content": f"Error executing {tool_name}"},
+                            {"role": "assistant", "content": error_msg}
+                        ]
+                    }
+                    
+        return {
+            "error": f"Tool {tool_name} not found",
+            "chat_messages": [
+                {"role": "system", "content": f"Tool {tool_name} not found"},
+                {"role": "assistant", "content": "I apologize, but I couldn't find the requested tool. Please try a different action."}
+            ]
+        }
 
     def _get_chat_history(self, video_path: str) -> List[Dict]:
         """Get chat history for video"""

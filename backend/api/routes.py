@@ -253,41 +253,29 @@ Frame Rate: {fps:.2f} FPS"""
 
 @api.route('/chat', methods=['POST'])
 def chat_analysis():
-    """Chat-based video analysis with RAG"""
-    video_name = None
+    """Chat-based video analysis with RAG and tool execution"""
     try:
         data = request.get_json()
         if not data or 'video_path' not in data or 'prompt' not in data:
             return jsonify({'error': 'Missing video_path or prompt'}), 400
 
+        # Process chat with tool handling
         response = chat_service.process_chat(
-            data['prompt'],
-            data['video_path'],
-            use_swarm=data.get('use_swarm', False)
+            query=data['prompt'],
+            video_path=data['video_path'],
+            confirmed=data.get('confirmed', False),
+            tool_input=data.get('tool_input', {})
         )
-        import pdb; pdb.set_trace()
-        # video_name = data.get('video_path')
-        # content_manager.save_chat_history(
-        #     [{'role': 'user', 'content': data['prompt']},
-        #      {'role': 'assistant', 'content': response.get('rag_response', '')}],
-        #     video_name if video_name else f"chat_{int(time.time())}"
-        # )
 
-        # Convert numpy types to Python native types
-        # def convert_numpy(obj):
-        #     if isinstance(obj, np.integer):
-        #         return int(obj)
-        #     elif isinstance(obj, np.floating):
-        #         return float(obj)
-        #     elif isinstance(obj, np.ndarray):
-        #         return obj.tolist()
-        #     elif isinstance(obj, dict):
-        #         return {k: convert_numpy(v) for k, v in obj.items()}
-        #     elif isinstance(obj, list):
-        #         return [convert_numpy(i) for i in obj]
-        #     return obj
+        # Save chat history
+        video_name = data.get('video_path')
+        if video_name and response.get('chat_messages'):
+            content_manager.save_chat_history(
+                response['chat_messages'],
+                video_name
+            )
 
-        return jsonify(response['result']) #(convert_numpy(response['result']))
+        return jsonify(response)
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
