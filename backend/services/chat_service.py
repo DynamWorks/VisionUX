@@ -22,7 +22,10 @@ class ChatService:
         self.state_dir = Path("tmp_content/agent_state")
         self.state_dir.mkdir(parents=True, exist_ok=True)
         
-        # Initialize agent with tools
+        # Initialize RAG service first to get retriever and LLM
+        self.rag_service = RAGService(user_id=user_id, project_id=project_id)
+        
+        # Initialize tools after RAG service
         from backend.core.analysis_tools import (
             SceneAnalysisTool, ObjectDetectionTool, 
             EdgeDetectionTool, ChatTool
@@ -36,9 +39,7 @@ class ChatService:
             ChatTool(self)
         ]
         
-        # Initialize RAG service first to get retriever
-        self.rag_service = RAGService(user_id=user_id, project_id=project_id)
-        
+        # Initialize agent with RAG components
         self.agent = VideoAnalysisAgent(
             llm=self.rag_service.llm,
             tools=self.tools,
