@@ -275,42 +275,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 logger.error(f"Tool execution error: {e}")
                 return {**state, "response": f"Error executing action: {str(e)}"}
                 
-        # Create graph
-        workflow = StateGraph(AgentState)
-        
-        # Add nodes
-        workflow.add_node("analyze_query", analyze_query)
-        workflow.add_node("handle_rag_request", handle_rag_request)
-        workflow.add_node("confirm_action", confirm_action)
-        workflow.add_node("execute_action", execute_action)
-        
-        # Define conditional edges
-        def route_query(state: AgentState) -> str:
-            """Route to appropriate handler based on intent"""
-            return "handle_rag_request" if state.get('intent') == 'rag' else "confirm_action"
-            
-        def route_action(state: AgentState) -> str:
-            """Route action based on confirmation"""
-            return "execute_action" if state.get('confirmed', False) else str(END)
-        
-        # Add conditional edges
-        workflow.add_conditional_edges(
-            "analyze_query",
-            lambda x: route_query(x)
-        )
-        workflow.add_conditional_edges(
-            "confirm_action",
-            lambda x: route_action(x)
-        )
-        
-        # Add final edges
-        workflow.add_edge("handle_rag_request", END)
-        workflow.add_edge("execute_action", END)
-        
-        # Set entry point
-        workflow.set_entry_point("analyze_query")
-        
-        return workflow
+        return self.workflow
 
     def _is_follow_up(self, query: str) -> bool:
         """Detect if query is a follow-up to previous conversation"""
