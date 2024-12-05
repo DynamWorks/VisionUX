@@ -279,7 +279,8 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             return {
                 **state,
                 "error": f"Tool {tool_name} not found",
-                "final_response": f"Sorry, the tool {tool_name} is not available."
+                "final_response": f"Sorry, the tool {tool_name} is not available.",
+                "requires_confirmation": False  # Reset confirmation since tool not found
             }
             
         try:
