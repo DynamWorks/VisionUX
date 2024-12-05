@@ -124,15 +124,32 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         chat_history = state.get("messages", [])
         
         # Get retriever response
-        result = self.retriever.get_relevant_documents(query)
-        
-        return {
-            **state,
-            "retriever_result": result[0].page_content if result else None,
-            "messages": chat_history + [
-                {"role": "user", "content": query}
-            ]
-        }
+        try:
+            result = self.retriever.get_relevant_documents(query)
+            retriever_response = result[0].page_content if result else None
+            
+            # Check if query suggests tool usage
+            tool_suggestion = self._analyze_for_tool_suggestion(query, retriever_response)
+            
+            return {
+                **state,
+                "retriever_result": retriever_response,
+                "suggested_tool": tool_suggestion["tool"] if tool_suggestion else None,
+                "tool_description": tool_suggestion["description"] if tool_suggestion else None,
+                "requires_confirmation": bool(tool_suggestion),
+                "messages": chat_history + [
+                    {"role": "user", "content": query}
+                ]
+            }
+        except Exception as e:
+            self.logger.error(f"Retrieval error: {e}")
+            return {
+                **state,
+                "error": str(e),
+                "messages": chat_history + [
+                    {"role": "user", "content": query}
+                ]
+            }
         
     def _suggest_tool(self, state: AgentState) -> AgentState:
         """Analyze query and suggest appropriate tool"""
@@ -162,19 +179,46 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
     def _execute_tool(self, state: AgentState) -> AgentState:
         """Execute suggested tool if confirmed"""
         if not state["confirmed"]:
+            tool_desc = state.get("tool_description", "this action")
             return {
                 **state,
-                "final_response": "Please confirm if you want to execute this tool."
+                "final_response": f"Would you like me to {tool_desc}? Please confirm.",
+                "requires_confirmation": True
             }
             
-        tool = state["suggested_tool"]
-        tool_input = state["tool_input"]
+        tool_name = state["suggested_tool"]
         
-        # Execute tool
-        result = self.tool_executor.invoke({
-            "tool": tool,
-            "tool_input": tool_input
-        })
+        # Find matching tool
+        tool = next((t for t in self.tools if t.name == tool_name), None)
+        if not tool:
+            return {
+                **state,
+                "error": f"Tool {tool_name} not found",
+                "final_response": f"Sorry, the tool {tool_name} is not available."
+            }
+            
+        try:
+            # Execute tool with current state context
+            result = tool.run(
+                query=state["current_query"],
+                chat_history=state.get("messages", []),
+                retriever_result=state.get("retriever_result")
+            )
+            
+            return {
+                **state,
+                "tool_result": result,
+                "messages": state["messages"] + [
+                    {"role": "system", "content": f"Executed {tool_name}: {result}"}
+                ]
+            }
+        except Exception as e:
+            self.logger.error(f"Tool execution error: {e}")
+            return {
+                **state,
+                "error": str(e),
+                "final_response": f"Error executing {tool_name}: {str(e)}"
+            }
         
         return {
             **state,
@@ -186,10 +230,33 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
     def _generate_response(self, state: AgentState) -> AgentState:
         """Generate final response combining retriever and tool results"""
+        if state.get("error"):
+            return {
+                **state,
+                "final_response": f"I encountered an error: {state['error']}"
+            }
+            
+        if state.get("requires_confirmation") and not state.get("confirmed"):
+            tool_desc = state.get("tool_description", "this action")
+            return {
+                **state,
+                "final_response": f"Would you like me to {tool_desc}? Please confirm."
+            }
+            
+        # Create response prompt based on state
+        prompt_parts = [
+            "Based on the following information, provide a helpful response:",
+            f"Query: {state['current_query']}",
+            f"Retrieved Context: {state.get('retriever_result', 'No context available')}"
+        ]
+        
+        if state.get("tool_result"):
+            prompt_parts.append(f"Tool Result: {state['tool_result']}")
+            
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "Generate a helpful response using the retriever result and any tool outputs."),
+            ("system", "Generate a helpful response using all available information."),
             MessagesPlaceholder(variable_name="messages"),
-            ("user", "Generate response for: {query}")
+            ("user", "\n".join(prompt_parts))
         ])
         
         chain = prompt | self.llm
@@ -206,8 +273,38 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             ]
         }
             
+    def _analyze_for_tool_suggestion(self, query: str, retriever_response: Optional[str]) -> Optional[Dict]:
+        """Analyze if query suggests using a specific tool"""
+        tool_patterns = {
+            'scene_analysis': {
+                'patterns': ['analyze scene', 'what is happening', 'describe scene', 'what do you see'],
+                'description': 'Perform detailed scene analysis'
+            },
+            'object_detection': {
+                'patterns': ['find objects', 'detect objects', 'locate', 'identify objects'],
+                'description': 'Detect and locate objects in the scene'
+            },
+            'edge_detection': {
+                'patterns': ['show edges', 'detect edges', 'highlight boundaries', 'outline'],
+                'description': 'Highlight edges and boundaries in the scene'
+            }
+        }
+        
+        query_lower = query.lower()
+        
+        for tool_name, config in tool_patterns.items():
+            if any(pattern in query_lower for pattern in config['patterns']):
+                return {
+                    'tool': tool_name,
+                    'description': config['description']
+                }
+                
+        return None
+
     def _route_after_suggestion(self, state: AgentState) -> str:
         """Route to next node after tool suggestion"""
+        if state.get("error"):
+            return "respond"
         if state["requires_confirmation"]:
             return "execute" if state["confirmed"] else "respond"
         return "respond"
