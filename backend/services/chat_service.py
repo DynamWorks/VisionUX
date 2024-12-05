@@ -19,6 +19,8 @@ class ChatService:
         self.rag_service = RAGService(user_id=user_id, project_id=project_id)
         self.logger = logging.getLogger(__name__)
         self._current_chain = None
+        self.state_dir = Path("tmp_content/agent_state")
+        self.state_dir.mkdir(parents=True, exist_ok=True)
         
         # Initialize agent with tools
         from backend.core.analysis_tools import (
@@ -71,6 +73,37 @@ class ChatService:
                 
         return required_functions
         
+    def _load_agent_state(self, state_path: Path) -> Dict:
+        """Load or initialize agent state"""
+        if state_path.exists():
+            try:
+                with open(state_path) as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.warning(f"Failed to load state, initializing new: {e}")
+
+        return {
+            'messages': [],
+            'current_query': '',
+            'retriever_result': None,
+            'suggested_tool': None,
+            'tool_input': None,
+            'requires_confirmation': False,
+            'confirmed': False,
+            'final_response': None,
+            'state_id': hashlib.md5(str(time.time()).encode()).hexdigest()[:8],
+            'last_checkpoint': time.time(),
+            'execution_history': []
+        }
+
+    def _save_agent_state(self, state_path: Path, state: Dict) -> None:
+        """Save agent state to disk"""
+        try:
+            with open(state_path, 'w') as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            self.logger.error(f"Failed to save agent state: {e}")
+
     def process_chat(self, query: str, video_path: str, confirmed: bool = False, tool_input: Dict = None) -> Dict:
         """Process chat query through agent workflow with state persistence"""
         try:

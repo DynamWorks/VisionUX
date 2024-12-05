@@ -81,16 +81,16 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
 """
 
     def _create_workflow(self) -> StateGraph:
-        """Create the agent workflow graph"""
+        """Create the agent workflow graph with checkpointing"""
         
         # Create workflow graph
         workflow = StateGraph(AgentState)
         
-        # Define nodes
-        workflow.add_node("retrieve", self._retrieve_info)
-        workflow.add_node("suggest_tool", self._suggest_tool)
-        workflow.add_node("execute_tool", self._execute_tool)
-        workflow.add_node("generate_response", self._generate_response)
+        # Define nodes with checkpointing
+        workflow.add_node("retrieve", self._retrieve_info_with_checkpoint)
+        workflow.add_node("suggest_tool", self._suggest_tool_with_checkpoint)
+        workflow.add_node("execute_tool", self._execute_tool_with_checkpoint)
+        workflow.add_node("generate_response", self._generate_response_with_checkpoint)
         
         # Define edges
         workflow.add_edge("retrieve", "suggest_tool")
@@ -122,8 +122,31 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         return workflow
             
+    def _retrieve_info_with_checkpoint(self, state: AgentState) -> AgentState:
+        """Use retriever to get initial response with checkpointing"""
+        try:
+            # Load checkpoint if exists
+            checkpointer = state.get('config', {}).get('checkpointer')
+            if checkpointer:
+                checkpoint = checkpointer.get_checkpoint(f"retrieve_{state['state_id']}")
+                if checkpoint:
+                    return checkpoint
+
+            # Execute retrieval
+            result = self._retrieve_info(state)
+
+            # Save checkpoint
+            if checkpointer:
+                checkpointer.save_checkpoint(f"retrieve_{state['state_id']}", result)
+                result['last_checkpoint'] = time.time()
+
+            return result
+        except Exception as e:
+            self.logger.error(f"Retrieval error: {e}")
+            return {**state, 'error': str(e)}
+
     def _retrieve_info(self, state: AgentState) -> AgentState:
-        """Use retriever to get initial response"""
+        """Core retrieval logic"""
         query = state["current_query"]
         chat_history = state.get("messages", [])
         
@@ -180,8 +203,50 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "confirmed": False
         }
         
+    def _execute_tool_with_checkpoint(self, state: AgentState) -> AgentState:
+        """Execute tool with tracking and checkpointing"""
+        try:
+            # Load checkpoint if exists
+            checkpointer = state.get('config', {}).get('checkpointer')
+            if checkpointer:
+                checkpoint = checkpointer.get_checkpoint(f"execute_{state['state_id']}")
+                if checkpoint:
+                    return checkpoint
+
+            # Track tool execution
+            execution_record = {
+                'tool': state.get('suggested_tool'),
+                'input': state.get('tool_input'),
+                'timestamp': time.time(),
+                'state_id': state['state_id']
+            }
+
+            # Execute tool
+            result = self._execute_tool(state)
+
+            # Update execution record
+            execution_record.update({
+                'status': 'success' if 'error' not in result else 'error',
+                'result': result.get('tool_result'),
+                'error': result.get('error'),
+                'completion_time': time.time()
+            })
+
+            # Update execution history
+            result['execution_history'] = result.get('execution_history', []) + [execution_record]
+
+            # Save checkpoint
+            if checkpointer:
+                checkpointer.save_checkpoint(f"execute_{state['state_id']}", result)
+                result['last_checkpoint'] = time.time()
+
+            return result
+        except Exception as e:
+            self.logger.error(f"Tool execution error: {e}")
+            return {**state, 'error': str(e)}
+
     def _execute_tool(self, state: AgentState) -> AgentState:
-        """Execute suggested tool if confirmed"""
+        """Core tool execution logic"""
         if not state["confirmed"]:
             tool_desc = state.get("tool_description", "this action")
             return {
