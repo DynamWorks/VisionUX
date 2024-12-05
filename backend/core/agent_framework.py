@@ -242,38 +242,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "requires_confirmation": result.get("requires_confirmation", False),
             "chat_history": result["messages"]
         }
-            """Handle RAG-based query"""
-            try:
-                # Get RAG response
-                rag_response = self.rag_service.query_knowledge_base(
-                    state['query'],
-                    self._current_chain,
-                    chat_history=state.get('conversation_context', [])
-                )
-                
-                response = rag_response.get('answer', '')
-                
-                # Add analysis suggestion if flagged
-                if state.get('suggest_analysis'):
-                    response += "\n\nI could run additional analysis to get more specific information about this. Would you like me to do that?"
-                    state['pending_action'] = self._get_relevant_tool(state['query'])
-                
-                return {**state, "response": response, "rag_response": rag_response}
-                
-            except Exception as e:
-                self.logger.error(f"RAG query error: {e}")
-                return {**state, "response": "I encountered an error accessing the analysis data. Would you like me to run a new analysis?"}
-            
-            # Add context about available analysis if any
-            analysis_files = list(Path("tmp_content/analysis").glob("*.json"))
-            if not analysis_files:
-                response = "No previous analysis results available. Would you like me to run a scene analysis?"
-            else:
-                response = self.llm.invoke([
-                    SystemMessage(content=self.system_prompt),
-                    HumanMessage(content=state['query'])
-                ]).content
-            return {**state, "response": response, "has_analysis": bool(analysis_files)}
             
         def confirm_action(state: AgentState) -> AgentState:
             """Get confirmation for action"""
