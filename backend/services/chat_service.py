@@ -128,16 +128,22 @@ class ChatService:
             chat_history = self._get_chat_history(video_path)
             state['messages'] = chat_history
             
-            # Initialize checkpointer for persistence
-            from langgraph.checkpoint import LocalFileCheckpointer
-            checkpointer = LocalFileCheckpointer(
-                Path("tmp_content/checkpoints") / video_path
-            )
+            # Initialize in-memory checkpointer for persistence
+            from langgraph.checkpoint.memory import MemorySaver
+            checkpointer = MemorySaver()
             
-            # Run agent workflow with state persistence
+            # Run agent workflow with state persistence and thread ID
+            config = {
+                'configurable': {
+                    'thread_id': f"chat_{video_path}_{int(time.time())}",
+                    'checkpoint_ns': video_path
+                }
+            }
+            
             result = self.agent.workflow.invoke(
                 state,
-                config={'checkpointer': checkpointer}
+                config=config,
+                checkpointer=checkpointer
             )
 
             # Process workflow result
