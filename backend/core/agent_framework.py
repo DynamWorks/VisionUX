@@ -206,10 +206,14 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             result = self._retrieve_info(state)
             
             try:
-                # Save new checkpoint
+                # Save new checkpoint with config info
+                result.update({
+                    'last_checkpoint': time.time(),
+                    'checkpoint_id': checkpoint_id,
+                    'namespace': namespace,
+                    'thread_id': thread_id
+                })
                 checkpointer.save_checkpoint(checkpoint_id, result)
-                result['last_checkpoint'] = time.time()
-                result['checkpoint_id'] = checkpoint_id
                 self.logger.info(f"Saved checkpoint: {checkpoint_id}")
             except Exception as e:
                 self.logger.error(f"Error saving checkpoint: {e}")

@@ -91,9 +91,38 @@ class ChatService:
                 self.logger.error(f"Error creating checkpoint table: {e}")
                 conn.close()
                 raise
-                
+
+            # Create custom SQLite checkpointer
+            class SQLiteCheckpointer:
+                def __init__(self, connection):
+                    self.conn = connection
+                    
+                def save_checkpoint(self, checkpoint_id: str, state: Dict) -> None:
+                    cursor = self.conn.cursor()
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO checkpoints (id, namespace, thread_id, state, timestamp) VALUES (?, ?, ?, ?, ?)",
+                        (checkpoint_id, state.get('namespace'), state.get('thread_id'), json.dumps(state), time.time())
+                    )
+                    self.conn.commit()
+                    
+                def get_checkpoint(self, checkpoint_id: str) -> Optional[Dict]:
+                    cursor = self.conn.cursor()
+                    cursor.execute("SELECT state FROM checkpoints WHERE id = ?", (checkpoint_id,))
+                    result = cursor.fetchone()
+                    if result:
+                        return json.loads(result[0])
+                    return None
+                    
+                def clear_checkpoints(self, namespace: Optional[str] = None) -> None:
+                    cursor = self.conn.cursor()
+                    if namespace:
+                        cursor.execute("DELETE FROM checkpoints WHERE namespace = ?", (namespace,))
+                    else:
+                        cursor.execute("DELETE FROM checkpoints")
+                    self.conn.commit()
+
             # Initialize checkpointer with connection
-            checkpointer = SqliteSaver(conn)
+            checkpointer = SQLiteCheckpointer(conn)
             
             # Generate unique thread ID and namespace
             thread_id = f"chat_{video_path}_{int(time.time())}"
