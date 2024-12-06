@@ -69,24 +69,58 @@ class ChatService:
             chat_history = self._get_chat_history(video_path)
             state['messages'] = chat_history
             
-            # Initialize SQLite checkpointer for persistence
+            # Initialize SQLite checkpointer with proper connection handling
             db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
             db_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Create tables if they don't exist
             conn = sqlite3.connect(str(db_path))
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS checkpoints (
+                        id TEXT PRIMARY KEY,
+                        namespace TEXT,
+                        thread_id TEXT,
+                        state TEXT,
+                        timestamp REAL
+                    )
+                """)
+                conn.commit()
+            except Exception as e:
+                self.logger.error(f"Error creating checkpoint table: {e}")
+                conn.close()
+                raise
+                
+            # Initialize checkpointer with connection
             checkpointer = SqliteSaver(conn)
             
-            # Run agent workflow with state persistence and thread ID
-            # Configure checkpointing with namespace and thread ID
+            # Generate unique thread ID and namespace
+            thread_id = f"chat_{video_path}_{int(time.time())}"
+            namespace = f"video_{hashlib.md5(video_path.encode()).hexdigest()[:8]}"
+            
+            # Configure checkpointing
             config = {
-                'thread_id': f"chat_{video_path}_{int(time.time())}",
-                'namespace': video_path,
+                'thread_id': thread_id,
+                'namespace': namespace,
                 'checkpointer': checkpointer
             }
-            app = self.agent.workflow.compile()
-            result = app.invoke(
-                state,
-                config=config
-            )
+            
+            try:
+                # Compile and run workflow with checkpointing
+                app = self.agent.workflow.compile()
+                result = app.invoke(state, config=config)
+                
+                # Save final state checkpoint
+                checkpoint_id = f"{thread_id}_final"
+                checkpointer.save_checkpoint(checkpoint_id, result)
+                
+            except Exception as e:
+                self.logger.error(f"Workflow execution error: {e}")
+                raise
+            finally:
+                # Ensure connection is closed
+                conn.close()
             
             # Process workflow result
             response = {

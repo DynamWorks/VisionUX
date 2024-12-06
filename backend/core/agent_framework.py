@@ -35,6 +35,7 @@ class VideoAnalysisAgent:
     """Agent for handling video analysis queries and actions"""
     
     def __init__(self, llm, tools: List[Tool], retriever):
+        """Initialize agent with components and checkpoint validation"""
         self.llm = llm
         self.tools = tools
         self.retriever = retriever
@@ -125,24 +126,92 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         workflow.set_entry_point("retrieve")
         
         return workflow
+        
+    def _is_valid_checkpoint(self, checkpoint: Dict) -> bool:
+        """Validate checkpoint data structure and freshness"""
+        try:
+            # Check required fields
+            required_fields = ['messages', 'current_query', 'last_checkpoint']
+            if not all(field in checkpoint for field in required_fields):
+                return False
+                
+            # Check timestamp freshness (24 hour expiry)
+            checkpoint_time = checkpoint.get('last_checkpoint', 0)
+            if time.time() - checkpoint_time > 24 * 60 * 60:
+                return False
+                
+            # Validate message structure
+            messages = checkpoint.get('messages', [])
+            if not isinstance(messages, list):
+                return False
+                
+            for msg in messages:
+                if not isinstance(msg, dict) or 'role' not in msg or 'content' not in msg:
+                    return False
+                    
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Checkpoint validation error: {e}")
+            return False
+            
+    def clear_checkpoints(self, namespace: str = None):
+        """Clear checkpoints for namespace or all if none specified"""
+        try:
+            db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
+            if not db_path.exists():
+                return
+                
+            conn = sqlite3.connect(str(db_path))
+            try:
+                cursor = conn.cursor()
+                if namespace:
+                    cursor.execute("DELETE FROM checkpoints WHERE namespace = ?", (namespace,))
+                else:
+                    cursor.execute("DELETE FROM checkpoints")
+                conn.commit()
+            finally:
+                conn.close()
+                
+        except Exception as e:
+            self.logger.error(f"Error clearing checkpoints: {e}")
             
     def _retrieve_info_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Use retriever to get initial response with checkpointing"""
+        """Use retriever to get initial response with robust checkpointing"""
         try:
-            # Load checkpoint if exists
-            checkpointer = state.get('config', {}).get('checkpointer')
-            if checkpointer:
-                checkpoint = checkpointer.get_checkpoint(f"retrieve_{state['state_id']}")
-                if checkpoint:
+            # Get checkpoint configuration
+            config = state.get('config', {})
+            checkpointer = config.get('checkpointer')
+            thread_id = config.get('thread_id')
+            namespace = config.get('namespace')
+            
+            if not all([checkpointer, thread_id, namespace]):
+                self.logger.warning("Missing checkpoint configuration")
+                return self._retrieve_info(state)
+            
+            # Generate unique checkpoint ID
+            checkpoint_id = f"{namespace}_{thread_id}_retrieve"
+            
+            try:
+                # Attempt to load existing checkpoint
+                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
+                if checkpoint and self._is_valid_checkpoint(checkpoint):
+                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
                     return checkpoint
+            except Exception as e:
+                self.logger.error(f"Error loading checkpoint: {e}")
 
             # Execute retrieval
             result = self._retrieve_info(state)
-
-            # Save checkpoint
-            if checkpointer:
-                checkpointer.save_checkpoint(f"retrieve_{state['state_id']}", result)
+            
+            try:
+                # Save new checkpoint
+                checkpointer.save_checkpoint(checkpoint_id, result)
                 result['last_checkpoint'] = time.time()
+                result['checkpoint_id'] = checkpoint_id
+                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
+            except Exception as e:
+                self.logger.error(f"Error saving checkpoint: {e}")
 
             return result
         except Exception as e:
@@ -200,22 +269,41 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             }
         
     def _suggest_tool_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Suggest tool with checkpoint handling"""
+        """Suggest tool with robust checkpoint handling"""
         try:
-            # Load checkpoint if exists
-            checkpointer = state.get('config', {}).get('checkpointer')
-            if checkpointer:
-                checkpoint = checkpointer.get_checkpoint(f"suggest_{state['state_id']}")
-                if checkpoint:
+            # Get checkpoint configuration
+            config = state.get('config', {})
+            checkpointer = config.get('checkpointer')
+            thread_id = config.get('thread_id')
+            namespace = config.get('namespace')
+            
+            if not all([checkpointer, thread_id, namespace]):
+                self.logger.warning("Missing checkpoint configuration")
+                return self._suggest_tool(state)
+            
+            # Generate unique checkpoint ID
+            checkpoint_id = f"{namespace}_{thread_id}_suggest"
+            
+            try:
+                # Attempt to load existing checkpoint
+                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
+                if checkpoint and self._is_valid_checkpoint(checkpoint):
+                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
                     return checkpoint
+            except Exception as e:
+                self.logger.error(f"Error loading checkpoint: {e}")
 
             # Execute tool suggestion
             result = self._suggest_tool(state)
             
-            # Save checkpoint
-            if checkpointer:
-                checkpointer.save_checkpoint(f"suggest_{state['state_id']}", result)
+            try:
+                # Save new checkpoint
+                checkpointer.save_checkpoint(checkpoint_id, result)
                 result['last_checkpoint'] = time.time()
+                result['checkpoint_id'] = checkpoint_id
+                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
+            except Exception as e:
+                self.logger.error(f"Error saving checkpoint: {e}")
 
             return result
         except Exception as e:
@@ -283,21 +371,37 @@ You must respond with valid JSON in this exact format:
         }
         
     def _execute_tool_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Execute tool with tracking and checkpointing"""
+        """Execute tool with robust tracking and checkpointing"""
         try:
-            # Load checkpoint if exists
-            checkpointer = state.get('config', {}).get('checkpointer')
-            if checkpointer:
-                checkpoint = checkpointer.get_checkpoint(f"execute_{state['state_id']}")
-                if checkpoint:
+            # Get checkpoint configuration
+            config = state.get('config', {})
+            checkpointer = config.get('checkpointer')
+            thread_id = config.get('thread_id')
+            namespace = config.get('namespace')
+            
+            if not all([checkpointer, thread_id, namespace]):
+                self.logger.warning("Missing checkpoint configuration")
+                return self._execute_tool(state)
+            
+            # Generate unique checkpoint ID
+            checkpoint_id = f"{namespace}_{thread_id}_execute"
+            
+            try:
+                # Attempt to load existing checkpoint
+                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
+                if checkpoint and self._is_valid_checkpoint(checkpoint):
+                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
                     return checkpoint
+            except Exception as e:
+                self.logger.error(f"Error loading checkpoint: {e}")
 
             # Track tool execution
             execution_record = {
                 'tool': state.get('suggested_tool'),
                 'input': state.get('tool_input'),
                 'timestamp': time.time(),
-                'state_id': state['state_id']
+                'thread_id': thread_id,
+                'namespace': namespace
             }
 
             # Execute tool
@@ -313,11 +417,15 @@ You must respond with valid JSON in this exact format:
 
             # Update execution history
             result['execution_history'] = result.get('execution_history', []) + [execution_record]
-
-            # Save checkpoint
-            if checkpointer:
-                checkpointer.save_checkpoint(f"execute_{state['state_id']}", result)
+            
+            try:
+                # Save new checkpoint
+                checkpointer.save_checkpoint(checkpoint_id, result)
                 result['last_checkpoint'] = time.time()
+                result['checkpoint_id'] = checkpoint_id
+                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
+            except Exception as e:
+                self.logger.error(f"Error saving checkpoint: {e}")
 
             return result
         except Exception as e:
@@ -371,22 +479,41 @@ You must respond with valid JSON in this exact format:
 
         
     def _generate_response_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Generate response with checkpoint handling"""
+        """Generate response with robust checkpoint handling"""
         try:
-            # Load checkpoint if exists
-            checkpointer = state.get('config', {}).get('checkpointer')
-            if checkpointer:
-                checkpoint = checkpointer.get_checkpoint(f"response_{state['state_id']}")
-                if checkpoint:
+            # Get checkpoint configuration
+            config = state.get('config', {})
+            checkpointer = config.get('checkpointer')
+            thread_id = config.get('thread_id')
+            namespace = config.get('namespace')
+            
+            if not all([checkpointer, thread_id, namespace]):
+                self.logger.warning("Missing checkpoint configuration")
+                return self._generate_response(state)
+            
+            # Generate unique checkpoint ID
+            checkpoint_id = f"{namespace}_{thread_id}_response"
+            
+            try:
+                # Attempt to load existing checkpoint
+                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
+                if checkpoint and self._is_valid_checkpoint(checkpoint):
+                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
                     return checkpoint
+            except Exception as e:
+                self.logger.error(f"Error loading checkpoint: {e}")
 
             # Execute response generation
             result = self._generate_response(state)
-
-            # Save checkpoint
-            if checkpointer:
-                checkpointer.save_checkpoint(f"response_{state['state_id']}", result)
+            
+            try:
+                # Save new checkpoint
+                checkpointer.save_checkpoint(checkpoint_id, result)
                 result['last_checkpoint'] = time.time()
+                result['checkpoint_id'] = checkpoint_id
+                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
+            except Exception as e:
+                self.logger.error(f"Error saving checkpoint: {e}")
 
             return result
         except Exception as e:
