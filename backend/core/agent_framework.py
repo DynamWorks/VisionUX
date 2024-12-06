@@ -94,8 +94,15 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         # Add edge from START to retrieve (entry point)
         workflow.add_edge(START, "retrieve")
         
-        # Define remaining edges
-        workflow.add_edge("retrieve", "suggest_tool")
+        # Add conditional edges from retrieve
+        workflow.add_conditional_edges(
+            "retrieve",
+            self._route_after_retrieve,
+            {
+                "suggest": "suggest_tool",
+                "respond": "generate_response"
+            }
+        )
         
         # Add conditional edges
         workflow.add_conditional_edges(
@@ -357,6 +364,14 @@ You must respond with valid JSON in this exact format:
                 }
                 
         return None
+
+    def _route_after_retrieve(self, state: AgentState) -> str:
+        """Route to next node after retrieval"""
+        if state.get("error"):
+            return "respond"
+        if state.get("suggested_tool"):
+            return "suggest"
+        return "respond"
 
     def _route_after_suggestion(self, state: AgentState) -> str:
         """Route to next node after tool suggestion"""
