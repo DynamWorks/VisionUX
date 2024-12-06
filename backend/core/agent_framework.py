@@ -225,9 +225,20 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
 
     def _suggest_tool(self, state: AgentState) -> AgentState:
         """Analyze query and suggest appropriate tool"""
-        # Create tool suggestion prompt
+        # Create tool suggestion prompt with available tools
+        tools_description = "\n".join([
+            f"- {tool.name}: {tool.description}"
+            for tool in self.tools
+        ])
+        
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "Analyze the query and retriever result to suggest an appropriate tool from {self.tools} if needed."),
+            ("system", f"""You are a video analysis assistant. Based on the user query and context, suggest an appropriate tool if needed.
+
+Available tools:
+{tools_description}
+
+Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
+If suggesting a tool, explain why it would be helpful."""),
             MessagesPlaceholder(variable_name="messages"),
             ("user", "Query: {query}\nRetriever result: {result}\n\nShould I suggest a tool?")
         ])
@@ -240,11 +251,29 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "result": state["retriever_result"]
         })
         
+        # Validate suggested tool exists
+        suggested_tool_name = suggestion.get("tool")
+        if suggested_tool_name:
+            matching_tool = next(
+                (tool for tool in self.tools if tool.name == suggested_tool_name),
+                None
+            )
+            if matching_tool:
+                return {
+                    **state,
+                    "suggested_tool": suggested_tool_name,
+                    "tool_input": suggestion.get("input"),
+                    "tool_description": matching_tool.description,
+                    "requires_confirmation": True,
+                    "confirmed": False
+                }
+            
+        # No valid tool suggested
         return {
             **state,
-            "suggested_tool": suggestion.get("tool"),
-            "tool_input": suggestion.get("input"),
-            "requires_confirmation": bool(suggestion.get("tool")),
+            "suggested_tool": None,
+            "tool_input": None,
+            "requires_confirmation": False,
             "confirmed": False
         }
         
