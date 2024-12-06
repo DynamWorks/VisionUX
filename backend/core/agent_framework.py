@@ -156,7 +156,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         # Create/update knowledge base
         try:
-            import pdb; pdb.set_trace()
             vectordb = self.rag_service.create_knowledge_base(Path(video_path))
             if not vectordb:
                 state['retriever_result']="No analysis files found. do some analysis on the video content."
@@ -210,7 +209,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                     return checkpoint
 
             # Execute tool suggestion
-            import pdb; pdb.set_trace()
             result = self._suggest_tool(state)
             
             # Save checkpoint
@@ -243,13 +241,12 @@ If suggesting a tool, explain why it would be helpful.
 You must respond with valid JSON in this exact format:
 {{{{
     "tool": "<tool_name or null if no tool needed>",
-    "input": {{"param": "value"}},
+    "input": {{{{"param": "value"}}}},
     "reason": "<explanation for suggesting or not suggesting a tool>"
 }}}}"""),
             MessagesPlaceholder(variable_name="messages"),
             ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
-        import pdb; pdb.set_trace()
         # Get suggestion from LLM
         chain = prompt | self.llm | JsonOutputParser()
         suggestion = chain.invoke({
@@ -257,7 +254,6 @@ You must respond with valid JSON in this exact format:
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
-        import pdb; pdb.set_trace()
         
         # Validate suggested tool exists
         suggested_tool_name = suggestion.get("tool")
@@ -271,7 +267,7 @@ You must respond with valid JSON in this exact format:
                     **state,
                     "suggested_tool": suggested_tool_name,
                     "tool_input": suggestion.get("input"),
-                    "tool_description": matching_tool.description,
+                    "tool_desc": matching_tool.description,
                     "requires_confirmation": True,
                     "confirmed": False
                 }
@@ -405,7 +401,8 @@ You must respond with valid JSON in this exact format:
             }
             
         if state.get("requires_confirmation") and not state.get("confirmed"):
-            tool_desc = state.get("tool_description", "this action")
+            import pdb; pdb.set_trace()
+            tool_desc = state.get("tool_desc", "this action")
             return {
                 **state,
                 "final_response": f"Would you like me to {tool_desc}? Please confirm."
