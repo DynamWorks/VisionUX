@@ -125,14 +125,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         return workflow
         
-    def _retrieve_info(self, state: AgentState) -> AgentState:
-        """Use retriever to get initial response"""
-        try:
-            result = self._retrieve_info(state)
-            return result
-        except Exception as e:
-            self.logger.error(f"Retrieval error: {e}")
-            return {**state, 'error': str(e)}
 
     def _retrieve_info(self, state: AgentState) -> AgentState:
         """Core retrieval logic"""
@@ -184,47 +176,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 ]
             }
         
-    def _suggest_tool_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Suggest tool with robust checkpoint handling"""
-        try:
-            # Get checkpoint configuration
-            config = state.get('config', {})
-            checkpointer = config.get('checkpointer')
-            thread_id = config.get('thread_id')
-            namespace = config.get('namespace')
-            
-            if not all([checkpointer, thread_id, namespace]):
-                self.logger.warning("Missing checkpoint configuration")
-                return self._suggest_tool(state)
-            
-            # Generate unique checkpoint ID
-            checkpoint_id = f"{namespace}_{thread_id}_suggest"
-            
-            try:
-                # Attempt to load existing checkpoint
-                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
-                if checkpoint and self._is_valid_checkpoint(checkpoint):
-                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
-                    return checkpoint
-            except Exception as e:
-                self.logger.error(f"Error loading checkpoint: {e}")
-
-            # Execute tool suggestion
-            result = self._suggest_tool(state)
-            
-            try:
-                # Save new checkpoint
-                checkpointer.save_checkpoint(checkpoint_id, result)
-                result['last_checkpoint'] = time.time()
-                result['checkpoint_id'] = checkpoint_id
-                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
-            except Exception as e:
-                self.logger.error(f"Error saving checkpoint: {e}")
-
-            return result
-        except Exception as e:
-            self.logger.error(f"Tool suggestion error: {e}")
-            return {**state, 'error': str(e)}
 
     def _suggest_tool(self, state: AgentState) -> AgentState:
         """Analyze query and suggest appropriate tool"""
@@ -286,67 +237,6 @@ You must respond with valid JSON in this exact format:
             "confirmed": False
         }
         
-    def _execute_tool_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Execute tool with robust tracking and checkpointing"""
-        try:
-            # Get checkpoint configuration
-            config = state.get('config', {})
-            checkpointer = config.get('checkpointer')
-            thread_id = config.get('thread_id')
-            namespace = config.get('namespace')
-            
-            if not all([checkpointer, thread_id, namespace]):
-                self.logger.warning("Missing checkpoint configuration")
-                return self._execute_tool(state)
-            
-            # Generate unique checkpoint ID
-            checkpoint_id = f"{namespace}_{thread_id}_execute"
-            
-            try:
-                # Attempt to load existing checkpoint
-                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
-                if checkpoint and self._is_valid_checkpoint(checkpoint):
-                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
-                    return checkpoint
-            except Exception as e:
-                self.logger.error(f"Error loading checkpoint: {e}")
-
-            # Track tool execution
-            execution_record = {
-                'tool': state.get('suggested_tool'),
-                'input': state.get('tool_input'),
-                'timestamp': time.time(),
-                'thread_id': thread_id,
-                'namespace': namespace
-            }
-
-            # Execute tool
-            result = self._execute_tool(state)
-
-            # Update execution record
-            execution_record.update({
-                'status': 'success' if 'error' not in result else 'error',
-                'result': result.get('tool_result'),
-                'error': result.get('error'),
-                'completion_time': time.time()
-            })
-
-            # Update execution history
-            result['execution_history'] = result.get('execution_history', []) + [execution_record]
-            
-            try:
-                # Save new checkpoint
-                checkpointer.save_checkpoint(checkpoint_id, result)
-                result['last_checkpoint'] = time.time()
-                result['checkpoint_id'] = checkpoint_id
-                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
-            except Exception as e:
-                self.logger.error(f"Error saving checkpoint: {e}")
-
-            return result
-        except Exception as e:
-            self.logger.error(f"Tool execution error: {e}")
-            return {**state, 'error': str(e)}
 
     def _execute_tool(self, state: AgentState) -> AgentState:
         """Core tool execution logic"""
@@ -393,48 +283,6 @@ You must respond with valid JSON in this exact format:
                 "final_response": f"Error executing {tool_name}: {str(e)}"
             }
 
-        
-    def _generate_response_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Generate response with robust checkpoint handling"""
-        try:
-            # Get checkpoint configuration
-            config = state.get('config', {})
-            checkpointer = config.get('checkpointer')
-            thread_id = config.get('thread_id')
-            namespace = config.get('namespace')
-            
-            if not all([checkpointer, thread_id, namespace]):
-                self.logger.warning("Missing checkpoint configuration")
-                return self._generate_response(state)
-            
-            # Generate unique checkpoint ID
-            checkpoint_id = f"{namespace}_{thread_id}_response"
-            
-            try:
-                # Attempt to load existing checkpoint
-                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
-                if checkpoint and self._is_valid_checkpoint(checkpoint):
-                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
-                    return checkpoint
-            except Exception as e:
-                self.logger.error(f"Error loading checkpoint: {e}")
-
-            # Execute response generation
-            result = self._generate_response(state)
-            
-            try:
-                # Save new checkpoint
-                checkpointer.save_checkpoint(checkpoint_id, result)
-                result['last_checkpoint'] = time.time()
-                result['checkpoint_id'] = checkpoint_id
-                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
-            except Exception as e:
-                self.logger.error(f"Error saving checkpoint: {e}")
-
-            return result
-        except Exception as e:
-            self.logger.error(f"Response generation error: {e}")
-            return {**state, 'error': str(e)}
 
     def _generate_response(self, state: AgentState) -> AgentState:
         """Generate final response combining retriever and tool results"""
@@ -534,7 +382,7 @@ You must respond with valid JSON in this exact format:
             retriever_result=None,
             suggested_tool=None,
             tool_input=None,
-            requires_confirmation=False,
+            requires_confirmation=True,
             confirmed=False,
             final_response=None
         )
@@ -545,7 +393,7 @@ You must respond with valid JSON in this exact format:
         return {
             "response": result["final_response"],
             "suggested_tool": result.get("suggested_tool"),
-            "requires_confirmation": result.get("requires_confirmation", False),
+            "requires_confirmation": result.get("requires_confirmation", True),
             "chat_history": result["messages"]
         }
             
