@@ -195,10 +195,17 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             
             try:
                 # Attempt to load existing checkpoint
-                checkpoint = checkpointer.get_checkpoint(checkpoint_id)
-                if checkpoint and self._is_valid_checkpoint(checkpoint):
-                    self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
-                    return checkpoint
+                config = {"configurable": {"thread_id": thread_id}}
+                checkpoints = list(checkpointer.list(config))
+                
+                if checkpoints:
+                    # Get most recent checkpoint
+                    latest_checkpoint = checkpoints[-1]
+                    checkpoint_state = latest_checkpoint.checkpoint["state"]
+                    
+                    if self._is_valid_checkpoint(checkpoint_state):
+                        self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
+                        return checkpoint_state
             except Exception as e:
                 self.logger.error(f"Error loading checkpoint: {e}")
 
@@ -206,14 +213,30 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             result = self._retrieve_info(state)
             
             try:
-                # Save new checkpoint with config info
-                result.update({
-                    'last_checkpoint': time.time(),
-                    'checkpoint_id': checkpoint_id,
-                    'namespace': namespace,
-                    'thread_id': thread_id
-                })
-                checkpointer.save_checkpoint(checkpoint_id, result)
+                # Prepare checkpoint data
+                checkpoint_data = {
+                    "thread_id": thread_id,
+                    "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                    "checkpoint": {
+                        "id": checkpoint_id,
+                        "state": result
+                    },
+                    "metadata": {
+                        "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                        "namespace": namespace
+                    }
+                }
+            
+                # Save checkpoint using SqliteSaver
+                saved_config = checkpointer.put(
+                    config={"configurable": {
+                        "thread_id": checkpoint_data["thread_id"],
+                        "thread_ts": checkpoint_data["thread_ts"]
+                    }},
+                    checkpoint=checkpoint_data["checkpoint"],
+                    metadata=checkpoint_data["metadata"]
+                )
+            
                 self.logger.info(f"Saved checkpoint: {checkpoint_id}")
             except Exception as e:
                 self.logger.error(f"Error saving checkpoint: {e}")

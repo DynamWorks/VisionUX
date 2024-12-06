@@ -69,60 +69,13 @@ class ChatService:
             chat_history = self._get_chat_history(video_path)
             state['messages'] = chat_history
             
-            # Initialize SQLite checkpointer with proper connection handling
+            # Initialize SQLite checkpointer
             db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
             db_path.parent.mkdir(parents=True, exist_ok=True)
             
-            # Create tables if they don't exist
-            conn = sqlite3.connect(str(db_path))
-            try:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS checkpoints (
-                        id TEXT PRIMARY KEY,
-                        namespace TEXT,
-                        thread_id TEXT,
-                        state TEXT,
-                        timestamp REAL
-                    )
-                """)
-                conn.commit()
-            except Exception as e:
-                self.logger.error(f"Error creating checkpoint table: {e}")
-                conn.close()
-                raise
-
-            # Create custom SQLite checkpointer
-            class SQLiteCheckpointer:
-                def __init__(self, connection):
-                    self.conn = connection
-                    
-                def save_checkpoint(self, checkpoint_id: str, state: Dict) -> None:
-                    cursor = self.conn.cursor()
-                    cursor.execute(
-                        "INSERT OR REPLACE INTO checkpoints (id, namespace, thread_id, state, timestamp) VALUES (?, ?, ?, ?, ?)",
-                        (checkpoint_id, state.get('namespace'), state.get('thread_id'), json.dumps(state), time.time())
-                    )
-                    self.conn.commit()
-                    
-                def get_checkpoint(self, checkpoint_id: str) -> Optional[Dict]:
-                    cursor = self.conn.cursor()
-                    cursor.execute("SELECT state FROM checkpoints WHERE id = ?", (checkpoint_id,))
-                    result = cursor.fetchone()
-                    if result:
-                        return json.loads(result[0])
-                    return None
-                    
-                def clear_checkpoints(self, namespace: Optional[str] = None) -> None:
-                    cursor = self.conn.cursor()
-                    if namespace:
-                        cursor.execute("DELETE FROM checkpoints WHERE namespace = ?", (namespace,))
-                    else:
-                        cursor.execute("DELETE FROM checkpoints")
-                    self.conn.commit()
-
-            # Initialize checkpointer with connection
-            checkpointer = SQLiteCheckpointer(conn)
+            # Create SqliteSaver instance
+            from langgraph.checkpoint.sqlite import SqliteSaver
+            checkpointer = SqliteSaver.from_conn_string(str(db_path))
             
             # Generate unique thread ID and namespace
             thread_id = f"chat_{video_path}_{int(time.time())}"
