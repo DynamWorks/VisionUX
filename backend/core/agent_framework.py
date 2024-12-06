@@ -238,9 +238,16 @@ Available tools:
 {tools_description}
 
 Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
-If suggesting a tool, explain why it would be helpful."""),
+If suggesting a tool, explain why it would be helpful.
+
+You must respond with valid JSON in this exact format:
+{{
+    "tool": "<tool_name or null if no tool needed>",
+    "input": {{"param": "value"}},
+    "reason": "<explanation for suggesting or not suggesting a tool>"
+}}"""),
             MessagesPlaceholder(variable_name="messages"),
-            ("user", "Query: {query}\nretriever_result: {result}\n\nShould I suggest a tool?")
+            ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
         import pdb; pdb.set_trace()
         # Get suggestion from LLM
