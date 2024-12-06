@@ -194,27 +194,26 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 checkpointer = SqliteSaver.from_conn_string(str(db_path))
                 
                 # Update state with new config
-                config = {
-                    'checkpointer': checkpointer,
-                    'thread_id': thread_id,
-                    'namespace': namespace
+            # Initialize SQLite checkpointer
+            db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Create SqliteSaver instance
+            checkpointer = SqliteSaver.from_conn_string(str(db_path))
+            
+            # Generate unique thread ID
+            thread_id = f"agent_{hashlib.md5(str(time.time()).encode()).hexdigest()[:8]}"
+            
+            # Configure checkpointing
+            config = {
+                "configurable": {
+                    "thread_id": thread_id,
+                    "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S')
                 }
-                state['config'] = config
-            
-            checkpointer = config.get('checkpointer')
-            thread_id = config.get('thread_id')
-            namespace = config.get('namespace')
-            
-            if not all([checkpointer, thread_id, namespace]):
-                self.logger.warning("Failed to initialize checkpoint configuration")
-                return self._retrieve_info(state)
-            
-            # Generate unique checkpoint ID
-            checkpoint_id = f"{namespace}_{thread_id}_retrieve"
-            
+            }
+
             try:
                 # Attempt to load existing checkpoint
-                config = {"configurable": {"thread_id": thread_id}}
                 with checkpointer.list(config) as checkpoints:
                     checkpoint_list = list(checkpoints)
                     if checkpoint_list:
@@ -223,7 +222,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                         checkpoint_state = latest_checkpoint.checkpoint["state"]
                         
                         if self._is_valid_checkpoint(checkpoint_state):
-                            self.logger.info(f"Loaded checkpoint: {checkpoint_id}")
+                            self.logger.info(f"Loaded checkpoint for thread: {thread_id}")
                             return checkpoint_state
             except Exception as e:
                 self.logger.error(f"Error loading checkpoint: {e}")
