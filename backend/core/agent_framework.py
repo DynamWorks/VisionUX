@@ -142,11 +142,12 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         # Create/update knowledge base
         try:
+            import pdb; pdb.set_trace()
             vectordb = self.rag_service.create_knowledge_base(Path(video_path))
             if not vectordb:
-                state['retriever_result']="No analysis files found. do some analysis on the video content."
                 return {
                     **state,
+                    "retriever_result":"Found no analysis files. Do analysis on the video content.",
                     "error": "Failed to create/update knowledge base",
                     "messages": chat_history + [
                         {"role": "user", "content": query}
@@ -368,12 +369,15 @@ You must respond with valid JSON in this exact format:
 
     def _route_after_retrieve(self, state: AgentState) -> str:
         """Route to next node after retrieval"""
+        import pdb; pdb.set_trace()
         if state.get("error"):
+            if state.get("error") == "Failed to create/update knowledge base" and state.get("retriever_result"):
+                return "suggest"
             return "respond"
         if state.get("suggested_tool") and state.get("confirmed"):
             return "execute"
-        if state.get("suggested_tool"):
-            return "suggest"
+        # if state.get("retriever_result") and not state.get("confirmed"):
+        #     return "suggest"
         return "respond"
 
     def _route_after_suggestion(self, state: AgentState) -> str:
