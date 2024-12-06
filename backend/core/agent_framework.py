@@ -240,9 +240,9 @@ Available tools:
 Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
 If suggesting a tool, explain why it would be helpful."""),
             MessagesPlaceholder(variable_name="messages"),
-            ("user", "Query: {query}\nRetriever result: {result}\n\nShould I suggest a tool?")
+            ("user", "Query: {query}\nretriever_result: {result}\n\nShould I suggest a tool?")
         ])
-        
+        import pdb; pdb.set_trace()
         # Get suggestion from LLM
         chain = prompt | self.llm | JsonOutputParser()
         suggestion = chain.invoke({
@@ -250,6 +250,7 @@ If suggesting a tool, explain why it would be helpful."""),
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
+        import pdb; pdb.set_trace()
         
         # Validate suggested tool exists
         suggested_tool_name = suggestion.get("tool")
