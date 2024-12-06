@@ -100,6 +100,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             self._route_after_retrieve,
             {
                 "suggest": "suggest_tool",
+                "execute": "execute_tool",
                 "respond": "generate_response"
             }
         )
@@ -369,6 +370,8 @@ You must respond with valid JSON in this exact format:
         """Route to next node after retrieval"""
         if state.get("error"):
             return "respond"
+        if state.get("suggested_tool") and state.get("confirmed"):
+            return "execute"
         if state.get("suggested_tool"):
             return "suggest"
         return "respond"
