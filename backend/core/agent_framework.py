@@ -180,14 +180,33 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
     def _retrieve_info_with_checkpoint(self, state: AgentState) -> AgentState:
         """Use retriever to get initial response with robust checkpointing"""
         try:
-            # Get checkpoint configuration
+            # Get or initialize checkpoint configuration
             config = state.get('config', {})
+            if not config:
+                # Initialize default configuration
+                thread_id = f"thread_{int(time.time())}"
+                namespace = "default"
+                db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Create SqliteSaver instance
+                from langgraph.checkpoint.sqlite import SqliteSaver
+                checkpointer = SqliteSaver.from_conn_string(str(db_path))
+                
+                # Update state with new config
+                config = {
+                    'checkpointer': checkpointer,
+                    'thread_id': thread_id,
+                    'namespace': namespace
+                }
+                state['config'] = config
+            
             checkpointer = config.get('checkpointer')
             thread_id = config.get('thread_id')
             namespace = config.get('namespace')
             
             if not all([checkpointer, thread_id, namespace]):
-                self.logger.warning("Missing checkpoint configuration")
+                self.logger.warning("Failed to initialize checkpoint configuration")
                 return self._retrieve_info(state)
             
             # Generate unique checkpoint ID
