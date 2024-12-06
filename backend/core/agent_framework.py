@@ -246,16 +246,23 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                     }
                 }
             
-                # Save checkpoint using SqliteSaver
+                # Save checkpoint
+                checkpoint_data = {
+                    "state": result,
+                    "metadata": {
+                        "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                        "operation": "retrieve"
+                    }
+                }
+                
                 with checkpointer.put(
-                    config={"configurable": {
-                        "thread_id": checkpoint_data["thread_id"],
-                        "thread_ts": checkpoint_data["thread_ts"]
-                    }},
-                    checkpoint=checkpoint_data["checkpoint"],
+                    config=config,
+                    checkpoint=checkpoint_data,
                     metadata=checkpoint_data["metadata"]
                 ) as saved_config:
                     pass  # Context manager handles the save
+                
+                self.logger.info(f"Saved checkpoint for thread: {thread_id}")
             
                 self.logger.info(f"Saved checkpoint: {checkpoint_id}")
             except Exception as e:
