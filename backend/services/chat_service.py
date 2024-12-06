@@ -88,21 +88,31 @@ class ChatService:
                 'checkpointer': checkpointer
             }
             
-            try:
-                # Compile and run workflow with checkpointing
-                app = self.agent.workflow.compile()
-                result = app.invoke(state, config=config)
-                
-                # Save final state checkpoint
-                checkpoint_id = f"{thread_id}_final"
-                checkpointer.save_checkpoint(checkpoint_id, result)
-                
-            except Exception as e:
-                self.logger.error(f"Workflow execution error: {e}")
-                raise
-            finally:
-                # Ensure connection is closed
-                conn.close()
+            # Compile and run workflow with checkpointing
+            app = self.agent.workflow.compile()
+            result = app.invoke(state, config=config)
+            
+            # Save final state checkpoint
+            checkpoint_id = f"{thread_id}_final"
+            checkpoint_data = {
+                "thread_id": thread_id,
+                "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                "checkpoint": {
+                    "id": checkpoint_id,
+                    "state": result
+                },
+                "metadata": {
+                    "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                    "namespace": config['namespace']
+                }
+            }
+            
+            # Save using SqliteSaver
+            checkpointer.put(
+                config={"configurable": {"thread_id": thread_id}},
+                checkpoint=checkpoint_data["checkpoint"],
+                metadata=checkpoint_data["metadata"]
+            )
             
             # Process workflow result
             response = {
