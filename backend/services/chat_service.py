@@ -140,7 +140,7 @@ class ChatService:
                 }
             }
             
-            result = self.agent.workflow.invoke(
+            result = self.workflow(
                 state,
                 config=config,
                 checkpointer=checkpointer
