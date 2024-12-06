@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 import logging
 import hashlib
@@ -6,6 +7,7 @@ from backend.content_manager import ContentManager
 from .rag_service import RAGService
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.runnables import RunnableSequence
+from langgraph.checkpoint.sqlite import SqliteSaver
 import json
 import time
 import numpy as np
