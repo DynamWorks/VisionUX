@@ -8,7 +8,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain.tools import BaseTool
 from langchain_core.tools import Tool
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolExecutor
 import re
 import json
@@ -83,7 +83,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
     def _create_workflow(self) -> StateGraph:
         """Create the agent workflow graph with checkpointing"""
         
-        # Create workflow graph with checkpointing
+        # Create workflow graph
         workflow = StateGraph(AgentState)
         
         # Define nodes with breakpoints for human approval
@@ -91,14 +91,11 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         workflow.add_node("suggest_tool", self._suggest_tool_with_checkpoint)
         workflow.add_node("execute_tool", self._execute_tool_with_checkpoint)
         workflow.add_node("generate_response", self._generate_response_with_checkpoint)
+
+        # Add edge from START to retrieve (entry point)
+        workflow.add_edge(START, "retrieve")
         
-        # Add breakpoints before tool execution for approval
-        workflow = workflow.compile(
-            checkpointer=None,  # Will be set during invoke
-            interrupt_before=["execute_tool"]
-        )
-        
-        # Define edges
+        # Define remaining edges
         workflow.add_edge("retrieve", "suggest_tool")
         
         # Add conditional edges
