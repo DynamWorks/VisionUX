@@ -268,6 +268,7 @@ You must respond with valid JSON in this exact format:
                     "suggested_tool": suggested_tool_name,
                     "tool_input": suggestion.get("input"),
                     "tool_desc": matching_tool.description,
+                    "tool_description": matching_tool.description,  # Add both for compatibility
                     "requires_confirmation": True,
                     "confirmed": False
                 }
