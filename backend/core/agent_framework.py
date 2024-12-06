@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Any, TypedDict
 from pathlib import Path
 import operator
 import time
+import sqlite3
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import JsonOutputParser
