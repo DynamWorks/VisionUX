@@ -139,13 +139,12 @@ class ChatService:
                     'checkpoint_ns': video_path
                 }
             }
-            
-            result = self.workflow(
+            app=self.agent.workflow.compile(checkpointer=checkpointer)
+            result = app.invoke(
                 state,
-                config=config,
-                checkpointer=checkpointer
+                config=config
             )
-
+            
             # Process workflow result
             response = {
                 "answer": result.get('final_response', ''),
