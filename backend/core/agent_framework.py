@@ -373,27 +373,22 @@ You must respond with valid JSON in this exact format:
             return "suggest"
         return "respond"
         
-    def process_query(self, query: str, chat_history: List[Dict] = None) -> Dict:
-        """Process user query through the workflow"""
-        # Initialize state
-        state = AgentState(
-            messages=chat_history or [],
-            current_query=query,
-            retriever_result=None,
-            suggested_tool=None,
-            tool_input=None,
-            requires_confirmation=True,
-            confirmed=False,
-            final_response=None
-        )
-        import pdb; pdb.set_trace()
-        # Run workflow
-        result = self.workflow.invoke(state)
-        
-        return {
-            "response": result["final_response"],
-            "suggested_tool": result.get("suggested_tool"),
-            "requires_confirmation": result.get("requires_confirmation", True),
-            "chat_history": result["messages"]
-        }
-            
+    """Agent for handling video analysis queries and actions
+    
+    The workflow can be invoked directly using:
+    ```python
+    state = AgentState(
+        messages=chat_history or [],
+        current_query=query,
+        retriever_result=None,
+        suggested_tool=None,
+        tool_input=None,
+        requires_confirmation=True,
+        confirmed=False,
+        final_response=None,
+        video_path=video_path,
+        execution_history=[]
+    )
+    result = workflow.invoke(state)
+    ```
+    """
