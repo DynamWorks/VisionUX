@@ -128,10 +128,11 @@ class ChatService:
             chat_history = self._get_chat_history(video_path)
             state['messages'] = chat_history
             
-            # Initialize in-memory checkpointer for persistence
-            import sqlite3
-            from langgraph.checkpoint.sqlite import SqliteSaver
-            checkpointer = MemorySaver()
+            # Initialize SQLite checkpointer for persistence
+            db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(db_path))
+            checkpointer = SqliteSaver(conn)
             
             # Run agent workflow with state persistence and thread ID
             config = {
