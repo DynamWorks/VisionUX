@@ -76,13 +76,13 @@ class ChatService:
             checkpointer = SqliteSaver(conn)
             
             # Run agent workflow with state persistence and thread ID
+            # Configure checkpointing with namespace and thread ID
             config = {
-                'configurable': {
-                    'thread_id': f"chat_{video_path}_{int(time.time())}",
-                    'checkpoint_ns': video_path
-                }
+                'thread_id': f"chat_{video_path}_{int(time.time())}",
+                'namespace': video_path,
+                'checkpointer': checkpointer
             }
-            app=self.agent.workflow.compile(checkpointer=checkpointer)
+            app = self.agent.workflow.compile()
             result = app.invoke(
                 state,
                 config=config
