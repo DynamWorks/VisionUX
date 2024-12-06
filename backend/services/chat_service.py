@@ -1,4 +1,5 @@
 import sqlite3
+import hashlib
 from pathlib import Path
 import logging
 from typing import Dict, List, Optional
