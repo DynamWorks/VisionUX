@@ -32,6 +32,7 @@ langchain-community>=0.3,<0.4
 langchain-core>=0.3,<0.4
 langchain-openai>=0.2,<0.3
 langgraph>=0.2.56
+sqlite3  # Built-in with Python
 langchain>=0.1.0
 openai<2.0.0
 faiss-cpu>=1.7.4

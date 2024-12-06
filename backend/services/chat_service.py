@@ -129,7 +129,8 @@ class ChatService:
             state['messages'] = chat_history
             
             # Initialize in-memory checkpointer for persistence
-            from langgraph.checkpoint.memory import MemorySaver
+            import sqlite3
+            from langgraph.checkpoint.sqlite import SqliteSaver
             checkpointer = MemorySaver()
             
             # Run agent workflow with state persistence and thread ID
