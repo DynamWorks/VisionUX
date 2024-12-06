@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Any, TypedDict
 from pathlib import Path
 import operator
 import time
-import sqlite3
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import JsonOutputParser
@@ -28,15 +27,13 @@ class AgentState(TypedDict):
     confirmed: bool                # Whether user confirmed tool execution
     final_response: Optional[str]   # Final response to return to user
     video_path: str               # Path to current video
-    state_id: str                 # Unique state identifier
-    last_checkpoint: float        # Last checkpoint timestamp
     execution_history: List[Dict] # History of tool executions
 
 class VideoAnalysisAgent:
     """Agent for handling video analysis queries and actions"""
     
     def __init__(self, llm, tools: List[Tool], retriever):
-        """Initialize agent with components and checkpoint validation"""
+        """Initialize agent with components"""
         self.llm = llm
         self.tools = tools
         self.retriever = retriever
@@ -88,11 +85,11 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         # Create workflow graph
         workflow = StateGraph(AgentState)
         
-        # Define nodes with breakpoints for human approval
-        workflow.add_node("retrieve", self._retrieve_info_with_checkpoint)
-        workflow.add_node("suggest_tool", self._suggest_tool_with_checkpoint)
-        workflow.add_node("execute_tool", self._execute_tool_with_checkpoint)
-        workflow.add_node("generate_response", self._generate_response_with_checkpoint)
+        # Define workflow nodes
+        workflow.add_node("retrieve", self._retrieve_info)
+        workflow.add_node("suggest_tool", self._suggest_tool)
+        workflow.add_node("execute_tool", self._execute_tool)
+        workflow.add_node("generate_response", self._generate_response)
 
         # Add edge from START to retrieve (entry point)
         workflow.add_edge(START, "retrieve")
@@ -128,145 +125,10 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         return workflow
         
-    def _is_valid_checkpoint(self, checkpoint: Dict) -> bool:
-        """Validate checkpoint data structure and freshness"""
+    def _retrieve_info(self, state: AgentState) -> AgentState:
+        """Use retriever to get initial response"""
         try:
-            # Check required fields
-            required_fields = ['messages', 'current_query', 'last_checkpoint']
-            if not all(field in checkpoint for field in required_fields):
-                return False
-                
-            # Check timestamp freshness (24 hour expiry)
-            checkpoint_time = checkpoint.get('last_checkpoint', 0)
-            if time.time() - checkpoint_time > 24 * 60 * 60:
-                return False
-                
-            # Validate message structure
-            messages = checkpoint.get('messages', [])
-            if not isinstance(messages, list):
-                return False
-                
-            for msg in messages:
-                if not isinstance(msg, dict) or 'role' not in msg or 'content' not in msg:
-                    return False
-                    
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Checkpoint validation error: {e}")
-            return False
-            
-    def clear_checkpoints(self, namespace: str = None):
-        """Clear checkpoints for namespace or all if none specified"""
-        try:
-            db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
-            if not db_path.exists():
-                return
-                
-            conn = sqlite3.connect(str(db_path))
-            try:
-                cursor = conn.cursor()
-                if namespace:
-                    cursor.execute("DELETE FROM checkpoints WHERE namespace = ?", (namespace,))
-                else:
-                    cursor.execute("DELETE FROM checkpoints")
-                conn.commit()
-            finally:
-                conn.close()
-                
-        except Exception as e:
-            self.logger.error(f"Error clearing checkpoints: {e}")
-            
-    def _retrieve_info_with_checkpoint(self, state: AgentState) -> AgentState:
-        """Use retriever to get initial response with robust checkpointing"""
-        try:
-            # Get or initialize checkpoint configuration
-            config = state.get('config', {})
-            if not config:
-                # Initialize default configuration
-                thread_id = f"thread_{int(time.time())}"
-                namespace = "default"
-                db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
-                db_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Create SqliteSaver instance
-                from langgraph.checkpoint.sqlite import SqliteSaver
-                checkpointer = SqliteSaver.from_conn_string(str(db_path))
-                
-                # Update state with new config
-            # Initialize SQLite checkpointer
-            db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Create SqliteSaver instance
-            checkpointer = SqliteSaver.from_conn_string(str(db_path))
-            
-            # Generate unique thread ID
-            thread_id = f"agent_{hashlib.md5(str(time.time()).encode()).hexdigest()[:8]}"
-            
-            # Configure checkpointing
-            config = {
-                "configurable": {
-                    "thread_id": thread_id,
-                    "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S')
-                }
-            }
-
-            try:
-                # Attempt to load existing checkpoint
-                with checkpointer.list(config) as checkpoints:
-                    checkpoint_list = list(checkpoints)
-                    if checkpoint_list:
-                        # Get most recent checkpoint
-                        latest_checkpoint = checkpoint_list[-1]
-                        checkpoint_state = latest_checkpoint.checkpoint["state"]
-                        
-                        if self._is_valid_checkpoint(checkpoint_state):
-                            self.logger.info(f"Loaded checkpoint for thread: {thread_id}")
-                            return checkpoint_state
-            except Exception as e:
-                self.logger.error(f"Error loading checkpoint: {e}")
-
-            # Execute retrieval
             result = self._retrieve_info(state)
-            
-            try:
-                # Prepare checkpoint data
-                checkpoint_data = {
-                    "thread_id": thread_id,
-                    "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S'),
-                    "checkpoint": {
-                        "id": checkpoint_id,
-                        "state": result
-                    },
-                    "metadata": {
-                        "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
-                        "namespace": namespace
-                    }
-                }
-            
-                # Save checkpoint
-                checkpoint_data = {
-                    "state": result,
-                    "metadata": {
-                        "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
-                        "operation": "retrieve"
-                    }
-                }
-                
-                with checkpointer.put(
-                    config=config,
-                    checkpoint=checkpoint_data,
-                    metadata=checkpoint_data["metadata"]
-                ) as saved_config:
-                    pass  # Context manager handles the save
-                
-                self.logger.info(f"Saved checkpoint for thread: {thread_id}")
-            
-                self.logger.info(f"Saved checkpoint: {checkpoint_id}")
-            except Exception as e:
-                self.logger.error(f"Error saving checkpoint: {e}")
-
             return result
         except Exception as e:
             self.logger.error(f"Retrieval error: {e}")
