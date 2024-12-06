@@ -156,8 +156,10 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         # Create/update knowledge base
         try:
+            import pdb; pdb.set_trace()
             vectordb = self.rag_service.create_knowledge_base(Path(video_path))
             if not vectordb:
+                state['retriever_result']="No analysis files found. do some analysis on the video content."
                 return {
                     **state,
                     "error": "Failed to create/update knowledge base",
@@ -165,14 +167,14 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                         {"role": "user", "content": query}
                     ]
                 }
-            
+        
             # Query knowledge base
             result = self.rag_service.query_knowledge_base(
                 query=query,
                 chat_history=chat_history
             )
             
-            retriever_response = result.get('answer') if result else None
+            retriever_response = result.get('result') if result else None
             
             # Check if query suggests tool usage
             tool_suggestion = self._analyze_for_tool_suggestion(query, retriever_response)
@@ -208,8 +210,9 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                     return checkpoint
 
             # Execute tool suggestion
+            import pdb; pdb.set_trace()
             result = self._suggest_tool(state)
-
+            
             # Save checkpoint
             if checkpointer:
                 checkpointer.save_checkpoint(f"suggest_{state['state_id']}", result)
@@ -224,7 +227,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         """Analyze query and suggest appropriate tool"""
         # Create tool suggestion prompt
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "Analyze the query and retriever result to suggest an appropriate tool if needed."),
+            ("system", "Analyze the query and retriever result to suggest an appropriate tool from {self.tools} if needed."),
             MessagesPlaceholder(variable_name="messages"),
             ("user", "Query: {query}\nRetriever result: {result}\n\nShould I suggest a tool?")
         ])
@@ -311,7 +314,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             
         try:
             # Execute tool with current state context
-            result = tool.run(
+            result = tool._run(
                 query=state["current_query"],
                 chat_history=state.get("messages", []),
                 retriever_result=state.get("retriever_result")
@@ -331,14 +334,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 "error": str(e),
                 "final_response": f"Error executing {tool_name}: {str(e)}"
             }
-        
-        return {
-            **state,
-            "tool_result": result,
-            "messages": state["messages"] + [
-                {"role": "assistant", "content": f"Executed {tool} with result: {result}"}
-            ]
-        }
+
         
     def _generate_response_with_checkpoint(self, state: AgentState) -> AgentState:
         """Generate response with checkpoint handling"""
@@ -412,7 +408,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         """Analyze if query suggests using a specific tool"""
         tool_patterns = {
             'scene_analysis': {
-                'patterns': ['analyze scene', 'what is happening', 'describe scene', 'what do you see'],
+                'patterns': ['analyze scene', 'what is happening', 'describe scene', 'what do you see', 'tell me about the video', 'what is in the video', 'search the video', 'explain the video'],
                 'description': 'Perform detailed scene analysis'
             },
             'object_detection': {
@@ -464,7 +460,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             confirmed=False,
             final_response=None
         )
-        
+        import pdb; pdb.set_trace()
         # Run workflow
         result = self.workflow.invoke(state)
         
