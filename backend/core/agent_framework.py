@@ -116,6 +116,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 "suggest": "suggest_tool"
             }
         )
+
         
         # Add edge to end
         workflow.add_edge("generate_response", END)
@@ -267,7 +268,6 @@ You must respond with valid JSON in this exact format:
                     **state,
                     "suggested_tool": suggested_tool_name,
                     "tool_input": suggestion.get("input"),
-                    "tool_desc": matching_tool.description,
                     "tool_description": matching_tool.description,  # Add both for compatibility
                     "requires_confirmation": True,
                     "confirmed": False
@@ -402,8 +402,8 @@ You must respond with valid JSON in this exact format:
             }
             
         if state.get("requires_confirmation") and not state.get("confirmed"):
-            import pdb; pdb.set_trace()
-            tool_desc = state.get("tool_desc", "this action")
+            tool_desc =[tool.description for tool in self.tools if tool.name == state["suggested_tool"]][0].lower()
+            # tool_desc = state.get("tool_desc", "this action")
             return {
                 **state,
                 "final_response": f"Would you like me to {tool_desc}? Please confirm."
