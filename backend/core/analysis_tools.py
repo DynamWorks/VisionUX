@@ -12,17 +12,19 @@ class SceneAnalysisTool(BaseTool):
     description: str = "Analyze the current video scene"
     scene_service: Any = None
     
-    def __init__(self, scene_service):
+    def __init__(self, chat_service=None):
         super().__init__()
-        self.scene_service = scene_service
+        # Import here to avoid circular imports
+        from backend.services import SceneAnalysisService
+        self.scene_service = SceneAnalysisService()
         
     def _run(self, video_path: Path = None, **kwargs) -> str:
         """Run scene analysis on video file or frames"""
         try:
             if video_path:
-                # Import here to avoid circular imports
-                from backend.services import SceneAnalysisService
-                self.scene_service = SceneAnalysisService()
+                if not self.scene_service:
+                    from backend.services import SceneAnalysisService
+                    self.scene_service = SceneAnalysisService()
                 
                 # Get video path
                 video_file = Path("tmp_content/uploads") / video_path.name
