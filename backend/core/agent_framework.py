@@ -219,12 +219,28 @@ You must respond with valid JSON in this exact format:
 
         import pdb; pdb.set_trace()
         # Get suggestion from LLM
-        chain = prompt | self.llm | JsonOutputParser()
-        suggestion = chain.invoke({
+        chain = prompt | self.llm
+        response = chain.invoke({
             "messages": state["messages"],
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
+            
+        # Extract content from AIMessage or string
+        content = response.content if hasattr(response, 'content') else str(response)
+            
+        # Parse JSON from content
+        import json
+        try:
+            suggestion = json.loads(content)
+        except json.JSONDecodeError:
+            suggestion = {
+                "tool": None,
+                "input": {},
+                "confirmed": False,
+                "requires_confirmation": False,
+                "reason": "Failed to parse tool suggestion"
+            }
 
         # Validate suggested tool exists
         suggested_tool_name = suggestion.get("tool")
@@ -336,6 +352,17 @@ You must respond with valid JSON in this exact format:
             "messages": state["messages"],
             "query": state["current_query"]
         })
+        
+        # Extract content from AIMessage or string
+        response_text = response.content if hasattr(response, 'content') else str(response)
+        
+        return {
+            **state,
+            "final_response": response_text,
+            "messages": state["messages"] + [
+                {"role": "assistant", "content": response_text}
+            ]
+        }
         
         return {
             **state,
