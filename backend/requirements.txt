@@ -37,6 +37,7 @@ openai<2.0.0
 faiss-cpu>=1.7.4
 sentence-transformers==3.3.0
 google-generativeai>=0.8.3
+langgraph-checkpoint-sqlite>=2.0.1
 
 # Visualization
 streamlit==1.27.2

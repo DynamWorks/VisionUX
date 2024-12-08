@@ -136,7 +136,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
 
         # Create/update knowledge base
         try:
-            import pdb; pdb.set_trace()
+            
             vectordb = self.rag_service.create_knowledge_base(Path(video_path))
             if not vectordb:
                 return {
@@ -212,7 +212,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
         #"input": {{{{"param": "value"}}}},
-        import pdb; pdb.set_trace()
+        
         # Get suggestion from LLM
         chain = prompt | self.llm 
         response = chain.invoke({
@@ -311,7 +311,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
 
     def _generate_response(self, state: AgentState) -> AgentState:
         """Generate final response combining retriever and tool results"""
-        import pdb; pdb.set_trace()
+        
         if state.get("error"):
             return {
                 **state,
@@ -420,7 +420,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         return "respond"
 
     def _route_after_suggestion(self, state: AgentState) -> str:
-        import pdb; pdb.set_trace()
+        
         """Route to next node after tool suggestion"""
         if state.get("error") or ( not state.get("confirmed") and not state.get("retrieve_info")):
             return "respond"
