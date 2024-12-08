@@ -202,19 +202,14 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
              4. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool information if deemed eligible and available.
 
             You must respond with valid JSON in this exact format:
-            {{{{
-                "tool": "<tool_name or null if no tool needed>",
-                "input": {{{{"param": "value"}}}},
-                "confirmed": <boolean>,
-                "requires_confirmation": <boolean>,
-                "reason": "<explanation for suggesting or not suggesting a tool>"
-            }}}}"""),
+            {{{{"tool": "<tool_name or null if no tool needed>","confirmed": <boolean>,"requires_confirmation": <boolean>,"reason": "<explanation for suggesting or not suggesting a tool>"}}}}"""),
             MessagesPlaceholder(variable_name="messages"),
             ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
+        #"input": {{{{"param": "value"}}}},
         import pdb; pdb.set_trace()
         # Get suggestion from LLM
-        chain = prompt | self.llm 
+        chain = prompt | self.llm | JsonOutputParser()
         response = chain.invoke({
             "messages": state["messages"],
             "query": state["current_query"],
