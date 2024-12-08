@@ -332,21 +332,21 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             # Get new analysis files
             analysis_files = self._get_new_analysis_files(metadata_path)
             
-            # If no analysis files exist, use scene analysis tool
-            if not analysis_files and not any(analysis_dir.glob("*.json")):
-                self.logger.info("No analysis files found - using scene analysis tool")
-                try:
-                    from backend.core.analysis_tools import SceneAnalysisTool
-                    scene_tool = SceneAnalysisTool(None)  # Pass None since we'll set params directly
+            # # If no analysis files exist, use scene analysis tool
+            # if not analysis_files and not any(analysis_dir.glob("*.json")):
+            #     self.logger.info("No analysis files found - using scene analysis tool")
+            #     try:
+            #         from backend.core.analysis_tools import SceneAnalysisTool
+            #         scene_tool = SceneAnalysisTool(None)  # Pass None since we'll set params directly
                     
-                    # Trigger analysis
-                    result = scene_tool._run(results_path)
-                    if result:
-                        return self.create_knowledge_base(results_path)
+            #         # Trigger analysis
+            #         result = scene_tool._run(results_path)
+            #         if result:
+            #             return self.create_knowledge_base(results_path)
                         
-                except Exception as e:
-                    self.logger.error(f"Auto scene analysis failed: {e}")
-                    return None
+            #     except Exception as e:
+            #         self.logger.error(f"Auto scene analysis failed: {e}")
+            #         return None
                 
             # If no new files but store exists, try loading existing store
             if not analysis_files:
@@ -650,7 +650,7 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 'version': '1.0'
             }, f, indent=2)
             
-    def get_retrieval_chain(self, vectordb: FAISS, results_path: Path) -> RetrievalQA:
+    def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQA:
         """Create retrieval chain with custom prompt"""
         if not vectordb:
             raise ValueError("Vector store is required to create retrieval chain")
@@ -692,30 +692,11 @@ Provide your response in natural language, focusing on being informative and hel
             template=prompt_template,
             input_variables=["context", "question"]
         )
-        # Initialize agent with tools
-        from backend.core.analysis_tools import (
-            SceneAnalysisTool, ObjectDetectionTool, 
-            EdgeDetectionTool, ChatTool
-        )
-        from backend.services import scene_service, cv_service
-        
-        tools = [
-            SceneAnalysisTool(None)._run(results_path),
-            ObjectDetectionTool(None)._run(),
-            EdgeDetectionTool(None)._run,
-            ChatTool(self)._run()
-        ]
-        llm_with_tools = self.llm.bind_tools([tools])
-        # # Create document chain using new constructor
-        # combine_docs_chain = create_stuff_documents_chain(
-        #     llm=llm_with_tools,
-        #     prompt=PROMPT,
-        #     document_variable_name="context"
-        # )
+
 
         # Create retrieval chain using LCEL
         chain = RetrievalQA.from_chain_type(
-            llm=llm_with_tools, #self.llm,
+            llm=self.llm,
             chain_type="stuff",
             retriever=retriever,
             return_source_documents=True,
@@ -728,7 +709,7 @@ Provide your response in natural language, focusing on being informative and hel
         self._current_chain = chain
         return chain
         
-    def query_knowledge_base(self, query: str, results_path: Path, chain: Optional[RetrievalQA] = None, 
+    def query_knowledge_base(self, query: str, chain: Optional[RetrievalQA] = None, 
                            chat_history: Optional[List[Dict]] = None,
                            tools: Optional[List] = None) -> Dict:
         """Query the knowledge base with enhanced source tracking and chat context"""
@@ -742,7 +723,7 @@ Provide your response in natural language, focusing on being informative and hel
                         "sources": [],
                         "requires_analysis": True
                     }
-                chain = self.get_retrieval_chain(vectordb, results_path)
+                chain = self.get_retrieval_chain(vectordb)
 
             # Format chat history
             # Process chat history into a string format
@@ -767,7 +748,7 @@ Provide your response in natural language, focusing on being informative and hel
                 if not vectordb:
                     raise ValueError("No vector store available and could not load from disk")
                 # Create new chain with loaded store
-                chain = self.get_retrieval_chain(vectordb, results_path)
+                chain = self.get_retrieval_chain(vectordb)
 
             # # Use consistent search parameters with the retriever config
             # relevant_docs = vectordb.similarity_search_with_score(

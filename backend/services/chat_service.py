@@ -33,8 +33,8 @@ class ChatService:
         self.tools = [
             SceneAnalysisTool(self),
             ObjectDetectionTool(self),
-            EdgeDetectionTool(self),
-            ChatTool(self)
+            EdgeDetectionTool(self)#,
+            #ChatTool(self)
         ]
         
         # Initialize agent with RAG components
@@ -56,63 +56,59 @@ class ChatService:
                 'retriever_result': None,
                 'suggested_tool': None,
                 'tool_input': tool_input,
-                'requires_confirmation': False,
+                'requires_confirmation': True,
                 'confirmed': confirmed,
                 'final_response': None,
                 'video_path': video_path,
                 'state_id': hashlib.md5(str(time.time()).encode()).hexdigest()[:8],
                 'last_checkpoint': time.time(),
-                'execution_history': []
+                'execution_history': [],
+                'retrieve_info': True
             }
             
             # Get chat history for context
             chat_history = self._get_chat_history(video_path)
             state['messages'] = chat_history
             
-            # Initialize SQLite checkpointer
-            db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
-            db_path.parent.mkdir(parents=True, exist_ok=True)
+            # # Initialize SQLite checkpointer
+            # db_path = Path("tmp_content/agent_state/checkpoints.sqlite")
+            # db_path.parent.mkdir(parents=True, exist_ok=True)
             
-            # Create SqliteSaver instance
-            from langgraph.checkpoint.sqlite import SqliteSaver
-            checkpointer = SqliteSaver.from_conn_string(str(db_path))
+            # # Create SqliteSaver instance
+            # from langgraph.checkpoint.sqlite import SqliteSaver
+            # checkpointer = SqliteSaver.from_conn_string(str(db_path))
             
             # Generate unique thread ID and namespace
-            thread_id = f"chat_{video_path}_{int(time.time())}"
-            namespace = f"video_{hashlib.md5(video_path.encode()).hexdigest()[:8]}"
+            # thread_id = f"chat_{video_path}_{int(time.time())}"
+            thread_id = f"video_{hashlib.md5(video_path.encode()).hexdigest()[:8]}"
             
             # Configure checkpointing
-            config = {
-                'thread_id': thread_id,
-                'namespace': namespace,
-                'checkpointer': checkpointer
-            }
+            config = {"configurable": {"thread_id": thread_id, "checkpoint_ns": ""}}
+
             
             # Compile and run workflow with checkpointing
             app = self.agent.workflow.compile()
             result = app.invoke(state, config=config)
             
-            # Save final state checkpoint
-            checkpoint_id = f"{thread_id}_final"
-            checkpoint_data = {
-                "thread_id": thread_id,
-                "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S'),
-                "checkpoint": {
-                    "id": checkpoint_id,
-                    "state": result
-                },
-                "metadata": {
-                    "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
-                    "namespace": config['namespace']
-                }
-            }
+            # # Save final state checkpoint
+            # checkpoint_data = {
+            #     "thread_id": thread_id,
+            #     "thread_ts": time.strftime('%Y-%m-%dT%H:%M:%S'),
+            #     "checkpoint": {
+            #         "state": result
+            #     },
+            #     "metadata": {
+            #         "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+            #     }
+            # }
             
-            # Save using SqliteSaver
-            checkpointer.put(
-                config={"configurable": {"thread_id": thread_id}},
-                checkpoint=checkpoint_data["checkpoint"],
-                metadata=checkpoint_data["metadata"]
-            )
+            # # Save using SqliteSaver
+            # checkpointer.put(
+            #     config={"configurable": {"thread_id": thread_id, , "checkpoint_ns": ""}},
+            #     checkpoint=checkpoint_data["checkpoint"],
+            #     metadata=checkpoint_data["metadata"],
+            #     new_versions={}
+            # )
             
             # Process workflow result
             response = {
@@ -121,17 +117,6 @@ class ChatService:
                 "timestamp": time.time(),
                 "chat_messages": result.get('messages', [])
             }
-
-            # Add tool suggestion if present
-            if result.get('suggested_tool'):
-                response.update({
-                    "suggested_tool": result['suggested_tool'],
-                    "tool_description": result.get('tool_description', ''),
-                    "requires_confirmation": True,
-                    "answer": f"{response['answer']}\n\nWould you like me to {result.get('tool_description', '')}?"
-                })
-                if response['chat_messages']:
-                    response['chat_messages'][-1]['content'] = response['answer']
 
             return response
 

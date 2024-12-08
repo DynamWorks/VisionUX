@@ -266,7 +266,6 @@ def chat_analysis():
             confirmed=data.get('confirmed', False),
             tool_input=data.get('tool_input', {})
         )
-
         # Save chat history
         video_name = data.get('video_path')
         if video_name and response.get('chat_messages'):
@@ -274,8 +273,10 @@ def chat_analysis():
                 response['chat_messages'],
                 video_name
             )
+        
+        rag_response = response.get("answer").content if hasattr(response.get("answer"), 'content') else str(response.get("answer"))
 
-        return jsonify(response)
+        return jsonify({"rag_response": rag_response})
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)

@@ -28,6 +28,7 @@ class AgentState(TypedDict):
     final_response: Optional[str]   # Final response to return to user
     video_path: str               # Path to current video
     execution_history: List[Dict] # History of tool executions
+    retrieve_info: bool            # Whether to retrieve information
 
 class VideoAnalysisAgent:
     """Agent for handling video analysis queries and actions"""
@@ -132,7 +133,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         query = state["current_query"]
         chat_history = state.get("messages", [])
         video_path = state.get("video_path")
-        import pdb; pdb.set_trace()
+
         # Create/update knowledge base
         try:
             import pdb; pdb.set_trace()
@@ -144,7 +145,8 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                     "error": "Failed to create/update knowledge base",
                     "messages": chat_history + [
                         {"role": "user", "content": query}
-                    ]
+                    ],
+                    "retrieve_info":False
                 }
         
             # Query knowledge base
@@ -166,7 +168,8 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 # "requires_confirmation": bool(tool_suggestion),
                 "messages": chat_history + [
                     {"role": "user", "content": query}
-                ]
+                ],
+                "retrieve_info":False
             }
         except Exception as e:
             self.logger.error(f"Retrieval error: {e}")
@@ -197,9 +200,11 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 Available tools:
                 {tools_description}
                 Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
-                If suggesting a tool, explain why it would be helpful. if retriever result is not available and a tool should not be suggested, set the confirmed to False and requires_confirmation to True.
-             3. If the user query appears to be a reply for tool execution question to confirm, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool. 
-             4. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool information if deemed eligible and available.
+                If suggesting a tool, explain why it would be helpful and set the tool to the suggested tool_name. 
+                If a tool has been suggested and have valid reason, keep/set the tool_name. 
+                If retriever result is not available and a tool should not be suggested, set the confirmed to False and requires_confirmation to True.
+             3. If the user query is a reply to confirm tool execution question, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool_name. 
+             4. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool_name information if deemed eligible and available.
 
             You must respond with valid JSON in this exact format:
             {{{{"tool": "<tool_name or null if no tool needed>","confirmed": <boolean>,"requires_confirmation": <boolean>,"reason": "<explanation for suggesting or not suggesting a tool>"}}}}"""),
@@ -209,16 +214,17 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         #"input": {{{{"param": "value"}}}},
         import pdb; pdb.set_trace()
         # Get suggestion from LLM
-        chain = prompt | self.llm | JsonOutputParser()
+        chain = prompt | self.llm 
         response = chain.invoke({
             "messages": state["messages"],
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
+        content = response.content if hasattr(response, 'content') else str(response)
         try:
             # Use JsonOutputParser for reliable parsing
             parser = JsonOutputParser()
-            suggestion = parser.parse(response)
+            suggestion = parser.parse(content)
         except Exception as e:
             self.logger.error(f"Failed to parse response: {e}")
             suggestion = {
@@ -244,7 +250,10 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                     "tool_description": matching_tool.description,  # Add both for compatibility
                     "requires_confirmation": suggestion.get("requires_confirmation"),
                     "confirmed": suggestion.get("confirmed"),
-                    "retriever_result": suggestion.get("reason")
+                    "retriever_result": suggestion.get("reason"),
+                    "messages": state["messages"] + [
+                        {"role": "system", "content": f"Suggested tool: {suggested_tool_name} - {matching_tool.description}"}
+                    ]
                 }
             
         # No valid tool suggested
@@ -263,7 +272,8 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             tool_desc = state.get("tool_description", "this action")
             return {
                 **state,
-                "final_response": f"Would you like me to {tool_desc}? Please confirm.",
+                "error": f"Tool {tool_name} was tried to be executed when confirmation is required.",
+                "retrieved_result": f"Sorry, the tool {tool_name} can not be executed since we did not receive a confirmation.",
                 "requires_confirmation": True
             }
             
@@ -275,8 +285,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             return {
                 **state,
                 "error": f"Tool {tool_name} not found",
-                "final_response": f"Sorry, the tool {tool_name} is not available.",
-                "requires_confirmation": False  # Reset confirmation since tool not found
+                "retrieved_result": f"Sorry, the tool {tool_name} is not available."
             }
             
         try:
@@ -296,7 +305,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             return {
                 **state,
                 "error": str(e),
-                "final_response": f"Error executing {tool_name}: {str(e)}"
+                "retrieved_result": f"Error executing {tool_name}: {str(e)}"
             }
 
 
@@ -317,12 +326,18 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 **state,
                 "final_response": final_response,
                 "messages": state["messages"] + [
-                {"role": "assistant", "content": f"Would you like me to {tool_desc}? Please confirm."}]
+                {"role": "assistant", "content": f"Would you like me to {tool_desc}? Please confirm."}],
+                "retrieve_info":True,
+                "retriever_result":None,
+                "suggested_tool":None,
+                "tool_input":None,
+                "requires_confirmation":True,
+                "confirmed":False
             }
             
         # Create response prompt based on state
         prompt_parts = [
-            "Based on the following information, provide a helpful response. If a tool has been executed, Say that the analysis is completed. Summarize the tool results and request to ask any questions.",
+            "Remember that you are responding to the user query in context with the uploaded video. Always place emphasis on the retriever_result if available. Based on the following information, provide a helpful response.",
             f"Query: {state['current_query']}",
             f"Retrieved Context: {state.get('retriever_result', 'No context available')}"
         ]
@@ -344,14 +359,26 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         })
         
         # Extract content from AIMessage or string
-        response_text = response.content if hasattr(response, 'content') else json.jsonify(response)
+        response_text = response.content if hasattr(response, 'content') else str(response)
         
         return {
             **state,
             "final_response": response_text,
             "messages": state["messages"] + [
                 {"role": "assistant", "content": response_text}
-            ]
+            ],
+            "execution_history": state["execution_history"] + [
+                {
+                    "query": state["current_query"],
+                    "response": response_text
+                }
+            ],
+            "retrieve_info":True,
+            "retriever_result":None,
+            "suggested_tool":None,
+            "tool_input":None,
+            "requires_confirmation":True,
+            "confirmed":False
         }
             
     def _analyze_for_tool_suggestion(self, query: str, retriever_response: Optional[str]) -> Optional[Dict]:
@@ -385,7 +412,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
     def _route_after_retrieve(self, state: AgentState) -> str:
         """Route to next node after retrieval"""
         if state.get("error"):
-            if state.get("error") == "Failed to create/update knowledge base" and state.get("retriever_result"):
+            if state.get("error") == "Failed to create/update knowledge base":
                 return "suggest"
             return "respond"
         if not state.get("error") and not state.get("confirmed"):
@@ -393,8 +420,9 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         return "respond"
 
     def _route_after_suggestion(self, state: AgentState) -> str:
+        import pdb; pdb.set_trace()
         """Route to next node after tool suggestion"""
-        if state.get("error") or ( not state.get("confirmed") and state.get("suggested_tool")):
+        if state.get("error") or ( not state.get("confirmed") and not state.get("retrieve_info")):
             return "respond"
         if not state["requires_confirmation"] and state["confirmed"]:
             return "execute" 
