@@ -92,14 +92,14 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         workflow.add_node("generate_response", self._generate_response)
 
         # Add edge from START to retrieve (entry point)
-        workflow.add_edge(START, "retrieve")
+        workflow.add_edge(START, "suggest_tool")
         
         # Add conditional edges from retrieve
         workflow.add_conditional_edges(
-            "retrieve",
-            self._route_after_retrieve,
+            "suggest_tool",
+            self._route_after_suggestion,
             {
-                "suggest": "suggest_tool",
+                "retrieve": "retrieve",
                 "execute": "execute_tool",
                 "respond": "generate_response"
             }
@@ -107,29 +107,22 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         # Add conditional edges
         workflow.add_conditional_edges(
-            "suggest_tool",
-            self._route_after_suggestion,
+            "retrieve",
+            self._route_after_retrieve,
             {
-                "execute": "execute_tool",
+                "suggest": "suggest_tool",
                 "respond": "generate_response"
             }
         )
         
-        workflow.add_conditional_edges(
-            "execute_tool",
-            self._route_after_execution,
-            {
-                "respond": "generate_response",
-                "suggest": "suggest_tool"
-            }
-        )
+        workflow.add_edge("execute_tool","generate_response")
 
         
         # Add edge to end
         workflow.add_edge("generate_response", END)
         
         # Set entry point
-        workflow.set_entry_point("retrieve")
+        workflow.set_entry_point("suggest_tool")
         
         return workflow
         
@@ -139,9 +132,10 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         query = state["current_query"]
         chat_history = state.get("messages", [])
         video_path = state.get("video_path")
-        
+        import pdb; pdb.set_trace()
         # Create/update knowledge base
         try:
+            import pdb; pdb.set_trace()
             vectordb = self.rag_service.create_knowledge_base(Path(video_path))
             if not vectordb:
                 return {
@@ -194,41 +188,40 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         ])
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", f"""You are a video analysis assistant. Based on the user query and context, suggest an appropriate tool if needed.
+            ("system", f"""You are an interpreter for the user query for the video uploaded by him to do the following.
+             1.Interpret the user query and context, and identify if the context is 
+                a. to get information.
+                b. to execute a tool or perform a specific analysis.
+                c. approval or denial of a tool execution.
+             2. If a retriever result is available, interpret and suggest an appropriate tool if needed.
+                Available tools:
+                {tools_description}
+                Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
+                If suggesting a tool, explain why it would be helpful. if retriever result is not available and a tool should not be suggested, set the confirmed to False and requires_confirmation to True.
+             3. If the user query appears to be a reply for tool execution question to confirm, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool. 
+             4. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool information if deemed eligible and available.
 
-Available tools:
-{tools_description}
-
-Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
-If suggesting a tool, explain why it would be helpful.
-
-If the user query appears to be a reply for tool execution question to confirm, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False. 
-If the user query intends to request tool execution, and if the available tool is capable of the user request, only then set the confirmed to True and requires_confirmation to False.
-
-You must respond with valid JSON in this exact format:
-{{{{
-    "tool": "<tool_name or null if no tool needed>",
-    "input": {{{{"param": "value"}}}},
-    "confirmed": <boolean>,
-    "requires_confirmation": <boolean>,
-    "reason": "<explanation for suggesting or not suggesting a tool>"
-}}}}"""),
+            You must respond with valid JSON in this exact format:
+            {{{{
+                "tool": "<tool_name or null if no tool needed>",
+                "input": {{{{"param": "value"}}}},
+                "confirmed": <boolean>,
+                "requires_confirmation": <boolean>,
+                "reason": "<explanation for suggesting or not suggesting a tool>"
+            }}}}"""),
             MessagesPlaceholder(variable_name="messages"),
             ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
-
         import pdb; pdb.set_trace()
         # Get suggestion from LLM
-        chain = prompt | self.llm
+        chain = prompt | self.llm 
         response = chain.invoke({
             "messages": state["messages"],
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
-            
         # Extract content from AIMessage or string
-        content = response.content if hasattr(response, 'content') else str(response)
-            
+        content = str(response.content) if hasattr(response, 'content') else str(response)
         # Parse JSON from content
         import json
         try:
@@ -238,7 +231,7 @@ You must respond with valid JSON in this exact format:
                 "tool": None,
                 "input": {},
                 "confirmed": False,
-                "requires_confirmation": False,
+                "requires_confirmation": True,
                 "reason": "Failed to parse tool suggestion"
             }
 
@@ -265,7 +258,7 @@ You must respond with valid JSON in this exact format:
             **state,
             "suggested_tool": None,
             "tool_input": None,
-            "requires_confirmation": False,
+            "requires_confirmation": True,
             "confirmed": False
         }
         
@@ -299,7 +292,7 @@ You must respond with valid JSON in this exact format:
             
             return {
                 **state,
-                "tool_result": result,
+                "retrieved_result": result,
                 "messages": state["messages"] + [
                     {"role": "system", "content": f"Executed {tool_name}: {result}"}
                 ]
@@ -315,6 +308,7 @@ You must respond with valid JSON in this exact format:
 
     def _generate_response(self, state: AgentState) -> AgentState:
         """Generate final response combining retriever and tool results"""
+        import pdb; pdb.set_trace()
         if state.get("error"):
             return {
                 **state,
@@ -324,28 +318,30 @@ You must respond with valid JSON in this exact format:
         if state.get("suggested_tool") and not state.get("confirmed"):
             tool_desc =[tool.description for tool in self.tools if tool.name == state["suggested_tool"]][0].lower()
             # tool_desc = state.get("tool_desc", "this action")
+            final_response = state["retriever_result"]+". "+f"Would you like me to {tool_desc}? Please confirm."
             return {
                 **state,
-                "final_response": f"Would you like me to {tool_desc}? Please confirm.",
+                "final_response": final_response,
                 "messages": state["messages"] + [
                 {"role": "assistant", "content": f"Would you like me to {tool_desc}? Please confirm."}]
             }
             
         # Create response prompt based on state
         prompt_parts = [
-            "Based on the following information, provide a helpful response:",
+            "Based on the following information, provide a helpful response. If a tool has been executed, Say that the analysis is completed. Summarize the tool results and request to ask any questions.",
             f"Query: {state['current_query']}",
             f"Retrieved Context: {state.get('retriever_result', 'No context available')}"
         ]
             
+        # if state.get("tool_result"):
+        #     prompt_parts.append(f"Say that the analysis is completed. Summarize the tool results and request to ask any questions. Tool Result: {state['tool_result']}") 
+
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", "Generate a helpful response using all available information."),
-            MessagesPlaceholder(variable_name="messages")#,
-            #("user", "\n".join(prompt_parts))
+            MessagesPlaceholder(variable_name="messages"),
+            ("user", "\n".join(prompt_parts))
         ])
-
-        if state.get("tool_result"):
-            prompt = f"Say that the analysis is completed. Summarize the tool results and request to ask any questions. Tool Result: {state['tool_result']}"
 
         chain = prompt | self.llm
         response = chain.invoke({
@@ -354,21 +350,13 @@ You must respond with valid JSON in this exact format:
         })
         
         # Extract content from AIMessage or string
-        response_text = response.content if hasattr(response, 'content') else str(response)
+        response_text = response.content if hasattr(response, 'content') else json.jsonify(response)
         
         return {
             **state,
             "final_response": response_text,
             "messages": state["messages"] + [
                 {"role": "assistant", "content": response_text}
-            ]
-        }
-        
-        return {
-            **state,
-            "final_response": response,
-            "messages": state["messages"] + [
-                {"role": "assistant", "content": response}
             ]
         }
             
@@ -406,27 +394,18 @@ You must respond with valid JSON in this exact format:
             if state.get("error") == "Failed to create/update knowledge base" and state.get("retriever_result"):
                 return "suggest"
             return "respond"
-        if state.get("suggested_tool") and state.get("confirmed"):
-            return "execute"
         if not state.get("error") and not state.get("confirmed"):
             return "suggest"
         return "respond"
 
     def _route_after_suggestion(self, state: AgentState) -> str:
         """Route to next node after tool suggestion"""
-        if state.get("error"):
+        if state.get("error") or ( not state.get("confirmed") and state.get("suggested_tool")):
             return "respond"
-        if not state["requires_confirmation"]:
-            return "execute" if state["confirmed"] else "respond"
-        return "respond"
-        
-    def _route_after_execution(self, state: AgentState) -> str:
-        """Route to next node after tool execution"""
-        # Check if we need to suggest another tool
-        # import pdb; pdb.set_trace()
-        # if state.get("tool_result", {}).get("suggest_next_tool"):
-        #     return "suggest"
-        return "respond"
+        if not state["requires_confirmation"] and state["confirmed"]:
+            return "execute" 
+        return "retrieve"
+    
         
     """Agent for handling video analysis queries and actions
     
