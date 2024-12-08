@@ -220,10 +220,34 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
-        # Use JsonOutputParser for reliable parsing
-        parser = JsonOutputParser()
+        # Extract and clean JSON from response
         try:
-            suggestion = parser.parse(response.content)
+            # First try direct JSON parsing
+            suggestion = json.loads(response.content)
+        except json.JSONDecodeError:
+            # If direct parsing fails, try to extract JSON from markdown
+            import re
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response.content, re.DOTALL)
+            if json_match:
+                try:
+                    suggestion = json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    suggestion = {
+                        "tool": None,
+                        "input": {},
+                        "confirmed": False,
+                        "requires_confirmation": True,
+                        "reason": f"Failed to parse tool suggestion from JSON"
+                    }
+            else:
+                # Fallback to default if no JSON found
+                suggestion = {
+                    "tool": None,
+                    "input": {},
+                    "confirmed": False,
+                    "requires_confirmation": True,
+                    "reason": "No valid JSON found in response"
+                }
         except Exception as e:
             self.logger.error(f"Failed to parse response: {e}")
             suggestion = {
