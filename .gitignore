@@ -3,6 +3,7 @@
 *.mp4
 *.png
 *.jpg
+*.pt
 *labels/
 output_csv/
 weights/
