@@ -220,52 +220,12 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
-        # Extract content and clean any formatting issues
-        content = str(response.content) if hasattr(response, 'content') else str(response)
-        # Clean up any potential formatting issues
-        content = content.strip()
-        
-        # Handle potential JSON string escaping
+        # Use JsonOutputParser for reliable parsing
+        parser = JsonOutputParser()
         try:
-            # First try direct JSON parsing
-            suggestion = json.loads(content)
-        except json.JSONDecodeError:
-            # If that fails, try cleaning the string more aggressively
-            # More aggressive JSON string cleaning
-            cleaned_content = content.strip()
-            
-            # Handle potential JSON string escaping and formatting
-            if cleaned_content.startswith('"') and cleaned_content.endswith('"'):
-                # Content is wrapped in quotes, unescape and parse
-                cleaned_content = cleaned_content[1:-1].encode().decode('unicode_escape')
-            
-            # Remove any ANSI escape codes
-            import re
-            cleaned_content = re.sub(r'\x1b\[[0-9;]*[mGKH]', '', cleaned_content)
-            
-            # Normalize whitespace and newlines
-            cleaned_content = ' '.join(cleaned_content.split())
-            
-            # Ensure proper JSON structure
-            if not cleaned_content.startswith('{'):
-                cleaned_content = '{' + cleaned_content
-            if not cleaned_content.endswith('}'):
-                cleaned_content = cleaned_content + '}'
-                
-            try:
-                # Parse with strict JSON rules
-                suggestion = json.loads(cleaned_content, strict=False)
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Failed to parse JSON after cleaning: {e}\nContent: {cleaned_content}")
-                suggestion = {
-                    "tool": None,
-                    "input": {},
-                    "confirmed": False,
-                    "requires_confirmation": True,
-                    "reason": f"Failed to parse tool suggestion: {str(e)}"
-                }
-        except json.JSONDecodeError as e:
-            self.logger.error(f"JSON parse error: {e}, Content: {content}")
+            suggestion = parser.parse(response.content)
+        except Exception as e:
+            self.logger.error(f"Failed to parse response: {e}")
             suggestion = {
                 "tool": None,
                 "input": {},
