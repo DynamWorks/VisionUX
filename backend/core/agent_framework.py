@@ -231,19 +231,30 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             suggestion = json.loads(content)
         except json.JSONDecodeError:
             # If that fails, try cleaning the string more aggressively
-            cleaned_content = (content
-                .replace('\n', '')
-                .replace('    ', ' ')
-                .replace('\\"', '"')
-                .replace('\\n', '')
-                .strip())
+            # More aggressive JSON string cleaning
+            cleaned_content = content.strip()
             
-            # Remove any extra quotes at start/end if present
+            # Handle potential JSON string escaping and formatting
             if cleaned_content.startswith('"') and cleaned_content.endswith('"'):
-                cleaned_content = cleaned_content[1:-1]
+                # Content is wrapped in quotes, unescape and parse
+                cleaned_content = cleaned_content[1:-1].encode().decode('unicode_escape')
+            
+            # Remove any ANSI escape codes
+            import re
+            cleaned_content = re.sub(r'\x1b\[[0-9;]*[mGKH]', '', cleaned_content)
+            
+            # Normalize whitespace and newlines
+            cleaned_content = ' '.join(cleaned_content.split())
+            
+            # Ensure proper JSON structure
+            if not cleaned_content.startswith('{'):
+                cleaned_content = '{' + cleaned_content
+            if not cleaned_content.endswith('}'):
+                cleaned_content = cleaned_content + '}'
                 
             try:
-                suggestion = json.loads(cleaned_content)
+                # Parse with strict JSON rules
+                suggestion = json.loads(cleaned_content, strict=False)
             except json.JSONDecodeError as e:
                 self.logger.error(f"Failed to parse JSON after cleaning: {e}\nContent: {cleaned_content}")
                 suggestion = {
