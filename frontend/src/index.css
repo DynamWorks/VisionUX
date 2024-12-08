@@ -1,0 +1,147 @@
+:root {
+  --primary-color: #333333;
+  --secondary-color: #bd9544;
+  --background-color: #f4f4f4;
+  --text-color: #ffffff;
+  --body-text-color: #050402;
+  --header-height: 60px;
+  --button-text-color: #ffffff;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--body-text-color);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content {
+    display: flex;
+    flex: 1;
+    padding: 20px;
+    gap: 20px;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    min-height: 400px;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.controls-container {
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.button {
+    background-color: var(--secondary-color);
+    color: var(--button-text-color);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #a17e3a;
+}
+
+.button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+    }
+}
+
+.left-panel {
+    width: 30%;
+    padding: 1rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    margin-right: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.right-panel {
+    width: 70%;
+    display: flex;
+    flex-direction: column;
+}
+
+.camera-feed {
+    position: relative;
+    width: 100%;
+    background-color: #000000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.camera-feed video {
+    width: 100%;
+    height: auto;
+}
+
+.camera-feed canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.action-button {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    margin: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.action-button:hover {
+    background-color: var(--secondary-color);
+}
+
+.action-button.active {
+    background-color: var(--secondary-color);
+}
+
+.action-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+    }
+
+    .left-panel,
+    .right-panel {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+}

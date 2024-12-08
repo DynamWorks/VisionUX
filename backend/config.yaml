@@ -1,0 +1,42 @@
+api:
+  port: 8000
+  cors_origins: "*"
+  rate_limits:
+    default: "1000 per day"
+    uploads: "100 per hour"
+    files_list: "200 per hour"
+
+websocket:
+  port: 8000  # Main WebSocket port
+  stream_port: 8001  # Dedicated streaming port
+  ping_timeout: 60
+  ping_interval: 25
+  max_buffer_size: 104857600
+
+storage:
+  base_path: "tmp_content"
+  subdirs:
+    - "uploads"
+    - "analysis" 
+    - "chat_history"
+    - "visualizations"
+    - "knowledgebase"
+    - "knowledgebase"
+  max_file_size: 104857600
+  allowed_extensions: [".mp4", ".avi", ".mov", ".webm"]
+  cleanup_interval: 86400
+  max_age: 604800
+
+video:
+  max_fps: 30
+  resolution:
+    width: 1280
+    height: 720
+  compression:
+    quality: 85
+    format: "jpeg"
+
+logging:
+  level: "INFO"
+  file: "video_analytics.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
