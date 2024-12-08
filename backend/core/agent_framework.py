@@ -223,10 +223,36 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         # Extract content and clean any formatting issues
         content = str(response.content) if hasattr(response, 'content') else str(response)
         # Clean up any potential formatting issues
-        content = content.strip().replace('\n', '').replace('    ', '')
+        content = content.strip()
         
+        # Handle potential JSON string escaping
         try:
+            # First try direct JSON parsing
             suggestion = json.loads(content)
+        except json.JSONDecodeError:
+            # If that fails, try cleaning the string more aggressively
+            cleaned_content = (content
+                .replace('\n', '')
+                .replace('    ', ' ')
+                .replace('\\"', '"')
+                .replace('\\n', '')
+                .strip())
+            
+            # Remove any extra quotes at start/end if present
+            if cleaned_content.startswith('"') and cleaned_content.endswith('"'):
+                cleaned_content = cleaned_content[1:-1]
+                
+            try:
+                suggestion = json.loads(cleaned_content)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Failed to parse JSON after cleaning: {e}\nContent: {cleaned_content}")
+                suggestion = {
+                    "tool": None,
+                    "input": {},
+                    "confirmed": False,
+                    "requires_confirmation": True,
+                    "reason": f"Failed to parse tool suggestion: {str(e)}"
+                }
         except json.JSONDecodeError as e:
             self.logger.error(f"JSON parse error: {e}, Content: {content}")
             suggestion = {
