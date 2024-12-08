@@ -220,19 +220,21 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             "query": state["current_query"],
             "result": state["retriever_result"]
         })
-        # Extract content from AIMessage or string
+        # Extract content and clean any formatting issues
         content = str(response.content) if hasattr(response, 'content') else str(response)
-        # Parse JSON from content
-        import json
+        # Clean up any potential formatting issues
+        content = content.strip().replace('\n', '').replace('    ', '')
+        
         try:
             suggestion = json.loads(content)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            self.logger.error(f"JSON parse error: {e}, Content: {content}")
             suggestion = {
                 "tool": None,
                 "input": {},
                 "confirmed": False,
                 "requires_confirmation": True,
-                "reason": "Failed to parse tool suggestion"
+                "reason": f"Failed to parse tool suggestion: {str(e)}"
             }
 
         # Validate suggested tool exists
