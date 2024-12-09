@@ -140,17 +140,22 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 // Determine which video to load based on visualization toggles
                 let videoPath;
                 if ((showEdgeVisualization || showObjectVisualization) && currentVisualization) {
-                    // Add cache buster to prevent browser caching
-                    const cacheBuster = `?t=${Date.now()}`;
-                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}${cacheBuster}`);
                     // Remove tmp_content prefix if present since API route already includes it
                     videoPath = currentVisualization.replace(/^tmp_content\//, '');
                 } else {
-                    // Add cache buster to prevent browser caching
-                    const cacheBuster = `?t=${Date.now()}`;
-                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}${cacheBuster}`);
                     videoPath = `uploads/${file.name}`;
                 }
+                
+                console.log('Loading video from:', videoPath);
+                
+                // Ensure path starts with tmp_content
+                const fullPath = videoPath.startsWith('tmp_content/') ? videoPath : `tmp_content/${videoPath}`;
+                // Remove tmp_content prefix if present since API route handles it
+                const apiPath = fullPath.replace(/^tmp_content\//, '');
+                
+                // Add cache buster to prevent browser caching
+                const cacheBuster = `?t=${Date.now()}`;
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}${cacheBuster}`);
                 console.log('Loading video from:', videoPath);
             
                 // Ensure path starts with tmp_content
