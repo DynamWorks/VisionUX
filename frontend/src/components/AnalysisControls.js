@@ -98,15 +98,13 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         }
                         // Handle successful edge detection
                         console.log('Edge detection complete:', data);
-                    })
-                    .catch(error => {
-                        console.error('Edge detection failed:', error);
-                        // Handle successful edge detection
-                        console.log('Edge detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
                             setShowEdgeVisualization(true);
                         }
+                    })
+                    .catch(error => {
+                        console.error('Edge detection failed:', error);
                     });
                 }}
                 disabled={!currentVideo}
@@ -152,15 +150,13 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         }
                         // Handle successful object detection
                         console.log('Object detection complete:', data);
-                    })
-                    .catch(error => {
-                        console.error('Object detection failed:', error);
-                        // Handle successful object detection
-                        console.log('Object detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
                             setShowObjectVisualization(true);
                         }
+                    })
+                    .catch(error => {
+                        console.error('Object detection failed:', error);
                     });
                 }}
                 disabled={!currentVideo}
