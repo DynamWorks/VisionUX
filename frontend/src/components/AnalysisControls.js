@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Button, ToggleButton, Switch, FormControlLabel } from '@mui/material';
+import { Box, Button, ToggleButton, Switch, FormControlLabel, ButtonGroup } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ChatIcon from '@mui/icons-material/Chat';
+import CompareIcon from '@mui/icons-material/Compare';
 import CircularProgress from '@mui/material/CircularProgress';
 import useStore from '../store';
 
@@ -16,7 +17,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
         autoAnalysisEnabled,
         setAutoAnalysisEnabled,
         isRagEnabled,
-        setRagEnabled
+        setRagEnabled,
+        showEdgeVisualization,
+        setShowEdgeVisualization,
+        showObjectVisualization,
+        setShowObjectVisualization,
+        setCurrentVisualization
     } = useStore();
 
     const handleSceneAnalysis = async () => {
@@ -95,6 +101,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     })
                     .catch(error => {
                         console.error('Edge detection failed:', error);
+                        // Handle successful edge detection
+                        console.log('Edge detection complete:', data);
+                        if (data.visualization) {
+                            setCurrentVisualization(data.visualization);
+                            setShowEdgeVisualization(true);
+                        }
                     });
                 }}
                 disabled={!currentVideo}
@@ -102,6 +114,22 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 Edge Detection
             </Button>
+            {currentVideo && showEdgeVisualization && (
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={showEdgeVisualization}
+                            onChange={(e) => setShowEdgeVisualization(e.target.checked)}
+                        />
+                    }
+                    label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CompareIcon />
+                            <span>Show Edge Detection</span>
+                        </Box>
+                    }
+                />
+            )}
             <Button
                 variant="contained"
                 startIcon={<TimelineIcon />}
@@ -127,6 +155,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     })
                     .catch(error => {
                         console.error('Object detection failed:', error);
+                        // Handle successful object detection
+                        console.log('Object detection complete:', data);
+                        if (data.visualization) {
+                            setCurrentVisualization(data.visualization);
+                            setShowObjectVisualization(true);
+                        }
                     });
                 }}
                 disabled={!currentVideo}
@@ -134,6 +168,22 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 Object Detection
             </Button>
+            {currentVideo && showObjectVisualization && (
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={showObjectVisualization}
+                            onChange={(e) => setShowObjectVisualization(e.target.checked)}
+                        />
+                    }
+                    label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CompareIcon />
+                            <span>Show Object Detection</span>
+                        </Box>
+                    }
+                />
+            )}
         </Box>
     </Box>
     );

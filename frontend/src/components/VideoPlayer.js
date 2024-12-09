@@ -7,7 +7,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import { websocketService } from '../services/websocket';
 import useStore from '../store';
 
-const VideoPlayer = ({ file }) => {
+const VideoPlayer = ({ file, visualizationPath }) => {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const animationFrameRef = useRef(null);
@@ -15,7 +15,13 @@ const VideoPlayer = ({ file }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState(null);
-    const { setIsStreaming, setStreamMetrics } = useStore();
+    const { 
+        setIsStreaming, 
+        setStreamMetrics,
+        showEdgeVisualization,
+        showObjectVisualization,
+        currentVisualization
+    } = useStore();
     const lastFrameTimeRef = useRef(Date.now());
     const frameCountRef = useRef(0);
 
@@ -132,7 +138,12 @@ const VideoPlayer = ({ file }) => {
         const loadVideo = async () => {
             try {
                 // Fetch the file from the server
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/uploads/${file.name}`);
+                // Determine which video to load based on visualization state
+                const videoPath = (showEdgeVisualization || showObjectVisualization) && currentVisualization
+                    ? currentVisualization
+                    : `tmp_content/uploads/${file.name}`;
+                
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${videoPath}`);
                 if (!response.ok) throw new Error('Failed to load video file');
 
                 const blob = await response.blob();

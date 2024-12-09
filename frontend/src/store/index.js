@@ -31,6 +31,9 @@ const useStore = create(
     isEdgeDetectionEnabled: false,
     autoAnalysisEnabled: false,
     isRagEnabled: false,
+    showEdgeVisualization: false,
+    showObjectVisualization: false,
+    currentVisualization: null,
 
     // Video actions
     setUploadedFiles: (files) => set({ uploadedFiles: Array.isArray(files) ? files : [] }),
@@ -45,6 +48,9 @@ const useStore = create(
     setEdgeDetectionEnabled: (enabled) => set({ isEdgeDetectionEnabled: enabled }),
     setAutoAnalysisEnabled: (enabled) => set({ autoAnalysisEnabled: enabled }),
     setRagEnabled: (enabled) => set({ isRagEnabled: enabled }),
+    setShowEdgeVisualization: (show) => set({ showEdgeVisualization: show }),
+    setShowObjectVisualization: (show) => set({ showObjectVisualization: show }),
+    setCurrentVisualization: (path) => set({ currentVisualization: path }),
 
     // Reset state
     resetVideoState: () => set({
