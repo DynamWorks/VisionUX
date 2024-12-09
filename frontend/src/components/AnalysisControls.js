@@ -88,7 +88,8 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            video_file: currentVideo.name
+                            video_file: currentVideo.name,
+                            save_analysis: false  // Don't save edge detection data by default
                         })
                     })
                     .then(response => response.json())

@@ -236,6 +236,9 @@ def detect_edges():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
+            
+        # Get save_analysis parameter, default to True for backward compatibility
+        save_analysis = data.get('save_analysis', True)
         
         video_file = data.get('video_file')
         if not video_file:
@@ -317,47 +320,52 @@ def detect_edges():
             (width, height)
         )
 
-        # Save results
-        analysis_id = f"edge_detection_{int(time.time())}"
-        
-        # Convert edge_results to compressed format
-        import numpy as np
-        compressed_results = []
-        for result in edge_results:
-            # Convert edges to sparse format - only store non-zero positions
-            if 'edges' in result:
-                edges = np.array(result['edges'])
-                non_zero = np.nonzero(edges)
-                compressed_result = {
-                    'frame_number': result['frame_number'],
-                    'timestamp': result['timestamp'],
-                    'shape': edges.shape,
-                    'positions': list(zip(non_zero[0].tolist(), non_zero[1].tolist()))
-                }
-            else:
-                compressed_result = {
-                    'frame_number': result['frame_number'],
-                    'timestamp': result['timestamp']
-                }
-            compressed_results.append(compressed_result)
-            
-        results = {
-            'video_file': video_file,
+        response_data = {
             'frame_count': frame_count,
-            'edge_results': compressed_results,
-            'visualization': str(output_video),
-            'timestamp': time.time(),
-            'format': 'sparse'  # Indicate compression format
-        }
-        
-        saved_path = content_manager.save_analysis(results, analysis_id)
-
-        return jsonify({
-            'analysis_id': analysis_id,
-            'frame_count': frame_count,
-            'storage_path': str(saved_path),
             'visualization': str(output_video)
-        })
+        }
+
+        # Save analysis if requested
+        if save_analysis:
+            analysis_id = f"edge_detection_{int(time.time())}"
+            
+            # Convert edge_results to compressed format
+            import numpy as np
+            compressed_results = []
+            for result in edge_results:
+                # Convert edges to sparse format - only store non-zero positions
+                if 'edges' in result:
+                    edges = np.array(result['edges'])
+                    non_zero = np.nonzero(edges)
+                    compressed_result = {
+                        'frame_number': result['frame_number'],
+                        'timestamp': result['timestamp'],
+                        'shape': edges.shape,
+                        'positions': list(zip(non_zero[0].tolist(), non_zero[1].tolist()))
+                    }
+                else:
+                    compressed_result = {
+                        'frame_number': result['frame_number'],
+                        'timestamp': result['timestamp']
+                    }
+                compressed_results.append(compressed_result)
+                
+            results = {
+                'video_file': video_file,
+                'frame_count': frame_count,
+                'edge_results': compressed_results,
+                'visualization': str(output_video),
+                'timestamp': time.time(),
+                'format': 'sparse'  # Indicate compression format
+            }
+            
+            saved_path = content_manager.save_analysis(results, analysis_id)
+            response_data.update({
+                'analysis_id': analysis_id,
+                'storage_path': str(saved_path)
+            })
+
+        return jsonify(response_data)
 
     except Exception as e:
         logger.error("Edge detection failed", exc_info=True)
