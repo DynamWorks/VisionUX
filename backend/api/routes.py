@@ -75,10 +75,10 @@ def serve_video(filepath):
             return jsonify({'error': 'Invalid file path'}), 403
             
         if not file_path.exists():
-            self.logger.error(f"File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             return jsonify({'error': f'File not found: {filepath}'}), 404
             
-        self.logger.info(f"Serving file: {file_path}")
+        logger.info(f"Serving file: {file_path}")
             
         # Get directory and filename
         directory = file_path.parent
