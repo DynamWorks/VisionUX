@@ -140,9 +140,15 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 // Determine which video to load based on visualization toggles
                 let videoPath;
                 if ((showEdgeVisualization || showObjectVisualization) && currentVisualization) {
+                    // Add cache buster to prevent browser caching
+                    const cacheBuster = `?t=${Date.now()}`;
+                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}${cacheBuster}`);
                     // Remove tmp_content prefix if present since API route already includes it
                     videoPath = currentVisualization.replace(/^tmp_content\//, '');
                 } else {
+                    // Add cache buster to prevent browser caching
+                    const cacheBuster = `?t=${Date.now()}`;
+                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}${cacheBuster}`);
                     videoPath = `uploads/${file.name}`;
                 }
                 console.log('Loading video from:', videoPath);
@@ -152,10 +158,6 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 // Remove tmp_content prefix if present since API route handles it
                 const apiPath = fullPath.replace(/^tmp_content\//, '');
             
-                // Add cache buster to prevent browser caching
-                const cacheBuster = `?t=${Date.now()}`;
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}${cacheBuster}`);
-                
                 if (!response.ok) throw new Error('Failed to load video');
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
