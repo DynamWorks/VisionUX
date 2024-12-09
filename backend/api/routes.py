@@ -319,19 +319,31 @@ def detect_edges():
 
         # Save results
         analysis_id = f"edge_detection_{int(time.time())}"
+        
+        # Convert edge_results to serializable format
+        serializable_results = []
+        for result in edge_results:
+            # Convert numpy arrays to lists and remove non-serializable data
+            serialized_result = {
+                'frame_number': result['frame_number'],
+                'timestamp': result['timestamp']
+            }
+            if 'edges' in result:
+                serialized_result['edges'] = result['edges'].tolist()
+            serializable_results.append(serialized_result)
+            
         results = {
             'video_file': video_file,
             'frame_count': frame_count,
-            'edge_results': edge_results,
+            'edge_results': serializable_results,
             'visualization': str(output_video),
             'timestamp': time.time()
         }
-        import pdb; pdb.set_trace()    
+        
         saved_path = content_manager.save_analysis(results, analysis_id)
 
         return jsonify({
             'analysis_id': analysis_id,
-            'edge_results': edge_results,
             'frame_count': frame_count,
             'storage_path': str(saved_path),
             'visualization': str(output_video)
