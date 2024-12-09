@@ -70,47 +70,70 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 {isAnalyzing ? 'Auto-Analyzing...' : 'Scene Analysis'}
             </Button>
-            <ToggleButton
-                value="edge"
-                selected={isEdgeDetectionEnabled}
-                onChange={() => {
-                    setEdgeDetectionEnabled(!isEdgeDetectionEnabled);
-                    onEdgeDetection(!isEdgeDetectionEnabled);
+            <Button
+                variant="contained"
+                startIcon={<TimelineIcon />}
+                onClick={() => {
+                    if (!currentVideo) return;
+                    
+                    fetch(`${process.env.REACT_APP_API_URL}/api/v1/detect_edges`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            video_file: currentVideo.name
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        // Handle successful edge detection
+                        console.log('Edge detection complete:', data);
+                    })
+                    .catch(error => {
+                        console.error('Edge detection failed:', error);
+                    });
                 }}
                 disabled={!currentVideo}
-                sx={{ 
-                    flex: 1,
-                    bgcolor: isEdgeDetectionEnabled ? 'primary.main' : 'inherit',
-                    '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        '&:hover': {
-                            bgcolor: 'primary.dark'
-                        }
-                    }
-                }}
+                sx={{ flex: 1 }}
             >
-                <TimelineIcon sx={{ mr: 1 }} />
                 Edge Detection
-            </ToggleButton>
-            <ToggleButton
-                value="rag"
-                selected={isRagEnabled}
-                onChange={() => setRagEnabled(!isRagEnabled)}
-                disabled={!currentVideo}
-                sx={{ 
-                    flex: 1,
-                    bgcolor: isRagEnabled ? 'primary.main' : 'inherit',
-                    '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        '&:hover': {
-                            bgcolor: 'primary.dark'
+            </Button>
+            <Button
+                variant="contained"
+                startIcon={<TimelineIcon />}
+                onClick={() => {
+                    if (!currentVideo) return;
+                    
+                    fetch(`${process.env.REACT_APP_API_URL}/api/v1/detect_objects`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            video_file: currentVideo.name
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
                         }
-                    }
+                        // Handle successful object detection
+                        console.log('Object detection complete:', data);
+                    })
+                    .catch(error => {
+                        console.error('Object detection failed:', error);
+                    });
                 }}
+                disabled={!currentVideo}
+                sx={{ flex: 1 }}
             >
-                <ChatIcon sx={{ mr: 1 }} />
-                RAG Chat
-            </ToggleButton>
+                Object Detection
+            </Button>
         </Box>
     </Box>
     );
