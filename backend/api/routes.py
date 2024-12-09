@@ -225,7 +225,7 @@ def detect_objects():
         logger.error("Object detection failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@api.route('/detect_edges', methods=['POST'])
+@api.route('/detect_edges', methods=['GET', 'POST'])
 def detect_edges():
     """Detect edges in video file"""
     try:
