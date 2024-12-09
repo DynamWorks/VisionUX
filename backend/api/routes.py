@@ -261,7 +261,7 @@ def detect_edges():
         
         # Get original video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         
         writer = cv2.VideoWriter(
@@ -307,7 +307,7 @@ def detect_edges():
             
         # Get original video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
             
         writer = cv2.VideoWriter(
@@ -326,7 +326,7 @@ def detect_edges():
             'visualization': str(output_video),
             'timestamp': time.time()
         }
-            
+        import pdb; pdb.set_trace()    
         saved_path = content_manager.save_analysis(results, analysis_id)
 
         return jsonify({
