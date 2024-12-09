@@ -138,9 +138,13 @@ const VideoPlayer = ({ file, visualizationPath }) => {
         const loadVideo = async () => {
             try {
                 // Determine which video to load based on visualization state
-                const videoPath = showEdgeVisualization && currentVisualization ? 
-                    currentVisualization : 
-                    `tmp_content/uploads/${file.name}`;
+                // Determine which video to load based on visualization toggles
+                let videoPath;
+                if (showEdgeVisualization && currentVisualization) {
+                    videoPath = currentVisualization;
+                } else {
+                    videoPath = `tmp_content/uploads/${file.name}`;
+                }
 
                 const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${videoPath}`);
                 
@@ -150,6 +154,7 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
                 if (videoRef.current) {
                     videoRef.current.src = url;
+                    videoRef.current.load(); // Force reload of video
                     setIsLoading(true);
                     setError(null);
 
@@ -192,7 +197,7 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 URL.revokeObjectURL(videoUrl);
             }
         };
-    }, [file]);
+    }, [file, showEdgeVisualization, currentVisualization]);
 
     // Cleanup on unmount
     useEffect(() => {
