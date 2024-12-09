@@ -142,12 +142,17 @@ def detect_objects():
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         
+        # Use H264 codec for better compatibility and quality
         writer = cv2.VideoWriter(
             str(output_video),
-            cv2.VideoWriter_fourcc(*'mp4v'),
+            cv2.VideoWriter_fourcc(*'avc1'),  # H264 codec
             fps,
-            (width, height)
+            (width, height),
+            True  # isColor=True
         )
+        
+        # Set video writer properties for better quality
+        writer.set(cv2.VIDEOWRITER_PROP_QUALITY, 95)  # Higher quality
 
         try:
             detections = []
@@ -184,9 +189,17 @@ def detect_objects():
                 frame_count += 1
 
         finally:
-            cap.release()
-            if 'writer' in locals():
+            # Ensure proper cleanup
+            if cap is not None:
+                cap.release()
+            if 'writer' in locals() and writer is not None:
                 writer.release()
+                # Verify output file was created
+                if not output_video.exists():
+                    raise ValueError("Failed to create output video file")
+                # Check file size is non-zero
+                if output_video.stat().st_size == 0:
+                    raise ValueError("Output video file is empty")
 
         if not detections:
             return jsonify({'error': 'No objects detected'}), 404
