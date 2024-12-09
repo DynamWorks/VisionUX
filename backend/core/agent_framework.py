@@ -205,6 +205,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 If retriever result is not available and a tool should not be suggested, set the confirmed to False and requires_confirmation to True.
              3. If the user query is a reply to confirm tool execution question, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool_name. 
              4. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool_name information if deemed eligible and available.
+             5. With NO user confirfirmation the confirmed should always be False and required confirmation should be True.
 
             You must respond with valid JSON in this exact format:
             {{{{"tool": "<tool_name or null if no tool needed>","confirmed": <boolean>,"requires_confirmation": <boolean>,"reason": "<explanation for suggesting or not suggesting a tool>"}}}}"""),
@@ -212,7 +213,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
         #"input": {{{{"param": "value"}}}},
-        
+
         # Get suggestion from LLM
         chain = prompt | self.llm 
         response = chain.invoke({

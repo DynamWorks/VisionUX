@@ -95,7 +95,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     }
                 }}
             >
-                {isAnalyzing ? 'Auto-Analyzing...' : 'Scene Analysis'}
+                {isAnalyzing ? 'Analyzing...' : 'Scene Analysis'}
             </Button>
             <Button
                 variant="contained"

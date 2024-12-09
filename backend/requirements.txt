@@ -17,11 +17,11 @@ ffmpeg-python==0.2.0
 langchain-experimental>=0.3.3
 
 # Machine Learning & Vision
-ultralytics==8.0.196
+ultralytics==8.3.48
 mediapipe==0.10.9
 segment-anything==1.0
-torch>=2.0.0
-torchvision>=0.15.0
+torch>=2.4
+torchvision>=0.19.0
 
 # API and Vision Services
 requests>=2.31.0

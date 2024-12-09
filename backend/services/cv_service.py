@@ -14,7 +14,7 @@ class CVService:
         # Use models directory from ContentManager
         from ..content_manager import ContentManager
         content_manager = ContentManager()
-        self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
+        self.model_path = model_path or str(content_manager.models_dir / 'yolo11n.pt')
         self.edge_detection_params = {
             'low_threshold': 100,
             'high_threshold': 200,
