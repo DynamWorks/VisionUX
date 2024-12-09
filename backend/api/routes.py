@@ -320,24 +320,34 @@ def detect_edges():
         # Save results
         analysis_id = f"edge_detection_{int(time.time())}"
         
-        # Convert edge_results to serializable format
-        serializable_results = []
+        # Convert edge_results to compressed format
+        import numpy as np
+        compressed_results = []
         for result in edge_results:
-            # Convert numpy arrays to lists and remove non-serializable data
-            serialized_result = {
-                'frame_number': result['frame_number'],
-                'timestamp': result['timestamp']
-            }
+            # Convert edges to sparse format - only store non-zero positions
             if 'edges' in result:
-                serialized_result['edges'] = result['edges'].tolist()
-            serializable_results.append(serialized_result)
+                edges = np.array(result['edges'])
+                non_zero = np.nonzero(edges)
+                compressed_result = {
+                    'frame_number': result['frame_number'],
+                    'timestamp': result['timestamp'],
+                    'shape': edges.shape,
+                    'positions': list(zip(non_zero[0].tolist(), non_zero[1].tolist()))
+                }
+            else:
+                compressed_result = {
+                    'frame_number': result['frame_number'],
+                    'timestamp': result['timestamp']
+                }
+            compressed_results.append(compressed_result)
             
         results = {
             'video_file': video_file,
             'frame_count': frame_count,
-            'edge_results': serializable_results,
+            'edge_results': compressed_results,
             'visualization': str(output_video),
-            'timestamp': time.time()
+            'timestamp': time.time(),
+            'format': 'sparse'  # Indicate compression format
         }
         
         saved_path = content_manager.save_analysis(results, analysis_id)
