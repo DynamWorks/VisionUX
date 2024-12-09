@@ -150,16 +150,18 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 const videoUrl = URL.createObjectURL(blob);
 
                 if (videoRef.current) {
-                    videoRef.current.src = videoUrl;
+                    // Set the appropriate video source based on toggle state
+                    videoRef.current.src = showEdgeVisualization && visualizationUrl ? visualizationUrl : originalUrl;
                     setIsLoading(true);
                     setError(null);
 
                     videoRef.current.onloadedmetadata = () => {
                         setIsLoading(false);
-                        // Auto-play if it's an edge detection visualization
-                        if (showEdgeVisualization && currentVisualization) {
+                        const currentTime = videoRef.current.currentTime;
+                        
+                        // Preserve playback state when switching
+                        if (isPlaying) {
                             videoRef.current.play();
-                            setIsPlaying(true);
                             startVideoProcessing();
                         }
                     };
@@ -169,6 +171,14 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                         setIsLoading(false);
                     };
                 }
+
+                // Cleanup function for URLs
+                return () => {
+                    URL.revokeObjectURL(originalUrl);
+                    if (visualizationUrl) {
+                        URL.revokeObjectURL(visualizationUrl);
+                    }
+                };
 
                 return videoUrl;
             } catch (err) {
