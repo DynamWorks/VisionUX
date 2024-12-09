@@ -201,7 +201,7 @@ def detect_objects():
                     frame_count += 1
                     
                 except Exception as e:
-                    self.logger.error(f"Error writing frame {frame_count}: {e}")
+                    logger.error(f"Error writing frame {frame_count}: {e}")
                     continue
 
         finally:
