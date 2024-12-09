@@ -149,7 +149,9 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
                 // Ensure path starts with tmp_content
                 const fullPath = videoPath.startsWith('tmp_content/') ? videoPath : `tmp_content/${videoPath}`;
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${fullPath}`);
+                // Remove tmp_content prefix if present since API route handles it
+                const apiPath = fullPath.replace(/^tmp_content\//, '');
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${apiPath}`);
                 
                 if (!response.ok) throw new Error('Failed to load video');
                 const blob = await response.blob();
