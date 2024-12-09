@@ -42,7 +42,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'flex-end',
+                gap: 2 
+            }}>
                 <FormControlLabel
                     control={
                         <Switch
@@ -57,6 +62,22 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         </Box>
                     }
                 />
+                {currentVideo && (
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={showEdgeVisualization}
+                                onChange={(e) => setShowEdgeVisualization(e.target.checked)}
+                            />
+                        }
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CompareIcon />
+                                <span>Show Edge Detection</span>
+                            </Box>
+                        }
+                    />
+                )}
             </Box>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button
@@ -78,10 +99,11 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             </Button>
             <Button
                 variant="contained"
-                startIcon={<TimelineIcon />}
+                startIcon={isEdgeDetectionEnabled ? <CircularProgress size={20} color="inherit" /> : <TimelineIcon />}
                 onClick={() => {
                     if (!currentVideo) return;
                     
+                    setEdgeDetectionEnabled(true);
                     fetch(`${process.env.REACT_APP_API_URL}/api/v1/detect_edges`, {
                         method: 'POST',
                         headers: {
@@ -89,7 +111,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         },
                         body: JSON.stringify({
                             video_file: currentVideo.name,
-                            save_analysis: false  // Don't save edge detection data by default
+                            save_analysis: false
                         })
                     })
                     .then(response => response.json())
@@ -97,7 +119,6 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         if (data.error) {
                             throw new Error(data.error);
                         }
-                        // Handle successful edge detection
                         console.log('Edge detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
@@ -106,29 +127,16 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     })
                     .catch(error => {
                         console.error('Edge detection failed:', error);
+                    })
+                    .finally(() => {
+                        setEdgeDetectionEnabled(false);
                     });
                 }}
-                disabled={!currentVideo}
+                disabled={!currentVideo || isEdgeDetectionEnabled}
                 sx={{ flex: 1 }}
             >
-                Edge Detection
+                {isEdgeDetectionEnabled ? 'Processing...' : 'Edge Detection'}
             </Button>
-            {currentVideo && showEdgeVisualization && (
-                <FormControlLabel
-                    control={
-                        <Switch
-                            checked={showEdgeVisualization}
-                            onChange={(e) => setShowEdgeVisualization(e.target.checked)}
-                        />
-                    }
-                    label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CompareIcon />
-                            <span>Show Edge Detection</span>
-                        </Box>
-                    }
-                />
-            )}
             <Button
                 variant="contained"
                 startIcon={<TimelineIcon />}
