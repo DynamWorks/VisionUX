@@ -97,6 +97,156 @@ def health_check():
         logger.error(f"Health check failed: {e}")
         return jsonify({'status': 'error', 'error': str(e)}), 500
 
+@api.route('/detect_objects', methods=['POST'])
+def detect_objects():
+    """Detect objects in video file"""
+    try:
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+            
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        video_file = data.get('video_file')
+        if not video_file:
+            return jsonify({'error': 'No video file specified'}), 400
+            
+        video_path = Path("tmp_content/uploads") / video_file
+        if not video_path.exists():
+            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+
+        # Initialize CV service
+        from backend.services import CVService
+        cv_service = CVService()
+
+        # Process video frames
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            return jsonify({'error': 'Failed to open video file'}), 500
+
+        try:
+            detections = []
+            frame_count = 0
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                    
+                # Run detection on frame
+                result = cv_service.detect_objects(frame)
+                if 'error' in result:
+                    continue
+                    
+                # Add frame number and timestamp
+                result['frame_number'] = frame_count
+                result['timestamp'] = frame_count / cap.get(cv2.CAP_PROP_FPS)
+                detections.append(result)
+                frame_count += 1
+
+        finally:
+            cap.release()
+
+        if not detections:
+            return jsonify({'error': 'No objects detected'}), 404
+
+        # Save results
+        analysis_id = f"object_detection_{int(time.time())}"
+        results = {
+            'video_file': video_file,
+            'frame_count': frame_count,
+            'detections': detections,
+            'timestamp': time.time()
+        }
+        
+        saved_path = content_manager.save_analysis(results, analysis_id)
+
+        return jsonify({
+            'analysis_id': analysis_id,
+            'detections': detections,
+            'frame_count': frame_count,
+            'storage_path': str(saved_path)
+        })
+
+    except Exception as e:
+        logger.error("Object detection failed", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/detect_edges', methods=['POST'])
+def detect_edges():
+    """Detect edges in video file"""
+    try:
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+            
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        video_file = data.get('video_file')
+        if not video_file:
+            return jsonify({'error': 'No video file specified'}), 400
+            
+        video_path = Path("tmp_content/uploads") / video_file
+        if not video_path.exists():
+            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+
+        # Initialize CV service
+        from backend.services import CVService
+        cv_service = CVService()
+
+        # Process video frames
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            return jsonify({'error': 'Failed to open video file'}), 500
+
+        try:
+            edge_results = []
+            frame_count = 0
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                    
+                # Run edge detection on frame
+                result = cv_service.detect_edges(frame)
+                if 'error' in result:
+                    continue
+                    
+                # Add frame number and timestamp
+                result['frame_number'] = frame_count
+                result['timestamp'] = frame_count / cap.get(cv2.CAP_PROP_FPS)
+                edge_results.append(result)
+                frame_count += 1
+
+        finally:
+            cap.release()
+
+        if not edge_results:
+            return jsonify({'error': 'Edge detection failed'}), 404
+
+        # Save results
+        analysis_id = f"edge_detection_{int(time.time())}"
+        results = {
+            'video_file': video_file,
+            'frame_count': frame_count,
+            'edge_results': edge_results,
+            'timestamp': time.time()
+        }
+        
+        saved_path = content_manager.save_analysis(results, analysis_id)
+
+        return jsonify({
+            'analysis_id': analysis_id,
+            'edge_results': edge_results,
+            'frame_count': frame_count,
+            'storage_path': str(saved_path)
+        })
+
+    except Exception as e:
+        logger.error("Edge detection failed", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():
     """Analyze scene from video file"""
