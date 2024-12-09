@@ -62,20 +62,26 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 api = Blueprint('api', __name__)
 
-@api.route('/tmp_content/uploads/<path:filename>')
-def serve_video(filename):
-    """Serve uploaded video files"""
+@api.route('/tmp_content/<path:filepath>')
+def serve_video(filepath):
+    """Serve video files from any tmp_content subdirectory"""
     try:
-        # Use absolute path resolved from project root
-        uploads_path = Path("tmp_content/uploads").resolve()
-        if not uploads_path.exists():
-            uploads_path.mkdir(parents=True, exist_ok=True)
+        # Ensure path is within tmp_content
+        base_path = Path("tmp_content").resolve()
+        file_path = (base_path / filepath).resolve()
+        
+        # Security check - ensure file is within tmp_content
+        if not str(file_path).startswith(str(base_path)):
+            return jsonify({'error': 'Invalid file path'}), 403
             
-        file_path = uploads_path / filename
         if not file_path.exists():
-            return jsonify({'error': f'File not found: {filename}'}), 404
+            return jsonify({'error': f'File not found: {filepath}'}), 404
             
-        return send_from_directory(uploads_path, filename, as_attachment=False)
+        # Get directory and filename
+        directory = file_path.parent
+        filename = file_path.name
+            
+        return send_from_directory(directory, filename, as_attachment=False)
     except Exception as e:
         logger.error(f"Error serving video file: {e}")
         return jsonify({'error': str(e)}), 500
