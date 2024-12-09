@@ -141,12 +141,13 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 // Determine which video to load based on visualization toggles
                 let videoPath;
                 if (showEdgeVisualization && currentVisualization) {
-                    videoPath = currentVisualization;
+                    // Remove tmp_content prefix if present since API route already includes it
+                    videoPath = currentVisualization.replace(/^tmp_content\//, '');
                 } else {
-                    videoPath = `tmp_content/uploads/${file.name}`;
+                    videoPath = `uploads/${file.name}`;
                 }
 
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${videoPath}`);
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${videoPath}`);
                 
                 if (!response.ok) throw new Error('Failed to load video');
                 const blob = await response.blob();
