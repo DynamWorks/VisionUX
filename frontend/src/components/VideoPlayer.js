@@ -156,6 +156,12 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
                     videoRef.current.onloadedmetadata = () => {
                         setIsLoading(false);
+                        // Auto-play if it's an edge detection visualization
+                        if (showEdgeVisualization && currentVisualization) {
+                            videoRef.current.play();
+                            setIsPlaying(true);
+                            startVideoProcessing();
+                        }
                     };
 
                     videoRef.current.onerror = () => {

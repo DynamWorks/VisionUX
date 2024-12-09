@@ -123,6 +123,11 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
                             setShowEdgeVisualization(true);
+                            // Force video reload to trigger auto-play
+                            const videoElement = document.querySelector('video');
+                            if (videoElement) {
+                                videoElement.load();
+                            }
                         }
                     })
                     .catch(error => {
