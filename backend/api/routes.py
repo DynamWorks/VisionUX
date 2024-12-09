@@ -184,9 +184,25 @@ def detect_objects():
                         (int(bbox[0]), int(bbox[1])-10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
-                # Write frame to video
-                writer.write(frame)
-                frame_count += 1
+                try:
+                    # Ensure frame is in correct format
+                    if frame.dtype != np.uint8:
+                        frame = frame.astype(np.uint8)
+                    
+                    # Ensure frame is BGR
+                    if len(frame.shape) == 2:  # Grayscale
+                        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+                    elif frame.shape[2] == 4:  # RGBA
+                        frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+                        
+                    # Write frame
+                    if not writer.write(frame):
+                        raise ValueError("Failed to write frame")
+                    frame_count += 1
+                    
+                except Exception as e:
+                    self.logger.error(f"Error writing frame {frame_count}: {e}")
+                    continue
 
         finally:
             # Ensure proper cleanup
