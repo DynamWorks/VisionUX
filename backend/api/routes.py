@@ -11,7 +11,7 @@ import logging
 import numpy as np
 
 from backend.utils.video_streaming.stream_manager import StreamManager
-from backend.services import SceneAnalysisService, ChatService
+from backend.services import SceneAnalysisService, ChatService, CVService
 from backend.utils.config import Config
 from backend.content_manager import ContentManager
 from pathlib import Path
@@ -45,7 +45,7 @@ def clear_files():
     except Exception as e:
         logger.error(f"Error clearing files: {e}")
         return jsonify({"error": str(e)}), 500
-from backend.services import SceneAnalysisService, ChatService
+from backend.services import SceneAnalysisService, ChatService, CVService
 from backend.utils.config import Config
 from backend.content_manager import ContentManager
 
@@ -54,6 +54,7 @@ content_manager = ContentManager()
 config = Config()
 scene_service = SceneAnalysisService()
 chat_service = ChatService()
+cv_service = CVService()
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -225,7 +226,7 @@ def detect_objects():
         logger.error("Object detection failed", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@api.route('/detect_edges', methods=['GET', 'POST'])
+@api.route('/detect_edges', methods=['POST'])
 def detect_edges():
     """Detect edges in video file"""
     try:
