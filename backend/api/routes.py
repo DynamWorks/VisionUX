@@ -125,6 +125,23 @@ def detect_objects():
         if not cap.isOpened():
             return jsonify({'error': 'Failed to open video file'}), 500
 
+        # Setup video writer for visualization
+        vis_path = Path("tmp_content/visualizations")
+        vis_path.mkdir(parents=True, exist_ok=True)
+        output_video = vis_path / f"{video_file}_objects.mp4"
+        
+        # Get original video properties
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        
+        writer = cv2.VideoWriter(
+            str(output_video),
+            cv2.VideoWriter_fourcc(*'mp4v'),
+            fps,
+            (width, height)
+        )
+
         try:
             detections = []
             frame_count = 0
@@ -235,6 +252,23 @@ def detect_edges():
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
             return jsonify({'error': 'Failed to open video file'}), 500
+
+        # Setup video writer for visualization
+        vis_path = Path("tmp_content/visualizations")
+        vis_path.mkdir(parents=True, exist_ok=True)
+        output_video = vis_path / f"{video_file}_edges.mp4"
+        
+        # Get original video properties
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        
+        writer = cv2.VideoWriter(
+            str(output_video),
+            cv2.VideoWriter_fourcc(*'mp4v'),
+            fps,
+            (width, height)
+        )
 
         try:
             edge_results = []
