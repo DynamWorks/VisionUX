@@ -326,6 +326,7 @@ def upload_file():
         (tmp_content / "analysis").mkdir(parents=True)
         (tmp_content / "chat_history").mkdir(parents=True)
         (tmp_content / "visualizations").mkdir(parents=True)
+        (tmp_content / "knowledgebase").mkdir(parents=True)
         uploads_path.mkdir(parents=True)
         
         logger.info(f"Upload directory: {uploads_path}")
