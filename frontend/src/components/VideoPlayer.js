@@ -137,17 +137,27 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
         const loadVideo = async () => {
             try {
-                // Fetch the file from the server
                 // Determine which video to load based on visualization state
-                const videoPath = (showEdgeVisualization || showObjectVisualization) && currentVisualization
-                    ? currentVisualization
-                    : `tmp_content/uploads/${file.name}`;
+                const originalPath = `tmp_content/uploads/${file.name}`;
+                const visualizationPath = currentVisualization;
                 
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${videoPath}`);
-                if (!response.ok) throw new Error('Failed to load video file');
-
-                const blob = await response.blob();
-                const videoUrl = URL.createObjectURL(blob);
+                // Load both videos
+                const [originalResponse, visualizationResponse] = await Promise.all([
+                    fetch(`${process.env.REACT_APP_API_URL}/api/v1/${originalPath}`),
+                    showEdgeVisualization && visualizationPath ? 
+                        fetch(`${process.env.REACT_APP_API_URL}/api/v1/${visualizationPath}`) : 
+                        Promise.resolve(null)
+                ]);
+                
+                if (!originalResponse.ok) throw new Error('Failed to load original video');
+                const originalBlob = await originalResponse.blob();
+                const originalUrl = URL.createObjectURL(originalBlob);
+                
+                let visualizationUrl = null;
+                if (visualizationResponse && visualizationResponse.ok) {
+                    const visualizationBlob = await visualizationResponse.blob();
+                    visualizationUrl = URL.createObjectURL(visualizationBlob);
+                }
 
                 if (videoRef.current) {
                     // Set the appropriate video source based on toggle state
