@@ -8,24 +8,41 @@ from ..utils.video_streaming.stream_subscriber import StreamSubscriber, Frame
 class CVService:
     """Service for computer vision processing"""
     
-    def __init__(self):
+    def __init__(self, model_path: str = 'yolov8n.pt'):
         self.logger = logging.getLogger(__name__)
         self.object_detection_model = None
+        self.model_path = model_path
         self.edge_detection_params = {
             'low_threshold': 100,
             'high_threshold': 200,
-            'overlay_mode': True
+            'overlay_mode': True,
+            'blur_size': 5,
+            'blur_sigma': 0
         }
         self.motion_detection_params = {
             'min_area': 500,
-            'prev_frame': None
+            'prev_frame': None,
+            'threshold': 25,
+            'dilate_iterations': 2
         }
+        self.is_initialized = False
         
     def detect_objects(self, frame: np.ndarray, confidence_threshold: float = 0.5) -> Dict:
         """Detect objects in frame"""
         try:
+            if not isinstance(frame, np.ndarray):
+                raise ValueError("Invalid frame format")
+                
+            if frame.size == 0 or len(frame.shape) != 3:
+                raise ValueError("Invalid frame dimensions")
+                
             if self.object_detection_model is None:
-                self.object_detection_model = YOLO('yolov8n.pt')
+                try:
+                    self.object_detection_model = YOLO(self.model_path)
+                    self.is_initialized = True
+                except Exception as e:
+                    self.logger.error(f"Failed to load YOLO model: {e}")
+                    return {'error': f"Model initialization failed: {str(e)}"}
                 
             results = self.object_detection_model(frame, conf=confidence_threshold)
             
@@ -56,11 +73,24 @@ class CVService:
     def detect_edges(self, frame: np.ndarray) -> Dict:
         """Detect edges in frame"""
         try:
+            if not isinstance(frame, np.ndarray):
+                raise ValueError("Invalid frame format")
+                
+            if frame.size == 0 or len(frame.shape) != 3:
+                raise ValueError("Invalid frame dimensions")
+                
             # Convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
-            # Apply Gaussian blur
-            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            # Apply Gaussian blur with configurable parameters
+            blur_size = self.edge_detection_params['blur_size']
+            if blur_size % 2 == 0:  # Ensure odd kernel size
+                blur_size += 1
+            blurred = cv2.GaussianBlur(
+                gray, 
+                (blur_size, blur_size), 
+                self.edge_detection_params['blur_sigma']
+            )
             
             # Apply Canny edge detection
             edges = cv2.Canny(
@@ -154,10 +184,30 @@ class CVService:
 
     def reset(self) -> None:
         """Reset service state"""
-        self.object_detection_model = None
-        self.motion_detection_params['prev_frame'] = None
+        self.cleanup()
         self.edge_detection_params = {
             'low_threshold': 100,
             'high_threshold': 200,
-            'overlay_mode': True
+            'overlay_mode': True,
+            'blur_size': 5,
+            'blur_sigma': 0
         }
+        self.motion_detection_params = {
+            'min_area': 500,
+            'prev_frame': None,
+            'threshold': 25,
+            'dilate_iterations': 2
+        }
+        
+    def cleanup(self) -> None:
+        """Clean up resources"""
+        if self.object_detection_model is not None:
+            try:
+                del self.object_detection_model
+                self.object_detection_model = None
+                self.is_initialized = False
+            except Exception as e:
+                self.logger.error(f"Error cleaning up model: {e}")
+        
+        if self.motion_detection_params['prev_frame'] is not None:
+            self.motion_detection_params['prev_frame'] = None
