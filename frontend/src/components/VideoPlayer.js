@@ -138,30 +138,18 @@ const VideoPlayer = ({ file, visualizationPath }) => {
         const loadVideo = async () => {
             try {
                 // Determine which video to load based on visualization state
-                const originalPath = `tmp_content/uploads/${file.name}`;
-                const visualizationPath = currentVisualization;
+                const videoPath = showEdgeVisualization && currentVisualization ? 
+                    currentVisualization : 
+                    `tmp_content/uploads/${file.name}`;
+
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${videoPath}`);
                 
-                // Load both videos
-                const [originalResponse, visualizationResponse] = await Promise.all([
-                    fetch(`${process.env.REACT_APP_API_URL}/api/v1/${originalPath}`),
-                    showEdgeVisualization && visualizationPath ? 
-                        fetch(`${process.env.REACT_APP_API_URL}/api/v1/${visualizationPath}`) : 
-                        Promise.resolve(null)
-                ]);
-                
-                if (!originalResponse.ok) throw new Error('Failed to load original video');
-                const originalBlob = await originalResponse.blob();
-                const originalUrl = URL.createObjectURL(originalBlob);
-                
-                let visualizationUrl = null;
-                if (visualizationResponse && visualizationResponse.ok) {
-                    const visualizationBlob = await visualizationResponse.blob();
-                    visualizationUrl = URL.createObjectURL(visualizationBlob);
-                }
+                if (!response.ok) throw new Error('Failed to load video');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
 
                 if (videoRef.current) {
-                    // Set the appropriate video source based on toggle state
-                    videoRef.current.src = showEdgeVisualization && visualizationUrl ? visualizationUrl : originalUrl;
+                    videoRef.current.src = url;
                     setIsLoading(true);
                     setError(null);
 
@@ -182,15 +170,10 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                     };
                 }
 
-                // Cleanup function for URLs
+                // Cleanup function for URL
                 return () => {
-                    URL.revokeObjectURL(originalUrl);
-                    if (visualizationUrl) {
-                        URL.revokeObjectURL(visualizationUrl);
-                    }
+                    URL.revokeObjectURL(url);
                 };
-
-                return videoUrl;
             } catch (err) {
                 console.error('Error loading video:', err);
                 setError(err.message);
