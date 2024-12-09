@@ -104,7 +104,7 @@ class CVService:
             
             # Convert edges to BGR and color them green
             edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-            edges_colored[edges > 0] = [0, 255, 0]
+            edges_colored[edges > 0] = [255, 0, 255]  # Bright magenta
             
             # Blend with original frame if overlay mode
             if self.edge_detection_params['overlay_mode']:

@@ -151,7 +151,7 @@ class ObjectDetectionTool(BaseTool):
                             cv2.rectangle(frame, 
                                 (int(bbox[0]), int(bbox[1])), 
                                 (int(bbox[2]), int(bbox[3])), 
-                                (0, 255, 0), 2)
+                                (255, 0, 255), 2)  # Bright magenta
                             cv2.putText(frame, 
                                 f"{det['class']}: {det['confidence']:.2f}", 
                                 (int(bbox[0]), int(bbox[1])-10),
