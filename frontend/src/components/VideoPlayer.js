@@ -146,7 +146,7 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 } else {
                     videoPath = `uploads/${file.name}`;
                 }
-
+                console.log('Loading video from:', videoPath)
                 // Ensure path starts with tmp_content
                 const fullPath = videoPath.startsWith('tmp_content/') ? videoPath : `tmp_content/${videoPath}`;
                 // Remove tmp_content prefix if present since API route handles it
