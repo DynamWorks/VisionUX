@@ -41,7 +41,7 @@ class CVService:
                 
             if self.object_detection_model is None:
                 try:
-                    self.object_detection_model = YOLO(self.model_path, weights_only=True)
+                    self.object_detection_model = YOLO(self.model_path)
                     self.is_initialized = True
                 except Exception as e:
                     self.logger.error(f"Failed to load YOLO model: {e}")
