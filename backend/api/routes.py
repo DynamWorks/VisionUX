@@ -142,13 +142,47 @@ def detect_objects():
                 result['frame_number'] = frame_count
                 result['timestamp'] = frame_count / cap.get(cv2.CAP_PROP_FPS)
                 detections.append(result)
+                
+                # Draw detections on frame
+                for det in result.get('detections', []):
+                    bbox = det['bbox']
+                    cv2.rectangle(frame, 
+                        (int(bbox[0]), int(bbox[1])), 
+                        (int(bbox[2]), int(bbox[3])), 
+                        (0, 255, 0), 2)
+                    cv2.putText(frame, 
+                        f"{det['class']}: {det['confidence']:.2f}", 
+                        (int(bbox[0]), int(bbox[1])-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+                # Write frame to video
+                writer.write(frame)
                 frame_count += 1
 
         finally:
             cap.release()
+            if 'writer' in locals():
+                writer.release()
 
         if not detections:
             return jsonify({'error': 'No objects detected'}), 404
+
+        # Setup video writer for visualization
+        vis_path = Path("tmp_content/visualizations")
+        vis_path.mkdir(parents=True, exist_ok=True)
+        output_video = vis_path / f"{video_file}_objects.mp4"
+            
+        # Get original video properties
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+            
+        writer = cv2.VideoWriter(
+            str(output_video),
+            cv2.VideoWriter_fourcc(*'mp4v'),
+            fps,
+            (width, height)
+        )
 
         # Save results
         analysis_id = f"object_detection_{int(time.time())}"
@@ -156,16 +190,18 @@ def detect_objects():
             'video_file': video_file,
             'frame_count': frame_count,
             'detections': detections,
+            'visualization': str(output_video),
             'timestamp': time.time()
         }
-        
+            
         saved_path = content_manager.save_analysis(results, analysis_id)
 
         return jsonify({
             'analysis_id': analysis_id,
             'detections': detections,
             'frame_count': frame_count,
-            'storage_path': str(saved_path)
+            'storage_path': str(saved_path),
+            'visualization': str(output_video)
         })
 
     except Exception as e:
@@ -217,6 +253,10 @@ def detect_edges():
                 result['frame_number'] = frame_count
                 result['timestamp'] = frame_count / cap.get(cv2.CAP_PROP_FPS)
                 edge_results.append(result)
+                
+                # Write processed frame with edges
+                if 'frame' in result:
+                    writer.write(result['frame'])
                 frame_count += 1
 
         finally:
@@ -225,22 +265,41 @@ def detect_edges():
         if not edge_results:
             return jsonify({'error': 'Edge detection failed'}), 404
 
+        # Setup video writer for visualization
+        vis_path = Path("tmp_content/visualizations")
+        vis_path.mkdir(parents=True, exist_ok=True)
+        output_video = vis_path / f"{video_file}_edges.mp4"
+            
+        # Get original video properties
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+            
+        writer = cv2.VideoWriter(
+            str(output_video),
+            cv2.VideoWriter_fourcc(*'mp4v'),
+            fps,
+            (width, height)
+        )
+
         # Save results
         analysis_id = f"edge_detection_{int(time.time())}"
         results = {
             'video_file': video_file,
             'frame_count': frame_count,
             'edge_results': edge_results,
+            'visualization': str(output_video),
             'timestamp': time.time()
         }
-        
+            
         saved_path = content_manager.save_analysis(results, analysis_id)
 
         return jsonify({
             'analysis_id': analysis_id,
             'edge_results': edge_results,
             'frame_count': frame_count,
-            'storage_path': str(saved_path)
+            'storage_path': str(saved_path),
+            'visualization': str(output_video)
         })
 
     except Exception as e:
