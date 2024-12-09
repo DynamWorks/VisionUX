@@ -8,10 +8,13 @@ from ..utils.video_streaming.stream_subscriber import StreamSubscriber, Frame
 class CVService:
     """Service for computer vision processing"""
     
-    def __init__(self, model_path: str = 'yolov8n.pt'):
+    def __init__(self, model_path: str = None):
         self.logger = logging.getLogger(__name__)
         self.object_detection_model = None
-        self.model_path = model_path
+        # Use models directory from ContentManager
+        from ..content_manager import ContentManager
+        content_manager = ContentManager()
+        self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
         self.edge_detection_params = {
             'low_threshold': 100,
             'high_threshold': 200,
