@@ -131,6 +131,26 @@ npm install
 - Copy `backend/.env.example` to `backend/.env`
 - Update configuration in `backend/config.yaml`
 
+### Environment Variables
+
+The following environment variables need to be configured in `.env`:
+
+Required:
+- `API_HOST`: API server bind address
+- `API_PORT`: API server port
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `GEMINI_API_KEY`: Your Gemini API key
+
+Optional:
+- `API_DEBUG`: Enable API debug mode (default: false)
+- `API_CORS_ORIGINS`: CORS allowed origins (default: *)
+- `WS_HOST`: WebSocket server host (default: localhost)
+- `WS_PORT`: WebSocket server port (default: 8000)
+- `WS_DEBUG`: Enable WebSocket debug mode (default: false)
+- `OPENAI_MODEL`: OpenAI model to use (default: gpt-4o-mini)
+- `GEMINI_MODEL`: Gemini model to use (default: gemini-1.5-flash)
+- `LOG_LEVEL`: Logging level (default: INFO)
+
 4. Start backend server:
 ```bash
 cd backend
