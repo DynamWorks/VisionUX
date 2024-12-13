@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import time
 import threading
+import os
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import defaultdict
@@ -102,7 +103,7 @@ class CVService:
                 self.model = YOLO(self.model_path)
 
             # Run detection with tracking
-            results = selfmodel.track(frame, persist=True, conf=0.25)  # Default confidence threshold
+            results = self.model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
