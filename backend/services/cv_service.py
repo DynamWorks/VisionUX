@@ -23,9 +23,109 @@ class CVService:
         self._lock = threading.Lock()
         self._model_ready = threading.Event()
         
-        # COCO dataset labels
-        self.coco_labels = {
-            1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle', 5: 'airplane',
+        # Load COCO class names
+        self.classNames = []
+        models_dir = Path("models")
+        models_dir.mkdir(exist_ok=True)
+        
+        classFile = models_dir / 'coco.names'
+        if not classFile.exists():
+            # Create coco.names if it doesn't exist
+            with open(classFile, 'w') as f:
+                f.write("""person
+bicycle
+car
+motorcycle
+airplane
+bus
+train
+truck
+boat
+traffic light
+fire hydrant
+street sign
+stop sign
+parking meter
+bench
+bird
+cat
+dog
+horse
+sheep
+cow
+elephant
+bear
+zebra
+giraffe
+hat
+backpack
+umbrella
+shoe
+eye glasses
+handbag
+tie
+suitcase
+frisbee
+skis
+snowboard
+sports ball
+kite
+baseball bat
+baseball glove
+skateboard
+surfboard
+tennis racket
+bottle
+plate
+wine glass
+cup
+fork
+knife
+spoon
+bowl
+banana
+apple
+sandwich
+orange
+broccoli
+carrot
+hot dog
+pizza
+donut
+cake
+chair
+couch
+potted plant
+bed
+mirror
+dining table
+window
+desk
+toilet
+door
+tv
+laptop
+mouse
+remote
+keyboard
+cell phone
+microwave
+oven
+toaster
+sink
+refrigerator
+blender
+book
+clock
+vase
+scissors
+teddy bear
+hair drier
+toothbrush""")
+
+        # Load class names
+        with open(classFile, 'rt') as f:
+            self.classNames = f.read().rstrip('\n').split('\n')
             6: 'bus', 7: 'train', 8: 'truck', 9: 'boat', 10: 'traffic light',
             11: 'fire hydrant', 13: 'stop sign', 14: 'parking meter', 15: 'bench',
             16: 'bird', 17: 'cat', 18: 'dog', 19: 'horse', 20: 'sheep', 21: 'cow',
@@ -88,17 +188,40 @@ class CVService:
         
 
     def _init_model(self):
-        """Initialize TensorFlow model"""
+        """Initialize OpenCV DNN model"""
         try:
-            import tensorflow_hub as hub
-            self.model = hub.load('https://tfhub.dev/tensorflow/efficientdet/d0/1')
+            models_dir = Path("models")
+            models_dir.mkdir(exist_ok=True)
+            
+            configPath = models_dir / 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
+            weightsPath = models_dir / 'frozen_inference_graph.pb'
+            
+            # Download model files if they don't exist
+            if not configPath.exists() or not weightsPath.exists():
+                import urllib.request
+                urllib.request.urlretrieve(
+                    "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt",
+                    str(configPath)
+                )
+                urllib.request.urlretrieve(
+                    "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/frozen_inference_graph.pb",
+                    str(weightsPath)
+                )
+            
+            # Initialize DNN model
+            self.net = cv2.dnn_DetectionModel(str(weightsPath), str(configPath))
+            self.net.setInputSize(320, 320)
+            self.net.setInputScale(1.0/127.5)
+            self.net.setInputMean((127.5, 127.5, 127.5))
+            self.net.setInputSwapRB(True)
+            
             self._model_ready.set()
             self._initialized = True
-            self.logger.info("TensorFlow model initialized successfully")
+            self.logger.info("OpenCV DNN model initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize TensorFlow model: {e}")
+            self.logger.error(f"Failed to initialize OpenCV DNN model: {e}")
             self._initialized = False
-            self.model = None
+            self.net = None
 
     def _load_model(self):
         """Initialize model if not already loaded"""
@@ -125,8 +248,8 @@ class CVService:
             # Prepare input for TensorFlow model
             input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
             
-            # Run detection
-            results = self.model(input_tensor)
+            # Run detection using OpenCV DNN
+            classIds, confidences, boxes = self.net.detect(frame, confThreshold=0.5)
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
@@ -136,25 +259,23 @@ class CVService:
                 ])
 
             detections = []
-            result_dict = {key: value.numpy() for key, value in results.items()}
             
-            detection_boxes = result_dict['detection_boxes'][0]
-            detection_scores = result_dict['detection_scores'][0]
-            detection_classes = result_dict['detection_classes'][0]
+            # Process detections
+            if len(classIds) > 0:
+                classIds = classIds.flatten()
+                confidences = confidences.flatten()
             
-            height, width = frame.shape[:2]
-            
-            for i in range(len(detection_scores)):
-                if detection_scores[i] > 0.5:  # Confidence threshold
-                    # Convert normalized coordinates to pixel values
-                    ymin, xmin, ymax, xmax = detection_boxes[i]
-                    xmin, xmax = int(xmin * width), int(xmax * width)
-                    ymin, ymax = int(ymin * height), int(ymax * height)
+            for i in range(len(classIds)):
+                confidence = float(confidences[i])
+                if confidence > 0.5:  # Confidence threshold
+                    # Get bounding box coordinates
+                    box = boxes[i]
+                    xmin, ymin = int(box[0]), int(box[1])
+                    xmax, ymax = int(xmin + box[2]), int(ymin + box[3])
                     
-                    # Get class name from COCO dataset labels
-                    class_id = int(detection_classes[i])
-                    class_name = self.coco_labels[class_id] if class_id in self.coco_labels else f"class_{class_id}"
-                    confidence = float(detection_scores[i])
+                    # Get class name from loaded classes
+                    class_id = int(classIds[i])
+                    class_name = self.classNames[class_id - 1] if 0 <= class_id - 1 < len(self.classNames) else f"class_{class_id}"
                     
                     # Create detection entry
                     bbox = [xmin, ymin, xmax, ymax]

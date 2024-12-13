@@ -18,8 +18,7 @@ langchain-experimental>=0.3.3
 shapely>=2.0.2
 
 # Machine Learning & Vision
-tensorflow==2.15.0
-tensorflow-hub==0.15.0
+opencv-python-headless==4.9.0.80
 numpy>=1.24.0
 
 # API and Vision Services
