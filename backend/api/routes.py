@@ -15,7 +15,7 @@ def setup_video_writer(video_file: str, cap: cv2.VideoCapture) -> Tuple[cv2.Vide
     """Setup video writer with common configuration"""
     vis_path = Path("tmp_content/visualizations")
     vis_path.mkdir(parents=True, exist_ok=True)
-    output_video = vis_path / f"{video_file}_objects.mp4"
+    output_video = vis_path / f"{video_file}.mp4"
     
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -185,7 +185,7 @@ def detect_objects():
             return jsonify({'error': 'Failed to open video file'}), 500
 
         # Setup video writer
-        writer, output_video = setup_video_writer(video_path.name, cap)
+        writer, output_video = setup_video_writer(video_path.name+'_objects', cap)
 
         try:
             detections = []
@@ -272,22 +272,22 @@ def detect_objects():
         if not detections:
             return jsonify({'error': 'No objects detected'}), 404
 
-        # Setup video writer for visualization
-        vis_path = Path("tmp_content/visualizations")
-        vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{data.get('output_name', video_path.name)}.mp4"
+        # # Setup video writer for visualization
+        # vis_path = Path("tmp_content/visualizations")
+        # vis_path.mkdir(parents=True, exist_ok=True)
+        # output_video = vis_path / f"{data.get('output_name', video_path.name)}.mp4"
             
-        # Get original video properties
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        # # Get original video properties
+        # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # fps = cap.get(cv2.CAP_PROP_FPS)
             
-        writer = cv2.VideoWriter(
-            str(output_video),
-            cv2.VideoWriter_fourcc(*'avc1'),
-            fps,
-            (width, height)
-        )
+        # writer = cv2.VideoWriter(
+        #     str(output_video),
+        #     cv2.VideoWriter_fourcc(*'avc1'),
+        #     fps,
+        #     (width, height)
+        # )
 
         # Save results
         analysis_id = f"object_detection_{int(time.time())}"
@@ -342,7 +342,7 @@ def detect_edges():
             return jsonify({'error': 'Failed to open video file'}), 500
 
         # Setup video writer
-        writer, output_video = setup_video_writer(video_path.name, cap)
+        writer, output_video = setup_video_writer(video_path.name+'_edges', cap)
 
         try:
             edge_results = []
@@ -373,22 +373,22 @@ def detect_edges():
         if not edge_results:
             return jsonify({'error': 'Edge detection failed'}), 404
 
-        # Setup video writer for visualization
-        vis_path = Path("tmp_content/visualizations")
-        vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{video_path.name}_edges.mp4"
+        # # Setup video writer for visualization
+        # vis_path = Path("tmp_content/visualizations")
+        # vis_path.mkdir(parents=True, exist_ok=True)
+        # output_video = vis_path / f"{video_path.name}_edges.mp4"
             
-        # Get original video properties
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        # # Get original video properties
+        # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # fps = cap.get(cv2.CAP_PROP_FPS)
             
-        writer = cv2.VideoWriter(
-            str(output_video),
-            cv2.VideoWriter_fourcc(*'avc1'),
-            fps,
-            (width, height)
-        )
+        # writer = cv2.VideoWriter(
+        #     str(output_video),
+        #     cv2.VideoWriter_fourcc(*'avc1'),
+        #     fps,
+        #     (width, height)
+        # )
 
         response_data = {
             'frame_count': frame_count,
