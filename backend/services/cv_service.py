@@ -135,18 +135,18 @@ class CVService:
             self.logger.error(f"Failed to load YOLO model: {e}")
             raise
                 
-            # Initialize counting region if not set
-            if self.counting_regions[0]["polygon"] is None and isinstance(frame_data, np.ndarray):
-                height, width = frame_data.shape[:2]
+            # Run detection with tracking
+            results = self.object_detection_model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
+            
+            # Initialize counting region if needed
+            if self.counting_regions[0]["polygon"] is None and isinstance(frame, np.ndarray):
+                height, width = frame.shape[:2]
                 self.counting_regions[0]["polygon"] = Polygon([
                     (0, 0), (width, 0), (width, height), (0, height)
                 ])
-                
-            # Run detection with tracking
-            results = self.object_detection_model.track(frame_data, persist=True, conf=0.25)  # Default confidence threshold
-            
+
             detections = []
-            if results[0].boxes.id is not None:
+            if results and results[0].boxes.id is not None:
                 boxes = results[0].boxes.xyxy.cpu()
                 track_ids = results[0].boxes.id.int().cpu().tolist()
                 confidences = results[0].boxes.conf.cpu().tolist()
