@@ -43,26 +43,10 @@ class CVService:
         self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
         
         # Configure environment
-        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
+        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:1024'
         os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-        
-        # Start model loading in background thread
-        self._load_model_thread = threading.Thread(target=self._load_model)
-        self._load_model_thread.daemon = True
-        self._load_model_thread.start()
 
-    def _load_model(self):
-        """Load YOLO model in background thread"""
-        try:
-            self.model = YOLO(self.model_path)
-            self._model_ready.set()
-            self._initialized = True
-            self.logger.info("YOLO model loaded successfully")
-        except Exception as e:
-            self.logger.error(f"Failed to load YOLO model: {e}")
-            self._initialized = False
-            
-        # Initialize tracking components with thread safety
+                # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
         self.next_object_id = 0
         self.tracked_objects = {}
@@ -101,6 +85,20 @@ class CVService:
             'threshold': 25,
             'dilate_iterations': 2
         }
+        
+
+    def _load_model(self):
+        """Load YOLO model in background thread"""
+        try:
+            self.model = YOLO(self.model_path)
+            self._model_ready.set()
+            self._initialized = True
+            self.logger.info("YOLO model loaded successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to load YOLO model: {e}")
+            self._initialized = False
+            
+
                 
     def detect_objects(self, frame: np.ndarray) -> Dict:
         """Detect objects in frame"""
@@ -110,8 +108,10 @@ class CVService:
                 
             # Initialize model if needed
             if not self.model:
-                from ultralytics import YOLO
-                self.model = YOLO(self.model_path)
+                # Start model loading in background thread
+                self._load_model_thread = threading.Thread(target=self._load_model)
+                self._load_model_thread.daemon = True
+                self._load_model_thread.start()
 
             # Run detection with tracking
             results = self.model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
