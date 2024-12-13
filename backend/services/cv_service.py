@@ -23,11 +23,11 @@ class CVService:
         self._model_ready = threading.Event()
         
         # Initialize MediaPipe
-        self.mp_object_detection = mp.solutions.object_detection
+        self.mp_face_detection = mp.solutions.face_detection
         self.mp_drawing = mp.solutions.drawing_utils
-        self.detector = self.mp_object_detection.ObjectDetection(
+        self.detector = self.mp_face_detection.FaceDetection(
             min_detection_confidence=0.5,
-            model_name='default'
+            model_selection=1  # 0 for close-range, 1 for far-range detection
         )
 
                 # Initialize tracking components with thread safety
@@ -99,7 +99,7 @@ class CVService:
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Process frame with MediaPipe
+            # Process frame with MediaPipe Face Detection
             results = self.detector.process(rgb_frame)
             
             # Initialize counting region if needed
@@ -116,10 +116,10 @@ class CVService:
                     h, w = frame.shape[:2]
                     
                     # Convert relative coordinates to absolute
-                    xmin = int(bbox.xmin * w)
-                    ymin = int(bbox.ymin * h)
-                    width = int(bbox.width * w)
-                    height = int(bbox.height * h)
+                    xmin = max(0, int(bbox.xmin * w))
+                    ymin = max(0, int(bbox.ymin * h))
+                    width = min(int(bbox.width * w), w - xmin)
+                    height = min(int(bbox.height * h), h - ymin)
                     
                     # Create detection entry
                     bbox = [xmin, ymin, xmin + width, ymin + height]
