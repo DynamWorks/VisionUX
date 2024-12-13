@@ -231,6 +231,10 @@ def detect_objects():
                     elif frame.shape[2] == 4:
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
 
+                    # Get dimensions from capture if needed
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    
                     # Resize frame if dimensions don't match
                     if frame.shape[:2] != (height, width):
                         frame = cv2.resize(frame, (width, height))
@@ -271,7 +275,7 @@ def detect_objects():
         # Setup video writer for visualization
         vis_path = Path("tmp_content/visualizations")
         vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{video_file}_objects.mp4"
+        output_video = vis_path / f"{video_path.name}_objects.mp4"
             
         # Get original video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -288,7 +292,7 @@ def detect_objects():
         # Save results
         analysis_id = f"object_detection_{int(time.time())}"
         results = {
-            'video_file': video_file,
+            'video_file': video_path.name,
             'frame_count': frame_count,
             'detections': detections,
             'visualization': str(output_video),
@@ -372,7 +376,7 @@ def detect_edges():
         # Setup video writer for visualization
         vis_path = Path("tmp_content/visualizations")
         vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{video_file}_edges.mp4"
+        output_video = vis_path / f"{video_path.name}_edges.mp4"
             
         # Get original video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -418,7 +422,7 @@ def detect_edges():
                 
             # Prepare results
             results = {
-                'video_file': video_file,
+                'video_file': video_path.name,
                 'frame_count': frame_count,
                 'edge_results': compressed_results,
                 'visualization': str(output_video),
