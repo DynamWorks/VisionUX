@@ -231,144 +231,58 @@ def analyze_scene():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
-        
-        # Get stream type and video file information
-        stream_type = data.get('stream_type', 'video')
+
         video_file = data.get('video_file')
-        
-        # For video files, verify existence
-        if stream_type == 'video':
-            if not video_file:
-                return jsonify({'error': 'No video file specified'}), 400
-            video_path = Path("tmp_content/uploads") / video_file
-            if not video_path.exists():
-                return jsonify({'error': f'Video file not found: {video_file}'}), 404
+        if not video_file:
+            return jsonify({'error': 'No video file specified'}), 400
             
-        num_frames = int(data.get('num_frames', 8))
+        video_path = Path("tmp_content/uploads") / video_file
+        if not video_path.exists():
+            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+
+        # Use SceneAnalysisTool for analysis
+        from backend.core.analysis_tools import SceneAnalysisTool
+        scene_tool = SceneAnalysisTool()
         
         try:
-            # Create a new video capture for analysis
-            cap = cv2.VideoCapture(str(video_path))
-            if not cap.isOpened():
-                return jsonify({'error': 'Failed to open video file'}), 500
-
-            try:
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                duration = total_frames / fps if fps > 0 else 0
-
-                if total_frames < num_frames:
-                    num_frames = total_frames
-
-                interval = max(1, total_frames // num_frames)
-                frame_positions = [i * interval for i in range(num_frames)]
-
-                frames = []
-                frame_numbers = []
-                timestamps = []
-
-                for pos in frame_positions:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
-                    ret, frame = cap.read()
-                    if ret:
-                        timestamp = pos / fps if fps > 0 else 0
-                        frames.append(frame.copy())  # Make a copy of the frame
-                        frame_numbers.append(int(pos))
-                        timestamps.append(timestamp)
-            finally:
-                cap.release()
-
-            if not frames:
-                return jsonify({'error': 'Failed to capture frames'}), 500
-
-            # Build context information
-            context = {
-                'video_file': video_file,
-                'source_type': stream_type,
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-                'frame_count': len(frames),
-                'total_frames': total_frames,
-                'duration': duration,
-                'fps': fps,
-                'frames_analyzed': frame_numbers
-            }
-
-            # Perform analysis
-            analysis = scene_service.analyze_scene(
-                frames,
-                context=str(context),
-                frame_numbers=frame_numbers,
-                timestamps=timestamps
-            )
-
-            if 'error' in analysis:
-                return jsonify({'error': analysis['error']}), 500
-
-            # Prepare response
-            response_data = {
-                'scene_analysis': analysis['scene_analysis'],
-                'technical_details': analysis['technical_details'],
-                'metadata': {
-                    'timestamp': time.time(),
-                    'video_file': video_file,
-                    'frame_count': len(frames),
-                    'frame_numbers': frame_numbers,
-                    'duration': duration,
-                    'fps': fps
+            result = scene_tool._run(video_path)
+            
+            if isinstance(result, str):
+                # Extract description from success message
+                description = result.replace("Scene analysis completed: ", "")
+                
+                response_data = {
+                    'scene_analysis': {
+                        'description': description
+                    },
+                    'chat_messages': [
+                        {
+                            'role': 'system',
+                            'content': 'Starting scene analysis...'
+                        },
+                        {
+                            'role': 'assistant',
+                            'content': description
+                        },
+                        {
+                            'role': 'system',
+                            'content': 'Analysis complete - results saved.'
+                        }
+                    ]
                 }
-            }
-
-            # Format scene analysis description
-            scene_description = analysis['scene_analysis']['description']
-            formatted_description = f"""Scene Analysis Results:
-
-{scene_description}
-
-Analyzed Frames: {len(frames)}
-Video Duration: {duration:.2f} seconds
-Frame Rate: {fps:.2f} FPS"""
-
-            # Add chat messages to response
-            response_data['chat_messages'] = [
-                {
-                    'role': 'system',
-                    'content': 'Starting scene analysis...'
-                },
-                {
-                    'role': 'assistant',
-                    'content': formatted_description
-                }
-            ]
-
-            # Add technical details if available
-            if response_data['technical_details']:
-                tech_details = json.dumps(response_data['technical_details'], indent=2)
-                response_data['chat_messages'].append({
-                    'role': 'system',
-                    'content': f"Technical Details:\n{tech_details}"
-                })
-
-            # Add completion message
-            response_data['chat_messages'].append({
-                'role': 'system',
-                'content': 'Analysis complete - results saved.'
-            })
-
-            # Save chat messages to history
-            from backend.content_manager import ContentManager
-            content_manager = ContentManager()
-            content_manager.save_chat_history(
-                response_data['chat_messages'],
-                video_file
-            )
-
-            return jsonify(response_data)
-
-        except ValueError as ve:
-            return jsonify({'error': str(ve)}), 400
-
+                
+                # Save chat messages to history
+                content_manager.save_chat_history(
+                    response_data['chat_messages'],
+                    video_file
+                )
+                
+                return jsonify(response_data)
+            else:
+                return jsonify({'error': 'Analysis failed'}), 500
+                
         except Exception as e:
-            logger.error(f"Frame processing error: {e}", exc_info=True)
+            logger.error(f"Scene analysis error: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
     except Exception as e:
