@@ -200,7 +200,8 @@ class CVService:
                 'frame': result,
                 'edges': edges,
                 'tracked_objects': tracked_objects,
-                'params': self.edge_detection_params.copy()
+                'params': self.edge_detection_params.copy(),
+                'tracking_analysis': tracking_path if 'tracking_path' in locals() else None
             }
             
         except Exception as e:
