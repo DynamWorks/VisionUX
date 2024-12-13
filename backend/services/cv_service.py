@@ -184,6 +184,14 @@ class CVService:
                         # Draw text
                         cv2.putText(result, text, (x, y-5),
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+
+                        # Save tracking data
+                        from backend.services.tracking_analysis import TrackingAnalysis
+                        tracking_analyzer = TrackingAnalysis()
+                        tracking_path = tracking_analyzer.save_tracking_data(
+                            str(Path(frame.filename).stem) if hasattr(frame, 'filename') else 'edge_detection',
+                            tracked_objects
+                        )
             
             # Draw edges
             edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
