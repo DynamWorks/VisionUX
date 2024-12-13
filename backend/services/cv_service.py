@@ -145,7 +145,7 @@ class CVService:
                     
                     detection = {
                         'bbox': bbox,
-                        'confidence': conf,
+                        'confidence': confidence,  # Use the confidence from detection.score[0]
                         'class': class_name,
                         'track_id': track_id,
                         'track_history': track.copy()
