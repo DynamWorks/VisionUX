@@ -139,8 +139,9 @@ const VideoPlayer = ({ file, visualizationPath }) => {
             try {
                 // Determine which video to load based on visualization toggles
                 let videoPath;
-                if ((showEdgeVisualization || showObjectVisualization) && currentVisualization) {
-                    // Remove tmp_content prefix if present since API route already includes it
+                if (showEdgeVisualization && currentVisualization) {
+                    videoPath = currentVisualization.replace(/^tmp_content\//, '');
+                } else if (showObjectVisualization && currentVisualization) {
                     videoPath = currentVisualization.replace(/^tmp_content\//, '');
                 } else {
                     videoPath = `uploads/${file.name}`;
