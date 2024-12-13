@@ -16,7 +16,21 @@ class CVService:
         # Use models directory from ContentManager
         from ..content_manager import ContentManager
         content_manager = ContentManager()
-        self.model_path = model_path or str(content_manager.models_dir / 'yolo11n.pt')
+        
+        # Create models directory if it doesn't exist
+        content_manager.models_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Default to YOLOv8n model
+        self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
+        
+        # Download model if it doesn't exist
+        if not Path(self.model_path).exists():
+            try:
+                from ultralytics import YOLO
+                YOLO('yolov8n').download()
+            except Exception as e:
+                self.logger.error(f"Failed to download YOLO model: {e}")
+                raise
         
         # Initialize trackers dictionary
         self.trackers = {}
