@@ -154,16 +154,14 @@ def detect_objects():
         fps = cap.get(cv2.CAP_PROP_FPS)
         
         # Use H264 codec for better compatibility and quality
+        # Initialize video writer with mp4v codec for better compatibility
         writer = cv2.VideoWriter(
             str(output_video),
-            cv2.VideoWriter_fourcc(*'avc1'),  # H264 codec
+            cv2.VideoWriter_fourcc(*'mp4v'),
             fps,
             (width, height),
             True  # isColor=True
         )
-        
-        # Set video writer properties for better quality
-        writer.set(cv2.VIDEOWRITER_PROP_QUALITY, 95)  # Higher quality
 
         try:
             detections = []
@@ -196,19 +194,29 @@ def detect_objects():
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
                 try:
-                    # Ensure frame is in correct format
+                    # Validate frame
+                    if frame is None or frame.size == 0:
+                        logger.warning(f"Invalid frame at position {frame_count}")
+                        continue
+                        
+                    # Ensure frame dimensions match writer
+                    if frame.shape[:2] != (height, width):
+                        frame = cv2.resize(frame, (width, height))
+                    
+                    # Ensure frame is BGR uint8
                     if frame.dtype != np.uint8:
                         frame = frame.astype(np.uint8)
-                    
-                    # Ensure frame is BGR
-                    if len(frame.shape) == 2:  # Grayscale
+                    if len(frame.shape) == 2:
                         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-                    elif frame.shape[2] == 4:  # RGBA
+                    elif frame.shape[2] == 4:
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
-                        
+                    
                     # Write frame
-                    if not writer.write(frame):
-                        raise ValueError("Failed to write frame")
+                    success = writer.write(frame)
+                    if not success:
+                        logger.error(f"Failed to write frame {frame_count}")
+                        continue
+                    
                     frame_count += 1
                     
                 except Exception as e:
