@@ -4,6 +4,9 @@ import logging
 import time
 from typing import Dict, Any, Optional, List
 from pathlib import Path
+from collections import defaultdict
+from shapely.geometry import Polygon
+from shapely.geometry.point import Point
 from ultralytics import YOLO
 from ..utils.video_streaming.stream_subscriber import StreamSubscriber, Frame
 
@@ -61,16 +64,42 @@ class CVService:
         }
         self.is_initialized = False
         
-    def detect_objects(self, frame: np.ndarray, confidence_threshold: float = 0.5) -> Dict:
-        """Detect objects in frame"""
-        try:
-            if not isinstance(frame, np.ndarray):
-                raise ValueError("Invalid frame format")
-                
-            if frame.size == 0 or len(frame.shape) != 3:
-                raise ValueError("Invalid frame dimensions")
-                
-            if self.object_detection_model is None:
+    def __init__(self, model_path: str = None):
+        self.logger = logging.getLogger(__name__)
+        self.object_detection_model = None
+        # Use models directory from ContentManager
+        from ..content_manager import ContentManager
+        content_manager = ContentManager()
+        
+        # Create models directory if it doesn't exist
+        content_manager.models_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Default to YOLOv8n model
+        self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
+        
+        # Download model if it doesn't exist
+        if not Path(self.model_path).exists():
+            try:
+                from ultralytics import YOLO
+                YOLO('yolov8n').download()
+            except Exception as e:
+                self.logger.error(f"Failed to download YOLO model: {e}")
+                raise
+        
+        # Initialize tracking components
+        self.track_history = defaultdict(list)
+        self.next_object_id = 0
+        self.tracked_objects = {}
+        
+        # Initialize counting regions
+        self.counting_regions = [{
+            "name": "Full Frame Region",
+            "polygon": None,  # Will be set based on frame dimensions
+            "counts": defaultdict(int),
+            "total_counts": defaultdict(int)
+        }]
+        
+        self.is_initialized = False
                 try:
                     import torch
                     import gc
