@@ -18,7 +18,7 @@ class CVService:
         self.edge_detection_params = {
             'low_threshold': 100,
             'high_threshold': 200,
-            'overlay_mode': True,
+            'overlay_mode': False,
             'blur_size': 5,
             'blur_sigma': 0
         }
