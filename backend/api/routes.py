@@ -175,139 +175,15 @@ def detect_objects():
         except (ValueError, FileNotFoundError) as e:
             return jsonify({'error': str(e)}), 400
 
-        # Initialize CV service
-        from backend.services import CVService
-        cv_service = CVService()
-
-        # Process video frames
-        cap = cv2.VideoCapture(str(video_path))
-        if not cap.isOpened():
-            return jsonify({'error': 'Failed to open video file'}), 500
-
-        # Setup video writer
-        writer, output_video = setup_video_writer(video_path.name+'_objects', cap)
-
-        try:
-            detections = []
-            frame_count = 0
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                    
-                # Run detection on frame
-                result = cv_service.detect_objects(frame)
-                if 'error' in result:
-                    continue
-                    
-                # Add frame number and timestamp
-                result['frame_number'] = frame_count
-                result['timestamp'] = frame_count / cap.get(cv2.CAP_PROP_FPS)
-                detections.append(result)
-                
-                # Draw detections on frame
-                for det in result.get('detections', []):
-                    bbox = det['bbox']
-                    cv2.rectangle(frame, 
-                        (int(bbox[0]), int(bbox[1])), 
-                        (int(bbox[2]), int(bbox[3])), 
-                        (0, 255, 0), 2)
-                    cv2.putText(frame, 
-                        f"{det['class']}: {det['confidence']:.2f}", 
-                        (int(bbox[0]), int(bbox[1])-10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                
-                try:
-                    # Validate frame
-                    if frame is None or frame.size == 0:
-                        logger.warning(f"Invalid frame at position {frame_count}")
-                        continue
-
-                    # Convert frame to BGR uint8 if needed
-                    if frame.dtype != np.uint8:
-                        frame = frame.astype(np.uint8)
-                    if len(frame.shape) == 2:
-                        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-                    elif frame.shape[2] == 4:
-                        frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
-
-                    # Get dimensions from capture if needed
-                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    
-                    # Resize frame if dimensions don't match
-                    if frame.shape[:2] != (height, width):
-                        frame = cv2.resize(frame, (width, height))
-
-                    # Verify frame is valid for writing
-                    if not (frame.shape[2] == 3 and frame.dtype == np.uint8):
-                        logger.error(f"Invalid frame format at position {frame_count}")
-                        continue
-
-                    # Write frame with error checking
-                    try:
-                        writer.write(frame)
-                        frame_count += 1
-                    except Exception as write_error:
-                        logger.error(f"Frame write error at position {frame_count}: {write_error}")
-                        continue
-                    
-                except Exception as e:
-                    logger.error(f"Error writing frame {frame_count}: {e}")
-                    continue
-
-        finally:
-            # Ensure proper cleanup
-            if cap is not None:
-                cap.release()
-            if 'writer' in locals() and writer is not None:
-                writer.release()
-                # Verify output file was created
-                if not output_video.exists():
-                    raise ValueError("Failed to create output video file")
-                # Check file size is non-zero
-                if output_video.stat().st_size == 0:
-                    raise ValueError("Output video file is empty")
-
-        if not detections:
-            return jsonify({'error': 'No objects detected'}), 404
-
-        # # Setup video writer for visualization
-        # vis_path = Path("tmp_content/visualizations")
-        # vis_path.mkdir(parents=True, exist_ok=True)
-        # output_video = vis_path / f"{data.get('output_name', video_path.name)}.mp4"
+        # Call object detection tool
+        from backend.core.analysis_tools import ObjectDetectionTool
+        detection_tool = ObjectDetectionTool(cv_service)
+        result = detection_tool._run(video_path)
+        
+        if isinstance(result, dict) and 'error' in result:
+            return jsonify(result), 404
             
-        # # Get original video properties
-        # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        # fps = cap.get(cv2.CAP_PROP_FPS)
-            
-        # writer = cv2.VideoWriter(
-        #     str(output_video),
-        #     cv2.VideoWriter_fourcc(*'avc1'),
-        #     fps,
-        #     (width, height)
-        # )
-
-        # Save results
-        analysis_id = f"object_detection_{int(time.time())}"
-        results = {
-            'video_file': video_path.name,
-            'frame_count': frame_count,
-            'detections': detections,
-            'visualization': str(output_video),
-            'timestamp': time.time()
-        }
-            
-        saved_path = content_manager.save_analysis(results, analysis_id)
-
-        return jsonify({
-            'analysis_id': analysis_id,
-            'detections': detections,
-            'frame_count': frame_count,
-            'storage_path': str(saved_path),
-            'visualization': str(output_video)
-        })
+        return jsonify(result)
 
     except Exception as e:
         logger.error("Object detection failed", exc_info=True)
@@ -331,149 +207,15 @@ def detect_edges():
             video_path = validate_video_file(data.get('video_file'))
         except (ValueError, FileNotFoundError) as e:
             return jsonify({'error': str(e)}), 400
-
-        # Initialize CV service
-        from backend.services import CVService
-        cv_service = CVService()
-
-        # Process video frames
-        cap = cv2.VideoCapture(str(video_path))
-        if not cap.isOpened():
-            return jsonify({'error': 'Failed to open video file'}), 500
-
-        # Setup video writer
-        writer, output_video = setup_video_writer(video_path.name+'_edges', cap)
-
-        try:
-            edge_results = []
-            frame_count = 0
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                    
-                # Run edge detection on frame
-                result = cv_service.detect_edges(frame)
-                if 'error' in result:
-                    continue
-                    
-                # Add frame number and timestamp
-                result['frame_number'] = frame_count
-                result['timestamp'] = frame_count / cap.get(cv2.CAP_PROP_FPS)
-                edge_results.append(result)
-                
-                # Write processed frame with edges
-                if 'frame' in result:
-                    writer.write(result['frame'])
-                frame_count += 1
-
-        finally:
-            cap.release()
-
-        if not edge_results:
-            return jsonify({'error': 'Edge detection failed'}), 404
-
-        # # Setup video writer for visualization
-        # vis_path = Path("tmp_content/visualizations")
-        # vis_path.mkdir(parents=True, exist_ok=True)
-        # output_video = vis_path / f"{video_path.name}_edges.mp4"
+        # Call edge detection tool
+        from backend.core.analysis_tools import EdgeDetectionTool
+        edge_tool = EdgeDetectionTool(cv_service)
+        result = edge_tool._run(video_path, save_analysis=save_analysis)
+        
+        if isinstance(result, dict) and 'error' in result:
+            return jsonify(result), 404
             
-        # # Get original video properties
-        # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        # fps = cap.get(cv2.CAP_PROP_FPS)
-            
-        # writer = cv2.VideoWriter(
-        #     str(output_video),
-        #     cv2.VideoWriter_fourcc(*'avc1'),
-        #     fps,
-        #     (width, height)
-        # )
-
-        response_data = {
-            'frame_count': frame_count,
-            'visualization': str(output_video)
-        }
-
-        # Save analysis if requested
-        if save_analysis:
-            analysis_id = f"edge_detection_{int(time.time())}"
-            
-            # Convert edge_results to compressed format
-            import numpy as np
-            compressed_results = []
-            for result in edge_results:
-                # Convert edges to sparse format - only store non-zero positions
-                if 'edges' in result:
-                    edges = np.array(result['edges'])
-                    non_zero = np.nonzero(edges)
-                    compressed_result = {
-                        'frame_number': result['frame_number'],
-                        'timestamp': result['timestamp'],
-                        'shape': edges.shape,
-                        'positions': list(zip(non_zero[0].tolist(), non_zero[1].tolist()))
-                    }
-                else:
-                    compressed_result = {
-                        'frame_number': result['frame_number'],
-                        'timestamp': result['timestamp']
-                    }
-                compressed_results.append(compressed_result)
-                
-            # Prepare results
-            results = {
-                'video_file': video_path.name,
-                'frame_count': frame_count,
-                'edge_results': compressed_results,
-                'visualization': str(output_video),
-                'timestamp': time.time(),
-                'format': 'sparse',  # Indicate compression format
-                'tracked_objects': []  # Initialize tracked objects list
-            }
-
-            # Extract tracked objects data
-            tracked_objects = {}
-            for result in edge_results:
-                if 'tracked_objects' in result:
-                    for obj in result['tracked_objects']:
-                        obj_id = obj['id']
-                        if obj_id not in tracked_objects:
-                            tracked_objects[obj_id] = {
-                                'id': obj_id,
-                                'first_frame': result['frame_number'],
-                                'last_frame': result['frame_number'],
-                                'trajectory': [],
-                                'bbox_history': []
-                            }
-                        tracked_obj = tracked_objects[obj_id]
-                        tracked_obj['last_frame'] = result['frame_number']
-                        if 'center' in obj:
-                            tracked_obj['trajectory'].append({
-                                'frame': result['frame_number'],
-                                'position': obj['center']
-                            })
-                        if 'bbox' in obj:
-                            tracked_obj['bbox_history'].append({
-                                'frame': result['frame_number'],
-                                'bbox': obj['bbox']
-                            })
-
-            # Add tracked objects to results
-            results['tracked_objects'] = list(tracked_objects.values())
-
-            # Save analysis if requested
-            if save_analysis:
-                analysis_id = f"edge_detection_{int(time.time())}"
-                saved_path = content_manager.save_analysis(results, analysis_id)
-                response_data.update({
-                    'analysis_id': analysis_id,
-                    'storage_path': str(saved_path)
-                })
-            else:
-                # When save_analysis is disabled, only exclude edges from response
-                response_data['tracked_objects'] = results['tracked_objects']
-
-        return jsonify(response_data)
+        return jsonify(result)
 
     except Exception as e:
         logger.error("Edge detection failed", exc_info=True)
