@@ -157,7 +157,7 @@ def detect_objects():
         # Initialize video writer with mp4v codec for better compatibility
         writer = cv2.VideoWriter(
             str(output_video),
-            cv2.VideoWriter_fourcc(*'mp4v'),
+            cv2.VideoWriter_fourcc(*'avc1'),
             fps,
             (width, height),
             True  # isColor=True
@@ -374,7 +374,7 @@ def detect_edges():
             
         writer = cv2.VideoWriter(
             str(output_video),
-            cv2.VideoWriter_fourcc(*'mp4v'),
+            cv2.VideoWriter_fourcc(*'avc1'),
             fps,
             (width, height)
         )
