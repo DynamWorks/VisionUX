@@ -21,7 +21,8 @@ shapely>=2.0.2
 ultralytics==8.0.196
 mediapipe==0.10.9
 segment-anything==1.0
-torch>=2.4
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.4+cpu
 torchvision>=0.19.0
 
 # API and Vision Services
