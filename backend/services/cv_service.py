@@ -22,9 +22,29 @@ class CVService:
         self._lock = threading.Lock()
         self._model_ready = threading.Event()
         
-        # Initialize YOLO
-        from ultralytics import YOLO
-        self.detector = YOLO('yolov8n.pt')  # Load the YOLOv8 nano model
+        # COCO dataset labels
+        self.coco_labels = {
+            1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle', 5: 'airplane',
+            6: 'bus', 7: 'train', 8: 'truck', 9: 'boat', 10: 'traffic light',
+            11: 'fire hydrant', 13: 'stop sign', 14: 'parking meter', 15: 'bench',
+            16: 'bird', 17: 'cat', 18: 'dog', 19: 'horse', 20: 'sheep', 21: 'cow',
+            22: 'elephant', 23: 'bear', 24: 'zebra', 25: 'giraffe', 27: 'backpack',
+            28: 'umbrella', 31: 'handbag', 32: 'tie', 33: 'suitcase', 34: 'frisbee',
+            35: 'skis', 36: 'snowboard', 37: 'sports ball', 38: 'kite', 39: 'baseball bat',
+            40: 'baseball glove', 41: 'skateboard', 42: 'surfboard', 43: 'tennis racket',
+            44: 'bottle', 46: 'wine glass', 47: 'cup', 48: 'fork', 49: 'knife', 50: 'spoon',
+            51: 'bowl', 52: 'banana', 53: 'apple', 54: 'sandwich', 55: 'orange',
+            56: 'broccoli', 57: 'carrot', 58: 'hot dog', 59: 'pizza', 60: 'donut',
+            61: 'cake', 62: 'chair', 63: 'couch', 64: 'potted plant', 65: 'bed',
+            67: 'dining table', 70: 'toilet', 72: 'tv', 73: 'laptop', 74: 'mouse',
+            75: 'remote', 76: 'keyboard', 77: 'cell phone', 78: 'microwave', 79: 'oven',
+            80: 'toaster', 81: 'sink', 82: 'refrigerator', 84: 'book', 85: 'clock',
+            86: 'vase', 87: 'scissors', 88: 'teddy bear', 89: 'hair drier', 90: 'toothbrush'
+        }
+        
+        # Initialize TensorFlow detector
+        import tensorflow_hub as hub
+        self.detector = hub.load('https://tfhub.dev/tensorflow/efficientdet/d0/1')
 
                 # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
@@ -95,8 +115,11 @@ class CVService:
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Process frame with YOLO
-            results = self.detector(frame)[0]  # Get detection results
+            # Prepare input for TensorFlow model
+            input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
+            
+            # Run detection
+            results = self.detector(input_tensor)
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
@@ -106,15 +129,25 @@ class CVService:
                 ])
 
             detections = []
-            if len(results.boxes) > 0:
-                for i, detection in enumerate(results.boxes):
-                    box = detection.xyxy[0].cpu().numpy()  # Get box coordinates
-                    conf = float(detection.conf[0].cpu().numpy())  # Get confidence
-                    cls = int(detection.cls[0].cpu().numpy())  # Get class
-                    class_name = results.names[cls]  # Get class name
+            result_dict = {key: value.numpy() for key, value in results.items()}
+            
+            detection_boxes = result_dict['detection_boxes'][0]
+            detection_scores = result_dict['detection_scores'][0]
+            detection_classes = result_dict['detection_classes'][0]
+            
+            height, width = frame.shape[:2]
+            
+            for i in range(len(detection_scores)):
+                if detection_scores[i] > 0.5:  # Confidence threshold
+                    # Convert normalized coordinates to pixel values
+                    ymin, xmin, ymax, xmax = detection_boxes[i]
+                    xmin, xmax = int(xmin * width), int(xmax * width)
+                    ymin, ymax = int(ymin * height), int(ymax * height)
                     
-                    # Convert coordinates to integers
-                    xmin, ymin, xmax, ymax = map(int, box)
+                    # Get class name from COCO dataset labels
+                    class_id = int(detection_classes[i])
+                    class_name = self.coco_labels[class_id] if class_id in self.coco_labels else f"class_{class_id}"
+                    confidence = float(detection_scores[i])
                     
                     # Create detection entry
                     bbox = [xmin, ymin, xmax, ymax]
