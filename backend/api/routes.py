@@ -388,20 +388,58 @@ def detect_edges():
                     }
                 compressed_results.append(compressed_result)
                 
+            # Prepare results
             results = {
                 'video_file': video_file,
                 'frame_count': frame_count,
                 'edge_results': compressed_results,
                 'visualization': str(output_video),
                 'timestamp': time.time(),
-                'format': 'sparse'  # Indicate compression format
+                'format': 'sparse',  # Indicate compression format
+                'tracked_objects': []  # Initialize tracked objects list
             }
-            
-            saved_path = content_manager.save_analysis(results, analysis_id)
-            response_data.update({
-                'analysis_id': analysis_id,
-                'storage_path': str(saved_path)
-            })
+
+            # Extract tracked objects data
+            tracked_objects = {}
+            for result in edge_results:
+                if 'tracked_objects' in result:
+                    for obj in result['tracked_objects']:
+                        obj_id = obj['id']
+                        if obj_id not in tracked_objects:
+                            tracked_objects[obj_id] = {
+                                'id': obj_id,
+                                'first_frame': result['frame_number'],
+                                'last_frame': result['frame_number'],
+                                'trajectory': [],
+                                'bbox_history': []
+                            }
+                        tracked_obj = tracked_objects[obj_id]
+                        tracked_obj['last_frame'] = result['frame_number']
+                        if 'center' in obj:
+                            tracked_obj['trajectory'].append({
+                                'frame': result['frame_number'],
+                                'position': obj['center']
+                            })
+                        if 'bbox' in obj:
+                            tracked_obj['bbox_history'].append({
+                                'frame': result['frame_number'],
+                                'bbox': obj['bbox']
+                            })
+
+            # Add tracked objects to results
+            results['tracked_objects'] = list(tracked_objects.values())
+
+            # Save analysis if requested
+            if save_analysis:
+                analysis_id = f"edge_detection_{int(time.time())}"
+                saved_path = content_manager.save_analysis(results, analysis_id)
+                response_data.update({
+                    'analysis_id': analysis_id,
+                    'storage_path': str(saved_path)
+                })
+            else:
+                # When save_analysis is disabled, only exclude edges from response
+                response_data['tracked_objects'] = results['tracked_objects']
 
         return jsonify(response_data)
 
