@@ -9,6 +9,58 @@ import json
 import shutil
 import logging
 import numpy as np
+from typing import Optional, Tuple
+
+def setup_video_writer(video_file: str, cap: cv2.VideoCapture) -> Tuple[cv2.VideoWriter, Path]:
+    """Setup video writer with common configuration"""
+    vis_path = Path("tmp_content/visualizations")
+    vis_path.mkdir(parents=True, exist_ok=True)
+    output_video = vis_path / f"{video_file}_objects.mp4"
+    
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    
+    writer = cv2.VideoWriter(
+        str(output_video),
+        cv2.VideoWriter_fourcc(*'avc1'),
+        fps,
+        (width, height)
+    )
+    
+    return writer, output_video
+
+def validate_video_file(video_file: str) -> Path:
+    """Validate video file exists and return path"""
+    if not video_file:
+        raise ValueError('No video file specified')
+        
+    video_path = Path("tmp_content/uploads") / video_file
+    if not video_path.exists():
+        raise FileNotFoundError(f'Video file not found: {video_file}')
+        
+    return video_path
+
+def handle_frame_write(writer: cv2.VideoWriter, frame: np.ndarray, frame_count: int) -> bool:
+    """Handle frame validation and writing with error checking"""
+    try:
+        if frame is None or frame.size == 0:
+            logger.warning(f"Invalid frame at position {frame_count}")
+            return False
+
+        if frame.dtype != np.uint8:
+            frame = frame.astype(np.uint8)
+        if len(frame.shape) == 2:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        elif frame.shape[2] == 4:
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+
+        writer.write(frame)
+        return True
+        
+    except Exception as e:
+        logger.error(f"Frame write error at position {frame_count}: {e}")
+        return False
 
 from backend.utils.video_streaming.stream_manager import StreamManager
 from backend.services import SceneAnalysisService, ChatService, CVService
@@ -118,21 +170,10 @@ def detect_objects():
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
         
-        video_file = data.get('video_file')
-        if not video_file:
-            return jsonify({'error': 'No video file specified'}), 400
-            
-        # Ensure uploads directory exists
-        uploads_dir = Path("tmp_content/uploads")
-        uploads_dir.mkdir(parents=True, exist_ok=True)
-        
-        video_path = uploads_dir / video_file
-        if not video_path.exists():
-            return jsonify({
-                'error': f'Video file not found: {video_file}',
-                'message': 'Please upload a video file first',
-                'upload_path': str(uploads_dir)
-            }), 404
+        try:
+            video_path = validate_video_file(data.get('video_file'))
+        except (ValueError, FileNotFoundError) as e:
+            return jsonify({'error': str(e)}), 400
 
         # Initialize CV service
         from backend.services import CVService
@@ -143,25 +184,8 @@ def detect_objects():
         if not cap.isOpened():
             return jsonify({'error': 'Failed to open video file'}), 500
 
-        # Setup video writer for visualization
-        vis_path = Path("tmp_content/visualizations")
-        vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{video_file}_objects.mp4"
-        
-        # Get original video properties
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        
-        # Use H264 codec for better compatibility and quality
-        # Initialize video writer with mp4v codec for better compatibility
-        writer = cv2.VideoWriter(
-            str(output_video),
-            cv2.VideoWriter_fourcc(*'avc1'),
-            fps,
-            (width, height),
-            True  # isColor=True
-        )
+        # Setup video writer
+        writer, output_video = setup_video_writer(video_path.name, cap)
 
         try:
             detections = []
@@ -299,13 +323,10 @@ def detect_edges():
         # Get save_analysis parameter, default to True for backward compatibility
         save_analysis = data.get('save_analysis', True)
         
-        video_file = data.get('video_file')
-        if not video_file:
-            return jsonify({'error': 'No video file specified'}), 400
-            
-        video_path = Path("tmp_content/uploads") / video_file
-        if not video_path.exists():
-            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+        try:
+            video_path = validate_video_file(data.get('video_file'))
+        except (ValueError, FileNotFoundError) as e:
+            return jsonify({'error': str(e)}), 400
 
         # Initialize CV service
         from backend.services import CVService
@@ -316,22 +337,8 @@ def detect_edges():
         if not cap.isOpened():
             return jsonify({'error': 'Failed to open video file'}), 500
 
-        # Setup video writer for visualization
-        vis_path = Path("tmp_content/visualizations")
-        vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{video_file}_edges.mp4"
-        
-        # Get original video properties
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        
-        writer = cv2.VideoWriter(
-            str(output_video),
-            cv2.VideoWriter_fourcc(*'avc1'),
-            fps,
-            (width, height)
-        )
+        # Setup video writer
+        writer, output_video = setup_video_writer(video_path.name, cap)
 
         try:
             edge_results = []
