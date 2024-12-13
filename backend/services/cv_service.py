@@ -17,7 +17,7 @@ class CVService:
     def __init__(self, model_path: str = None):
         """Initialize CV service"""
         self.logger = logging.getLogger(__name__)
-        self.model = None
+        # self.model = None
         self._initialized = False
         self._lock = threading.Lock()
         
@@ -85,12 +85,15 @@ class CVService:
                 raise ValueError("Input frame must be a numpy array")
                 
             # Initialize model if needed
-            if not self.model:
-                from ultralytics import YOLO
-                self.model = YOLO(self.model_path)
+            #if not self.model:
+            # from ultralytics import YOLO
+            from ..content_manager import ContentManager
+            content_manager = ContentManager()
+            import pdb;pdb.set_trace()
+            model = YOLO(str(content_manager.models_dir / 'yolov8n.pt'))#self.model_path)
 
             # Run detection with tracking
-            results = self.model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
+            results = model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
