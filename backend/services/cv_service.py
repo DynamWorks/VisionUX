@@ -84,8 +84,13 @@ class CVService:
             if not isinstance(frame, np.ndarray):
                 raise ValueError("Input frame must be a numpy array")
                 
+            # Initialize model if needed
+            if not self.model:
+                from ultralytics import YOLO
+                self.model = YOLO(self.model_path)
+
             # Run detection with tracking
-            results = self.object_detection_model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
+            results = self.model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
