@@ -22,7 +22,11 @@ class CVService:
         self.trackers = {}
         self.tracked_objects = {}
         self.next_object_id = 0
-        self.multi_tracker = cv2.MultiTracker_create()
+        # Initialize multi-tracker based on OpenCV version
+        if int(cv2.__version__.split('.')[0]) >= 4:
+            self.multi_tracker = cv2.legacy.MultiTracker_create()
+        else:
+            self.multi_tracker = cv2.MultiTracker_create()
         self.tracking_history = {}
         
         # Edge detection parameters
