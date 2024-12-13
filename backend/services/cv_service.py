@@ -43,9 +43,8 @@ class CVService:
             86: 'vase', 87: 'scissors', 88: 'teddy bear', 89: 'hair drier', 90: 'toothbrush'
         }
         
-        # Initialize TensorFlow detector
-        import tensorflow_hub as hub
-        self.detector = hub.load('https://tfhub.dev/tensorflow/efficientdet/d0/1')
+        # Initialize TensorFlow model
+        self._init_model()
 
                 # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
@@ -88,16 +87,23 @@ class CVService:
         }
         
 
-    def _load_model(self):
-        """Initialize MediaPipe detector"""
+    def _init_model(self):
+        """Initialize TensorFlow model"""
         try:
+            import tensorflow_hub as hub
+            self.model = hub.load('https://tfhub.dev/tensorflow/efficientdet/d0/1')
             self._model_ready.set()
             self._initialized = True
-            self.logger.info("MediaPipe detector initialized successfully")
+            self.logger.info("TensorFlow model initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize MediaPipe detector: {e}")
+            self.logger.error(f"Failed to initialize TensorFlow model: {e}")
             self._initialized = False
-            
+            self.model = None
+
+    def _load_model(self):
+        """Initialize model if not already loaded"""
+        if not self._initialized:
+            self._init_model()
 
                 
     def detect_objects(self, frame: np.ndarray) -> Dict:
@@ -120,7 +126,7 @@ class CVService:
             input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
             
             # Run detection
-            results = self.detector(input_tensor)
+            results = self.model(input_tensor)
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
