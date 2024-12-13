@@ -121,7 +121,7 @@ class ObjectDetectionTool(BaseTool):
                 output_video = vis_path / f"{video_path.stem}_objects.mp4"
                 writer = cv2.VideoWriter(
                     str(output_video),
-                    cv2.VideoWriter_fourcc(*'mp4v'),
+                    cv2.VideoWriter_fourcc(*'avc1'),
                     fps,
                     (width, height)
                 )
@@ -225,7 +225,7 @@ class EdgeDetectionTool(BaseTool):
                 output_video = vis_path / f"{video_path.stem}_edges.mp4"
                 writer = cv2.VideoWriter(
                     str(output_video),
-                    cv2.VideoWriter_fourcc(*'mp4v'),
+                    cv2.VideoWriter_fourcc(*'avc1'),
                     fps,
                     (width, height)
                 )
