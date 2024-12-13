@@ -198,26 +198,31 @@ def detect_objects():
                     if frame is None or frame.size == 0:
                         logger.warning(f"Invalid frame at position {frame_count}")
                         continue
-                        
-                    # Ensure frame dimensions match writer
-                    if frame.shape[:2] != (height, width):
-                        frame = cv2.resize(frame, (width, height))
-                    
-                    # Ensure frame is BGR uint8
+
+                    # Convert frame to BGR uint8 if needed
                     if frame.dtype != np.uint8:
                         frame = frame.astype(np.uint8)
                     if len(frame.shape) == 2:
                         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
                     elif frame.shape[2] == 4:
                         frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
-                    
-                    # Write frame
-                    success = writer.write(frame)
-                    if not success:
-                        logger.error(f"Failed to write frame {frame_count}")
+
+                    # Resize frame if dimensions don't match
+                    if frame.shape[:2] != (height, width):
+                        frame = cv2.resize(frame, (width, height))
+
+                    # Verify frame is valid for writing
+                    if not (frame.shape[2] == 3 and frame.dtype == np.uint8):
+                        logger.error(f"Invalid frame format at position {frame_count}")
                         continue
-                    
-                    frame_count += 1
+
+                    # Write frame with error checking
+                    try:
+                        writer.write(frame)
+                        frame_count += 1
+                    except Exception as write_error:
+                        logger.error(f"Frame write error at position {frame_count}: {write_error}")
+                        continue
                     
                 except Exception as e:
                     logger.error(f"Error writing frame {frame_count}: {e}")
