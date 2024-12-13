@@ -118,7 +118,7 @@ class ObjectDetectionTool(BaseTool):
                 # Setup video writer for visualization
                 vis_path = Path("tmp_content/visualizations")
                 vis_path.mkdir(parents=True, exist_ok=True)
-                output_video = vis_path / f"{video_path.stem}_objects.mp4"
+                output_video = vis_path / f"{data.get('output_name', video_path.stem)}.mp4"
                 writer = cv2.VideoWriter(
                     str(output_video),
                     cv2.VideoWriter_fourcc(*'avc1'),
