@@ -73,15 +73,34 @@ class CVService:
             if self.object_detection_model is None:
                 try:
                     import torch
+                    import gc
+                    
+                    # Force garbage collection
+                    gc.collect()
+                    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+                    
                     # Configure PyTorch to handle segfaults more gracefully
                     torch.multiprocessing.set_start_method('spawn', force=True)
                     
-                    # Load model with error handling and device management
+                    # Set memory management options
+                    torch.backends.cudnn.benchmark = True
+                    torch.backends.cudnn.deterministic = True
+                    
+                    # Load model with reduced memory footprint
                     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                    if device == 'cuda':
+                        torch.cuda.set_per_process_memory_fraction(0.7)  # Limit GPU memory usage
+                    
+                    # Load model in eval mode directly
                     self.object_detection_model = YOLO(self.model_path)
-                    self.object_detection_model.to(device)
+                    self.object_detection_model.to(device).eval()
+                    
+                    # Clear unnecessary memory
+                    if device == 'cuda':
+                        torch.cuda.empty_cache()
+                    
                     self.is_initialized = True
-                    self.logger.info(f"Successfully loaded YOLO model on {device}")
+                    self.logger.info(f"Successfully loaded YOLO model on {device} with memory optimizations")
                 except Exception as e:
                     self.logger.error(f"Failed to load YOLO model: {e}")
                     return {'error': f"Model initialization failed: {str(e)}"}
