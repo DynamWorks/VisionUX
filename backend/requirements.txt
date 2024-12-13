@@ -17,7 +17,7 @@ ffmpeg-python==0.2.0
 langchain-experimental>=0.3.3
 
 # Machine Learning & Vision
-ultralytics==8.3.48
+ultralytics==8.0.196
 mediapipe==0.10.9
 segment-anything==1.0
 torch>=2.4
