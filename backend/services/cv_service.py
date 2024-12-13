@@ -136,7 +136,7 @@ class CVService:
                     # Create and initialize tracker
                     tracker = cv2.TrackerCSRT_create()
                     success = tracker.init(frame, (x, y, w, h))
-                    
+                    import pdb; pdb.set_trace()
                     if success:
                         return {
                             'id': obj_id,
