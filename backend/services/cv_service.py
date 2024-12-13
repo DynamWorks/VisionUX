@@ -118,53 +118,65 @@ class CVService:
                 cv2.CHAIN_APPROX_SIMPLE
             )
             
-            # Process contours and update trackers
+            # Process contours and prepare for async tracking
             tracked_objects = []
             result = frame.copy()
             
             if self.edge_detection_params['track_objects']:
-                for contour in contours:
+                import threading
+                
+                def track_object(contour, frame, obj_id):
                     area = cv2.contourArea(contour)
                     if area < self.edge_detection_params['min_object_area']:
-                        continue
+                        return None
                         
                     x, y, w, h = cv2.boundingRect(contour)
-                    object_roi = frame[y:y+h, x:x+w]
                     
-                    # Check if this object is already being tracked
-                    tracked = False
-                    for obj_id, tracker in self.trackers.items():
-                        success, bbox = tracker.update(frame)
-                        if success:
-                            tx, ty, tw, th = map(int, bbox)
-                            # Check if current contour overlaps with tracked object
-                            if (abs(tx - x) < w/2 and abs(ty - y) < h/2):
-                                tracked = True
-                                # Draw tracking box
-                                cv2.rectangle(result, (tx, ty), (tx+tw, ty+th), (0, 255, 0), 2)
-                                cv2.putText(result, f"Object {obj_id}", (tx, ty-10),
-                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                                tracked_objects.append({
-                                    'id': obj_id,
-                                    'bbox': [tx, ty, tw, th],
-                                    'center': (tx + tw//2, ty + th//2)
-                                })
-                                break
+                    # Create and initialize tracker
+                    tracker = cv2.TrackerCSRT_create()
+                    success = tracker.init(frame, (x, y, w, h))
                     
-                    # If object not tracked, create new tracker
-                    if not tracked:
-                        tracker = cv2.TrackerGOTURN_create()
-                        tracker.init(frame, (x, y, w, h))
-                        obj_id = self.next_object_id
-                        self.next_object_id += 1
-                        self.trackers[obj_id] = tracker
-                        tracked_objects.append({
+                    if success:
+                        return {
                             'id': obj_id,
+                            'tracker': tracker,
                             'bbox': [x, y, w, h],
                             'center': (x + w//2, y + h//2)
+                        }
+                    return None
+                
+                # Start tracking threads
+                tracking_threads = []
+                tracking_results = []
+                
+                for contour in contours:
+                    thread = threading.Thread(
+                        target=lambda c=contour: tracking_results.append(
+                            track_object(c, frame.copy(), self.next_object_id)
+                        )
+                    )
+                    tracking_threads.append(thread)
+                    thread.start()
+                    self.next_object_id += 1
+                
+                # Wait for all tracking threads to complete
+                for thread in tracking_threads:
+                    thread.join()
+                
+                # Process tracking results
+                for track_result in tracking_results:
+                    if track_result:
+                        self.trackers[track_result['id']] = track_result['tracker']
+                        tracked_objects.append({
+                            'id': track_result['id'],
+                            'bbox': track_result['bbox'],
+                            'center': track_result['center']
                         })
+                        
+                        # Draw tracking boxes
+                        x, y, w, h = track_result['bbox']
                         cv2.rectangle(result, (x, y), (x+w, y+h), (255, 0, 0), 2)
-                        cv2.putText(result, f"Object {obj_id}", (x, y-10),
+                        cv2.putText(result, f"Object {track_result['id']}", (x, y-10),
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
             
             # Draw edges
