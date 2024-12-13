@@ -29,6 +29,17 @@ class CVService:
         # Default to YOLOv8n model
         self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
         
+        # Edge detection parameters
+        self.edge_detection_params = {
+            'low_threshold': 100,
+            'high_threshold': 200,
+            'overlay_mode': False,
+            'blur_size': 5,
+            'blur_sigma': 0,
+            'track_objects': True,  # Enable object tracking
+            'min_object_area': 500  # Minimum contour area to track
+        }
+        
         # Initialize trackers dictionary
         self.trackers = {}
         self.tracked_objects = {}
