@@ -51,6 +51,17 @@ class CVService:
         self._load_model_thread.daemon = True
         self._load_model_thread.start()
 
+    def _load_model(self):
+        """Load YOLO model in background thread"""
+        try:
+            self.model = YOLO(self.model_path)
+            self._model_ready.set()
+            self._initialized = True
+            self.logger.info("YOLO model loaded successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to load YOLO model: {e}")
+            self._initialized = False
+            
         # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
         self.next_object_id = 0
