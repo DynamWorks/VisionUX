@@ -9,42 +9,26 @@ from pathlib import Path
 from collections import defaultdict
 from shapely.geometry import Polygon
 from shapely.geometry.point import Point
-from ultralytics import YOLO
+import mediapipe as mp
 from ..utils.video_streaming.stream_subscriber import StreamSubscriber, Frame
 
 class CVService:
     """Service for computer vision processing"""
     
-    def __init__(self, model_path: str = None):
+    def __init__(self):
         """Initialize CV service"""
         self.logger = logging.getLogger(__name__)
-        self.model = None
         self._initialized = False
         self._lock = threading.Lock()
         self._model_ready = threading.Event()
         
-        # Configure memory limits
-        import torch
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        if self.device == 'cuda':
-            # Limit CUDA memory usage
-            torch.cuda.set_per_process_memory_fraction(0.6)  # Use 60% of available GPU memory
-            torch.cuda.empty_cache()
-        else:
-            # Set CPU thread limit
-            torch.set_num_threads(4)  # Limit CPU threads
-            
-        # Use models directory from ContentManager
-        from ..content_manager import ContentManager
-        content_manager = ContentManager()
-        content_manager.models_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Default to YOLOv8n model
-        self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
-        
-        # Configure environment
-        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:1024'
-        os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+        # Initialize MediaPipe
+        self.mp_object_detection = mp.solutions.object_detection
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.detector = self.mp_object_detection.ObjectDetection(
+            min_detection_confidence=0.5,
+            model_name='default'
+        )
 
                 # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
@@ -88,14 +72,13 @@ class CVService:
         
 
     def _load_model(self):
-        """Load YOLO model in background thread"""
+        """Initialize MediaPipe detector"""
         try:
-            self.model = YOLO(self.model_path)
             self._model_ready.set()
             self._initialized = True
-            self.logger.info("YOLO model loaded successfully")
+            self.logger.info("MediaPipe detector initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to load YOLO model: {e}")
+            self.logger.error(f"Failed to initialize MediaPipe detector: {e}")
             self._initialized = False
             
 
@@ -113,8 +96,11 @@ class CVService:
                 self._load_model_thread.daemon = True
                 self._load_model_thread.start()
 
-            # Run detection with tracking
-            results = self.model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
+            # Convert BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Process frame with MediaPipe
+            results = self.detector.process(rgb_frame)
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
@@ -124,15 +110,22 @@ class CVService:
                 ])
 
             detections = []
-            if results and results[0].boxes.id is not None:
-                boxes = results[0].boxes.xyxy.cpu()
-                track_ids = results[0].boxes.id.int().cpu().tolist()
-                confidences = results[0].boxes.conf.cpu().tolist()
-                classes = results[0].boxes.cls.cpu().tolist()
-                
-                for box, track_id, conf, cls in zip(boxes, track_ids, confidences, classes):
-                    class_name = results[0].names[int(cls)]
-                    bbox = box.tolist()
+            if results.detections:
+                for i, detection in enumerate(results.detections):
+                    bbox = detection.location_data.relative_bounding_box
+                    h, w = frame.shape[:2]
+                    
+                    # Convert relative coordinates to absolute
+                    xmin = int(bbox.xmin * w)
+                    ymin = int(bbox.ymin * h)
+                    width = int(bbox.width * w)
+                    height = int(bbox.height * h)
+                    
+                    # Create detection entry
+                    bbox = [xmin, ymin, xmin + width, ymin + height]
+                    class_name = f"Object {i+1}"
+                    track_id = i + 1
+                    confidence = detection.score[0]
                     
                     # Calculate center point
                     center_x = (bbox[0] + bbox[2]) / 2
