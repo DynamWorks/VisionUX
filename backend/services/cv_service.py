@@ -173,11 +173,17 @@ class CVService:
                             'center': track_result['center']
                         })
                         
-                        # Draw tracking boxes
+                        # Draw tracking boxes with IDs
                         x, y, w, h = track_result['bbox']
-                        cv2.rectangle(result, (x, y), (x+w, y+h), (255, 0, 0), 2)
-                        cv2.putText(result, f"Object {track_result['id']}", (x, y-10),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                        cv2.rectangle(result, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                        # Draw ID text with better visibility
+                        text = f"ID: {track_result['id']}"
+                        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+                        # Draw background rectangle for text
+                        cv2.rectangle(result, (x, y-25), (x + text_size[0], y), (0, 255, 0), -1)
+                        # Draw text
+                        cv2.putText(result, text, (x, y-5),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
             
             # Draw edges
             edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
