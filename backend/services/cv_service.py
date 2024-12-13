@@ -134,6 +134,13 @@ class CVService:
                     self.logger.error(f"Failed to load YOLO model: {e}")
                     return {'error': f"Model initialization failed: {str(e)}"}
                 
+            # Initialize counting region if not set
+            if self.counting_regions[0]["polygon"] is None:
+                height, width = frame.shape[:2]
+                self.counting_regions[0]["polygon"] = Polygon([
+                    (0, 0), (width, 0), (width, height), (0, height)
+                ])
+                
             # Run detection with tracking
             results = self.object_detection_model.track(frame, persist=True, conf=confidence_threshold)
             
