@@ -134,26 +134,53 @@ class CVService:
                     self.logger.error(f"Failed to load YOLO model: {e}")
                     return {'error': f"Model initialization failed: {str(e)}"}
                 
-            results = self.object_detection_model(frame, conf=confidence_threshold)
+            # Run detection with tracking
+            results = self.object_detection_model.track(frame, persist=True, conf=confidence_threshold)
             
             detections = []
-            for r in results:
-                boxes = r.boxes
-                for box in boxes:
-                    b = box.xyxy[0].tolist()
-                    c = box.conf.item()
-                    cls = int(box.cls.item())
-                    name = r.names[cls]
+            if results[0].boxes.id is not None:
+                boxes = results[0].boxes.xyxy.cpu()
+                track_ids = results[0].boxes.id.int().cpu().tolist()
+                confidences = results[0].boxes.conf.cpu().tolist()
+                classes = results[0].boxes.cls.cpu().tolist()
+                
+                for box, track_id, conf, cls in zip(boxes, track_ids, confidences, classes):
+                    class_name = results[0].names[int(cls)]
+                    bbox = box.tolist()
                     
-                    detections.append({
-                        'bbox': b,
-                        'confidence': c,
-                        'class': name
-                    })
+                    # Calculate center point
+                    center_x = (bbox[0] + bbox[2]) / 2
+                    center_y = (bbox[1] + bbox[3]) / 2
                     
+                    # Update tracking history
+                    track = self.track_history[track_id]
+                    track.append((float(center_x), float(center_y)))
+                    if len(track) > 30:  # Keep last 30 points
+                        track.pop(0)
+                    
+                    # Check regions and update counts
+                    for region in self.counting_regions:
+                        if region["polygon"].contains(Point(center_x, center_y)):
+                            region["counts"][class_name] += 1
+                            region["total_counts"][class_name] += 1
+                    
+                    detection = {
+                        'bbox': bbox,
+                        'confidence': conf,
+                        'class': class_name,
+                        'track_id': track_id,
+                        'track_history': track.copy()
+                    }
+                    detections.append(detection)
+            
             return {
                 'detections': detections,
-                'timestamp': frame.timestamp if hasattr(frame, 'timestamp') else None
+                'timestamp': frame.timestamp if hasattr(frame, 'timestamp') else None,
+                'regions': [{
+                    'name': region['name'],
+                    'counts': dict(region['counts']),
+                    'total_counts': dict(region['total_counts'])
+                } for region in self.counting_regions]
             }
             
         except Exception as e:
