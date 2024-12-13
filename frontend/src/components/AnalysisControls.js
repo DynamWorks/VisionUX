@@ -178,7 +178,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 Object Detection
             </Button>
-            {currentVideo && showObjectVisualization && (
+            {currentVideo && (
                 <FormControlLabel
                     control={
                         <Switch
