@@ -72,8 +72,16 @@ class CVService:
                 
             if self.object_detection_model is None:
                 try:
+                    import torch
+                    # Configure PyTorch to handle segfaults more gracefully
+                    torch.multiprocessing.set_start_method('spawn', force=True)
+                    
+                    # Load model with error handling and device management
+                    device = 'cuda' if torch.cuda.is_available() else 'cpu'
                     self.object_detection_model = YOLO(self.model_path)
+                    self.object_detection_model.to(device)
                     self.is_initialized = True
+                    self.logger.info(f"Successfully loaded YOLO model on {device}")
                 except Exception as e:
                     self.logger.error(f"Failed to load YOLO model: {e}")
                     return {'error': f"Model initialization failed: {str(e)}"}
