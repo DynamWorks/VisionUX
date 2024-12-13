@@ -87,8 +87,8 @@ class CVService:
             models_dir = Path("models")
             models_dir.mkdir(exist_ok=True)
             
-            configPath = models_dir / 'config_files/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
-            weightsPath = models_dir / 'config_files/frozen_inference_graph.pb'
+            configPath = models_dir / 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
+            weightsPath = models_dir / 'frozen_inference_graph.pb'
             
             if not configPath.exists() or not weightsPath.exists():
                 self.logger.error("Model files not found in config_files directory")
