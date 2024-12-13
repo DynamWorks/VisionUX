@@ -15,12 +15,21 @@ class CVService:
         from ..content_manager import ContentManager
         content_manager = ContentManager()
         self.model_path = model_path or str(content_manager.models_dir / 'yolo11n.pt')
+        
+        # Initialize trackers dictionary
+        self.trackers = {}
+        self.tracked_objects = {}
+        self.next_object_id = 0
+        
+        # Edge detection parameters
         self.edge_detection_params = {
             'low_threshold': 100,
             'high_threshold': 200,
             'overlay_mode': False,
             'blur_size': 5,
-            'blur_sigma': 0
+            'blur_sigma': 0,
+            'track_objects': True,  # Enable object tracking
+            'min_object_area': 500  # Minimum contour area to track
         }
         self.motion_detection_params = {
             'min_area': 500,
@@ -74,7 +83,7 @@ class CVService:
             return {'error': str(e)}
 
     def detect_edges(self, frame: np.ndarray) -> Dict:
-        """Detect edges in frame"""
+        """Detect edges and track objects in frame"""
         try:
             if not isinstance(frame, np.ndarray):
                 raise ValueError("Invalid frame format")
@@ -85,9 +94,9 @@ class CVService:
             # Convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
-            # Apply Gaussian blur with configurable parameters
+            # Apply Gaussian blur
             blur_size = self.edge_detection_params['blur_size']
-            if blur_size % 2 == 0:  # Ensure odd kernel size
+            if blur_size % 2 == 0:
                 blur_size += 1
             blurred = cv2.GaussianBlur(
                 gray, 
@@ -102,21 +111,77 @@ class CVService:
                 self.edge_detection_params['high_threshold']
             )
             
-            # Convert edges to BGR and color them green
+            # Find contours for object detection
+            contours, _ = cv2.findContours(
+                edges,
+                cv2.RETR_EXTERNAL,
+                cv2.CHAIN_APPROX_SIMPLE
+            )
+            
+            # Process contours and update trackers
+            tracked_objects = []
+            result = frame.copy()
+            
+            if self.edge_detection_params['track_objects']:
+                for contour in contours:
+                    area = cv2.contourArea(contour)
+                    if area < self.edge_detection_params['min_object_area']:
+                        continue
+                        
+                    x, y, w, h = cv2.boundingRect(contour)
+                    object_roi = frame[y:y+h, x:x+w]
+                    
+                    # Check if this object is already being tracked
+                    tracked = False
+                    for obj_id, tracker in self.trackers.items():
+                        success, bbox = tracker.update(frame)
+                        if success:
+                            tx, ty, tw, th = map(int, bbox)
+                            # Check if current contour overlaps with tracked object
+                            if (abs(tx - x) < w/2 and abs(ty - y) < h/2):
+                                tracked = True
+                                # Draw tracking box
+                                cv2.rectangle(result, (tx, ty), (tx+tw, ty+th), (0, 255, 0), 2)
+                                cv2.putText(result, f"Object {obj_id}", (tx, ty-10),
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                                tracked_objects.append({
+                                    'id': obj_id,
+                                    'bbox': [tx, ty, tw, th],
+                                    'center': (tx + tw//2, ty + th//2)
+                                })
+                                break
+                    
+                    # If object not tracked, create new tracker
+                    if not tracked:
+                        tracker = cv2.TrackerGOTURN_create()
+                        tracker.init(frame, (x, y, w, h))
+                        obj_id = self.next_object_id
+                        self.next_object_id += 1
+                        self.trackers[obj_id] = tracker
+                        tracked_objects.append({
+                            'id': obj_id,
+                            'bbox': [x, y, w, h],
+                            'center': (x + w//2, y + h//2)
+                        })
+                        cv2.rectangle(result, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                        cv2.putText(result, f"Object {obj_id}", (x, y-10),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            
+            # Draw edges
             edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
             edges_colored[edges > 0] = [255, 0, 255]  # Bright magenta
             
-            # Blend with original frame if overlay mode
             if self.edge_detection_params['overlay_mode']:
-                alpha = 0.7  # Original frame weight
-                beta = 0.3   # Edge overlay weight
-                result = cv2.addWeighted(frame, alpha, edges_colored, beta, 0)
+                alpha = 0.7
+                beta = 0.3
+                result = cv2.addWeighted(result, alpha, edges_colored, beta, 0)
             else:
                 result = edges_colored
                 
             return {
                 'frame': result,
                 'edges': edges,
+                'tracked_objects': tracked_objects,
                 'params': self.edge_detection_params.copy()
             }
             
