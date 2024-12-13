@@ -63,20 +63,36 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     }
                 />
                 {currentVideo && (
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                checked={showEdgeVisualization}
-                                onChange={(e) => setShowEdgeVisualization(e.target.checked)}
-                            />
-                        }
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CompareIcon />
-                                <span>Show Edge Detection</span>
-                            </Box>
-                        }
-                    />
+                    <>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={showEdgeVisualization}
+                                    onChange={(e) => setShowEdgeVisualization(e.target.checked)}
+                                />
+                            }
+                            label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CompareIcon />
+                                    <span>Show Edge Detection</span>
+                                </Box>
+                            }
+                        />
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={showObjectVisualization}
+                                    onChange={(e) => setShowObjectVisualization(e.target.checked)}
+                                />
+                            }
+                            label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CompareIcon />
+                                    <span>Show Object Detection</span>
+                                </Box>
+                            }
+                        />
+                    </>
                 )}
             </Box>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -178,22 +194,6 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             >
                 Object Detection
             </Button>
-            {currentVideo && (
-                <FormControlLabel
-                    control={
-                        <Switch
-                            checked={showObjectVisualization}
-                            onChange={(e) => setShowObjectVisualization(e.target.checked)}
-                        />
-                    }
-                    label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CompareIcon />
-                            <span>Show Object Detection</span>
-                        </Box>
-                    }
-                />
-            )}
         </Box>
     </Box>
     );
