@@ -136,14 +136,14 @@ class CVService:
             raise
                 
             # Initialize counting region if not set
-            if self.counting_regions[0]["polygon"] is None:
-                height, width = frame.shape[:2]
+            if self.counting_regions[0]["polygon"] is None and isinstance(frame_data, np.ndarray):
+                height, width = frame_data.shape[:2]
                 self.counting_regions[0]["polygon"] = Polygon([
                     (0, 0), (width, 0), (width, height), (0, height)
                 ])
                 
             # Run detection with tracking
-            results = self.object_detection_model.track(frame, persist=True, conf=confidence_threshold)
+            results = self.object_detection_model.track(frame_data, persist=True, conf=0.25)  # Default confidence threshold
             
             detections = []
             if results[0].boxes.id is not None:
@@ -183,7 +183,7 @@ class CVService:
             
             return {
                 'detections': detections,
-                'timestamp': frame.timestamp if hasattr(frame, 'timestamp') else None,
+                'timestamp': time.time(),
                 'regions': [{
                     'name': region['name'],
                     'counts': dict(region['counts']),
