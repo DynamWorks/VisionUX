@@ -122,11 +122,8 @@ class CVService:
                 raise ValueError("Input frame must be a numpy array")
                 
             # Initialize model if needed
-            if not self.model:
-                # Start model loading in background thread
-                self._load_model_thread = threading.Thread(target=self._load_model)
-                self._load_model_thread.daemon = True
-                self._load_model_thread.start()
+            if not self._initialized:
+                self._init_model()
 
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
