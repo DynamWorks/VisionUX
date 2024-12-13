@@ -20,7 +20,19 @@ class CVService:
         self.model = None
         self._initialized = False
         self._lock = threading.Lock()
+        self._model_ready = threading.Event()
         
+        # Configure memory limits
+        import torch
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if self.device == 'cuda':
+            # Limit CUDA memory usage
+            torch.cuda.set_per_process_memory_fraction(0.6)  # Use 60% of available GPU memory
+            torch.cuda.empty_cache()
+        else:
+            # Set CPU thread limit
+            torch.set_num_threads(4)  # Limit CPU threads
+            
         # Use models directory from ContentManager
         from ..content_manager import ContentManager
         content_manager = ContentManager()
@@ -29,14 +41,14 @@ class CVService:
         # Default to YOLOv8n model
         self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
         
-        # Download model if it doesn't exist
-        if not Path(self.model_path).exists():
-            try:
-                from ultralytics import YOLO
-                YOLO('yolov8n').download()
-            except Exception as e:
-                self.logger.error(f"Failed to download YOLO model: {e}")
-                raise
+        # Configure environment
+        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
+        os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+        
+        # Start model loading in background thread
+        self._load_model_thread = threading.Thread(target=self._load_model)
+        self._load_model_thread.daemon = True
+        self._load_model_thread.start()
 
         # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
