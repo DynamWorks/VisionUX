@@ -30,98 +30,8 @@ class CVService:
         
         classFile = models_dir / 'coco.names'
         if not classFile.exists():
-            # Create coco.names if it doesn't exist
-            with open(classFile, 'w') as f:
-                f.write("""person
-bicycle
-car
-motorcycle
-airplane
-bus
-train
-truck
-boat
-traffic light
-fire hydrant
-street sign
-stop sign
-parking meter
-bench
-bird
-cat
-dog
-horse
-sheep
-cow
-elephant
-bear
-zebra
-giraffe
-hat
-backpack
-umbrella
-shoe
-eye glasses
-handbag
-tie
-suitcase
-frisbee
-skis
-snowboard
-sports ball
-kite
-baseball bat
-baseball glove
-skateboard
-surfboard
-tennis racket
-bottle
-plate
-wine glass
-cup
-fork
-knife
-spoon
-bowl
-banana
-apple
-sandwich
-orange
-broccoli
-carrot
-hot dog
-pizza
-donut
-cake
-chair
-couch
-potted plant
-bed
-mirror
-dining table
-window
-desk
-toilet
-door
-tv
-laptop
-mouse
-remote
-keyboard
-cell phone
-microwave
-oven
-toaster
-sink
-refrigerator
-blender
-book
-clock
-vase
-scissors
-teddy bear
-hair drier
-toothbrush""")
+            self.logger.error("coco.names file not found in models directory")
+            raise FileNotFoundError("Required coco.names file not found in models directory")
 
         # Load class names
         with open(classFile, 'rt') as f:
@@ -177,20 +87,12 @@ toothbrush""")
             models_dir = Path("models")
             models_dir.mkdir(exist_ok=True)
             
-            configPath = models_dir / 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
-            weightsPath = models_dir / 'frozen_inference_graph.pb'
+            configPath = models_dir / 'config_files/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
+            weightsPath = models_dir / 'config_files/frozen_inference_graph.pb'
             
-            # Download model files if they don't exist
             if not configPath.exists() or not weightsPath.exists():
-                import urllib.request
-                urllib.request.urlretrieve(
-                    "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt",
-                    str(configPath)
-                )
-                urllib.request.urlretrieve(
-                    "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/frozen_inference_graph.pb",
-                    str(weightsPath)
-                )
+                self.logger.error("Model files not found in config_files directory")
+                raise FileNotFoundError("Required model files not found in config_files directory")
             
             # Initialize DNN model
             self.net = cv2.dnn_DetectionModel(str(weightsPath), str(configPath))
