@@ -29,59 +29,6 @@ class CVService:
         # Default to YOLOv8n model
         self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
         
-        # Edge detection parameters
-        self.edge_detection_params = {
-            'low_threshold': 100,
-            'high_threshold': 200,
-            'overlay_mode': False,
-            'blur_size': 5,
-            'blur_sigma': 0,
-            'track_objects': True,  # Enable object tracking
-            'min_object_area': 500  # Minimum contour area to track
-        }
-        
-        # Initialize trackers dictionary
-        self.trackers = {}
-        self.tracked_objects = {}
-        self.next_object_id = 0
-        # Initialize multi-tracker based on OpenCV version
-        if int(cv2.__version__.split('.')[0]) >= 4:
-            self.multi_tracker = cv2.legacy.MultiTracker_create()
-        else:
-            self.multi_tracker = cv2.MultiTracker_create()
-        self.tracking_history = {}
-        
-        # Edge detection parameters
-        self.edge_detection_params = {
-            'low_threshold': 100,
-            'high_threshold': 200,
-            'overlay_mode': False,
-            'blur_size': 5,
-            'blur_sigma': 0,
-            'track_objects': True,  # Enable object tracking
-            'min_object_area': 500  # Minimum contour area to track
-        }
-        self.motion_detection_params = {
-            'min_area': 500,
-            'prev_frame': None,
-            'threshold': 25,
-            'dilate_iterations': 2
-        }
-        self.is_initialized = False
-        
-    def __init__(self, model_path: str = None):
-        self.logger = logging.getLogger(__name__)
-        self.object_detection_model = None
-        # Use models directory from ContentManager
-        from ..content_manager import ContentManager
-        content_manager = ContentManager()
-        
-        # Create models directory if it doesn't exist
-        content_manager.models_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Default to YOLOv8n model
-        self.model_path = model_path or str(content_manager.models_dir / 'yolov8n.pt')
-        
         # Download model if it doesn't exist
         if not Path(self.model_path).exists():
             try:
@@ -90,12 +37,20 @@ class CVService:
             except Exception as e:
                 self.logger.error(f"Failed to download YOLO model: {e}")
                 raise
-        
+
         # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
         self.next_object_id = 0
         self.tracked_objects = {}
         
+        # Initialize trackers
+        self.trackers = {}
+        if int(cv2.__version__.split('.')[0]) >= 4:
+            self.multi_tracker = cv2.legacy.MultiTracker_create()
+        else:
+            self.multi_tracker = cv2.MultiTracker_create()
+        self.tracking_history = {}
+
         # Initialize counting regions
         self.counting_regions = [{
             "name": "Full Frame Region",
@@ -103,6 +58,25 @@ class CVService:
             "counts": defaultdict(int),
             "total_counts": defaultdict(int)
         }]
+
+        # Edge detection parameters
+        self.edge_detection_params = {
+            'low_threshold': 100,
+            'high_threshold': 200,
+            'overlay_mode': False,
+            'blur_size': 5,
+            'blur_sigma': 0,
+            'track_objects': True,  # Enable object tracking
+            'min_object_area': 500  # Minimum contour area to track
+        }
+
+        # Motion detection parameters
+        self.motion_detection_params = {
+            'min_area': 500,
+            'prev_frame': None,
+            'threshold': 25,
+            'dilate_iterations': 2
+        }
                 
     def detect_objects(self, frame: np.ndarray) -> Dict:
         """Detect objects in frame"""
