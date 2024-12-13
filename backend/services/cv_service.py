@@ -135,11 +135,17 @@ class CVService:
             self.logger.error(f"Failed to load YOLO model: {e}")
             raise
                 
+    def detect_objects(self, frame: np.ndarray) -> Dict:
+        """Detect objects in frame"""
+        try:
+            if not isinstance(frame, np.ndarray):
+                raise ValueError("Input frame must be a numpy array")
+                
             # Run detection with tracking
             results = self.object_detection_model.track(frame, persist=True, conf=0.25)  # Default confidence threshold
             
             # Initialize counting region if needed
-            if self.counting_regions[0]["polygon"] is None and isinstance(frame, np.ndarray):
+            if self.counting_regions[0]["polygon"] is None:
                 height, width = frame.shape[:2]
                 self.counting_regions[0]["polygon"] = Polygon([
                     (0, 0), (width, 0), (width, height), (0, height)
