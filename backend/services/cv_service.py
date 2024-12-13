@@ -116,6 +116,9 @@ class CVService:
             torch.backends.cudnn.benchmark = True
             torch.backends.cudnn.deterministic = True
             
+            # Import YOLO here to avoid circular imports
+            from ultralytics import YOLO
+            
             # Load model with reduced memory footprint
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             if device == 'cuda':
