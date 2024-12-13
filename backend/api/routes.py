@@ -122,9 +122,17 @@ def detect_objects():
         if not video_file:
             return jsonify({'error': 'No video file specified'}), 400
             
-        video_path = Path("tmp_content/uploads") / video_file
+        # Ensure uploads directory exists
+        uploads_dir = Path("tmp_content/uploads")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        
+        video_path = uploads_dir / video_file
         if not video_path.exists():
-            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+            return jsonify({
+                'error': f'Video file not found: {video_file}',
+                'message': 'Please upload a video file first',
+                'upload_path': str(uploads_dir)
+            }), 404
 
         # Initialize CV service
         from backend.services import CVService
