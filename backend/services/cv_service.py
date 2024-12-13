@@ -21,6 +21,8 @@ class CVService:
         self.trackers = {}
         self.tracked_objects = {}
         self.next_object_id = 0
+        self.multi_tracker = cv2.MultiTracker_create()
+        self.tracking_history = {}
         
         # Edge detection parameters
         self.edge_detection_params = {
@@ -133,16 +135,26 @@ class CVService:
                         
                     x, y, w, h = cv2.boundingRect(contour)
                     
-                    # Create and initialize tracker
-                    tracker = cv2.TrackerCSRT_create()
+                    # Initialize tracker based on OpenCV version
+                    tracker_type = 'KCF'  # Using KCF tracker for better performance
+                    if int(cv2.__version__.split('.')[1]) < 3:
+                        tracker = cv2.Tracker_create(tracker_type)
+                    else:
+                        tracker = cv2.TrackerKCF_create()
+                    
                     success = tracker.init(frame, (x, y, w, h))
-                    import pdb; pdb.set_trace()
                     if success:
                         return {
                             'id': obj_id,
                             'tracker': tracker,
                             'bbox': [x, y, w, h],
-                            'center': (x + w//2, y + h//2)
+                            'center': (x + w//2, y + h//2),
+                            'tracking_info': {
+                                'type': tracker_type,
+                                'confidence': 1.0,
+                                'frames_tracked': 0,
+                                'last_update': time.time()
+                            }
                         }
                     return None
                 
