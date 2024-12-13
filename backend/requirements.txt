@@ -18,7 +18,7 @@ langchain-experimental>=0.3.3
 shapely>=2.0.2
 
 # Machine Learning & Vision
-mediapipe==0.10.9
+ultralytics==8.1.8
 segment-anything==1.0
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.0

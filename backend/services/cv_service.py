@@ -22,13 +22,9 @@ class CVService:
         self._lock = threading.Lock()
         self._model_ready = threading.Event()
         
-        # Initialize MediaPipe
-        self.mp_face_detection = mp.solutions.face_detection
-        self.mp_drawing = mp.solutions.drawing_utils
-        self.detector = self.mp_face_detection.FaceDetection(
-            min_detection_confidence=0.5,
-            model_selection=1  # 0 for close-range, 1 for far-range detection
-        )
+        # Initialize YOLO
+        from ultralytics import YOLO
+        self.detector = YOLO('yolov8n.pt')  # Load the YOLOv8 nano model
 
                 # Initialize tracking components with thread safety
         self.track_history = defaultdict(list)
@@ -99,8 +95,8 @@ class CVService:
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Process frame with MediaPipe Face Detection
-            results = self.detector.process(rgb_frame)
+            # Process frame with YOLO
+            results = self.detector(frame)[0]  # Get detection results
             
             # Initialize counting region if needed
             if self.counting_regions[0]["polygon"] is None:
@@ -110,22 +106,20 @@ class CVService:
                 ])
 
             detections = []
-            if results.detections:
-                for i, detection in enumerate(results.detections):
-                    bbox = detection.location_data.relative_bounding_box
-                    h, w = frame.shape[:2]
+            if len(results.boxes) > 0:
+                for i, detection in enumerate(results.boxes):
+                    box = detection.xyxy[0].cpu().numpy()  # Get box coordinates
+                    conf = float(detection.conf[0].cpu().numpy())  # Get confidence
+                    cls = int(detection.cls[0].cpu().numpy())  # Get class
+                    class_name = results.names[cls]  # Get class name
                     
-                    # Convert relative coordinates to absolute
-                    xmin = max(0, int(bbox.xmin * w))
-                    ymin = max(0, int(bbox.ymin * h))
-                    width = min(int(bbox.width * w), w - xmin)
-                    height = min(int(bbox.height * h), h - ymin)
+                    # Convert coordinates to integers
+                    xmin, ymin, xmax, ymax = map(int, box)
                     
                     # Create detection entry
-                    bbox = [xmin, ymin, xmin + width, ymin + height]
-                    class_name = f"Object {i+1}"
+                    bbox = [xmin, ymin, xmax, ymax]
                     track_id = i + 1
-                    confidence = detection.score[0]
+                    confidence = conf
                     
                     # Calculate center point
                     center_x = (bbox[0] + bbox[2]) / 2
