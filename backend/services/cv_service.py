@@ -4,6 +4,7 @@ import logging
 import time
 import threading
 import os
+import tensorflow as tf
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import defaultdict
@@ -152,7 +153,7 @@ class CVService:
                     # Create detection entry
                     bbox = [xmin, ymin, xmax, ymax]
                     track_id = i + 1
-                    confidence = conf
+                    # confidence already set above
                     
                     # Calculate center point
                     center_x = (bbox[0] + bbox[2]) / 2
