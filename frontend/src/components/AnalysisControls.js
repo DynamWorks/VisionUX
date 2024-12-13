@@ -127,7 +127,8 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         },
                         body: JSON.stringify({
                             video_file: currentVideo.name,
-                            save_analysis: false
+                            save_analysis: false,
+                            output_name: `${currentVideo.name}_edges`
                         })
                     })
                     .then(response => response.json())

@@ -275,7 +275,7 @@ def detect_objects():
         # Setup video writer for visualization
         vis_path = Path("tmp_content/visualizations")
         vis_path.mkdir(parents=True, exist_ok=True)
-        output_video = vis_path / f"{video_path.name}_objects.mp4"
+        output_video = vis_path / f"{data.get('output_name', video_path.name)}.mp4"
             
         # Get original video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
