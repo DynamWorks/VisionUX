@@ -193,7 +193,8 @@ function App() {
                                 alt="VisionUX Logo" 
                                 style={{ 
                                     height: '40px',
-                                    width: 'auto'
+                                    width: 'auto',
+                                    animation: 'spin3D 2s infinite linear'
                                 }}
                             />
                             <Typography variant="h4" component="h1" sx={{ 

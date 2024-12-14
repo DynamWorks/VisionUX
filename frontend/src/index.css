@@ -18,6 +18,15 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+@keyframes spin3D {
+    from {
+        transform: rotateY(0deg);
+    }
+    to {
+        transform: rotateY(360deg);
+    }
+}
+
 .app-container {
     display: flex;
     flex-direction: column;
