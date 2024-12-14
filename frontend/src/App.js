@@ -267,7 +267,8 @@ function App() {
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                height: '100%' // Add explicit height
                             }}
                         >
                             <Box sx={{
@@ -279,7 +280,8 @@ function App() {
                                 width: '100%',
                                 mx: 'auto',
                                 height: '100%',
-                                minHeight: 0 // Add this to allow proper flex behavior
+                                minHeight: 0,
+                                overflow: 'hidden' // Add overflow hidden
                             }}>
                                 <Box sx={{
                                     display: 'flex',
@@ -291,7 +293,8 @@ function App() {
                                         width: '100%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        mb: 2
+                                        mb: 2,
+                                        flex: 'none' // Prevent flex growth
                                     }}>
                                         <InputSelector />
                                         {isLoading ? (
