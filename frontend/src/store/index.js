@@ -114,7 +114,11 @@ const useStore = create(
     name: 'video-analytics-storage',
     partialize: (state) => ({
         currentVideo: state.currentVideo,
-        uploadedFiles: state.uploadedFiles
+        uploadedFiles: state.uploadedFiles,
+        visualizationsAvailable: state.visualizationsAvailable,
+        showEdgeVisualization: state.showEdgeVisualization,
+        showObjectVisualization: state.showObjectVisualization,
+        currentVisualization: state.currentVisualization
     })
 }));
 

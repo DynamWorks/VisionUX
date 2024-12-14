@@ -187,6 +187,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         console.log('Edge detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
+                            // Update visualizations available state
+                            const visualizationsAvailable = useStore.getState().visualizationsAvailable;
+                            useStore.getState().setVisualizationsAvailable({
+                                ...visualizationsAvailable,
+                                edge: true
+                            });
                             // Only set visualization if not already set by chat response
                             const { showEdgeVisualization } = useStore.getState();
                             if (!showEdgeVisualization) {
@@ -241,6 +247,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         console.log('Object detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
+                            // Update visualizations available state
+                            const visualizationsAvailable = useStore.getState().visualizationsAvailable;
+                            useStore.getState().setVisualizationsAvailable({
+                                ...visualizationsAvailable,
+                                object: true
+                            });
                             // Only set visualization if not already set by chat response
                             const { showObjectVisualization } = useStore.getState();
                             if (!showObjectVisualization) {
