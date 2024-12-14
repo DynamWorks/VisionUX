@@ -75,7 +75,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                             setShowObjectVisualization(false);
                                         }
                                     }}
-                                    disabled={!currentVideo}
+                                    disabled={!currentVideo || !currentVisualization?.includes('_edges')}
                                 />
                             }
                             label={
@@ -95,7 +95,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                             setShowEdgeVisualization(false);
                                         }
                                     }}
-                                    disabled={!currentVideo}
+                                    disabled={!currentVideo || !currentVisualization?.includes('_objects')}
                                 />
                             }
                             label={
