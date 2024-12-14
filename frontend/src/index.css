@@ -19,13 +19,17 @@ body {
 }
 
 @keyframes titleGlow {
-    0%, 100% {
+    from {
         filter: brightness(100%);
         transform: scale(1);
     }
     50% {
         filter: brightness(120%);
         transform: scale(1.05);
+    }
+    to {
+        filter: brightness(100%);
+        transform: scale(1);
     }
 }
 
