@@ -177,7 +177,7 @@ def detect_objects():
 
         # Call object detection tool
         from backend.core.analysis_tools import ObjectDetectionTool
-        detection_tool = ObjectDetectionTool(cv_service)
+        detection_tool = ObjectDetectionTool()
         result = detection_tool._run(video_path)
         
         if isinstance(result, dict) and 'error' in result:
@@ -209,7 +209,7 @@ def detect_edges():
             return jsonify({'error': str(e)}), 400
         # Call edge detection tool
         from backend.core.analysis_tools import EdgeDetectionTool
-        edge_tool = EdgeDetectionTool(cv_service)
+        edge_tool = EdgeDetectionTool()
         result = edge_tool._run(video_path, save_analysis=save_analysis)
         
         if isinstance(result, dict) and 'error' in result:
