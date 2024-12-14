@@ -255,15 +255,16 @@ function App() {
                             </Box>
                         </Paper>
 
-                        {/* Right Panel */}
+                        {/* Right Panel - Chat */}
                         <Paper
                             elevation={3}
                             sx={{
-                                width: { xs: '100%', lg: '300px' },
+                                width: { xs: '100%', lg: '400px' },
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                borderLeft: '1px solid rgba(255, 255, 255, 0.1)'
                             }}
                         >
                             <Box sx={{
