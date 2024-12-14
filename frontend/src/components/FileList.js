@@ -155,7 +155,7 @@ const FileList = () => {
         }}>
             {/* Upload Zone */}
             <Box sx={{ 
-                width: '50%',
+                width: '40%',
                 display: 'flex',
                 flexDirection: 'column'
             }}>
@@ -219,7 +219,7 @@ const FileList = () => {
 
             {/* File List Section */}
             <Box sx={{ 
-                width: '50%', 
+                width: '60%', 
                 display: 'flex', 
                 flexDirection: 'column',
                 height: '100%',
@@ -241,12 +241,13 @@ const FileList = () => {
                                 <ListItem
                                     key={index}
                                     sx={{
-                                        mb: 1,
+                                        mb: 0.5,
                                         borderRadius: 1,
                                         flexDirection: 'column',
                                         alignItems: 'stretch',
                                         bgcolor: currentVideo?.name === file.name ? '#2a2a2a' : '#1a1a1a',
-                                        transition: 'background-color 0.2s ease'
+                                        transition: 'background-color 0.2s ease',
+                                        py: 1
                                     }}
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
