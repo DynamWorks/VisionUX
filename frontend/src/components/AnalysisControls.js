@@ -110,7 +110,6 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                         if (e.target.checked) {
                                             setShowObjectVisualization(true);
                                             setShowEdgeVisualization(false);
-                                            }
                                         } else {
                                             setShowObjectVisualization(false);
                                             setCurrentVisualization(null);
