@@ -190,8 +190,7 @@ function App() {
                         <Box sx={{ 
                             display: 'flex', 
                             alignItems: 'center', 
-                            gap: 2,
-                            margin: '0 auto'
+                            gap: 2
                         }}>
                             <img 
                                 src={logo} 
