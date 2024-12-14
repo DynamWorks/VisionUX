@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import logo from './assets/logo.png';
 import { Container, Box, Paper, Typography, useTheme } from '@mui/material';
 import AnalysisControls from './components/AnalysisControls';
 import { ThemeProvider } from '@mui/material/styles';
@@ -174,21 +175,40 @@ function App() {
                     }}
                 >
                     {/* Header */}
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h1" component="h1" gutterBottom sx={{ 
-                            color: 'primary.main',
-                            fontWeight: 500,
-                            textAlign: 'center',
-                            mb: 3
-                        }}>
-                            Camera Playground
-                        </Typography>
+                    <Paper 
+                        elevation={3}
+                        sx={{
+                            mb: 4,
+                            p: 2,
+                            bgcolor: 'background.paper',
+                            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <img 
+                                src={logo} 
+                                alt="VisionUX Logo" 
+                                style={{ 
+                                    height: '40px',
+                                    width: 'auto'
+                                }}
+                            />
+                            <Typography variant="h4" component="h1" sx={{ 
+                                color: 'text.primary',
+                                fontWeight: 500,
+                            }}>
+                                VisionUX
+                            </Typography>
+                        </Box>
                         {error && (
-                            <Typography color="error" sx={{ mb: 2, textAlign: 'center' }}>
+                            <Typography color="error">
                                 Error: {error}
                             </Typography>
                         )}
-                    </Box>
+                    </Paper>
 
                     {/* Main Content */}
                     <Box
