@@ -147,9 +147,18 @@ const FileList = () => {
     };
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'row',
+            gap: 2
+        }}>
             {/* Upload Zone */}
-            <Box sx={{ width: '100%', mb: 2 }}>
+            <Box sx={{ 
+                width: '50%',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
                 <Box
                     {...getRootProps()}
                     sx={{
@@ -206,9 +215,12 @@ const FileList = () => {
                 )}
             </Box>
 
+            </Box>
+
             {/* File List */}
+            <Box sx={{ width: '50%' }}>
             {(!uploadedFiles || uploadedFiles.length === 0) ? (
-                <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
                         No files uploaded yet
                     </Typography>
