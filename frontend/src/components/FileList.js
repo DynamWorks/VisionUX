@@ -217,7 +217,7 @@ const FileList = () => {
 
             </Box>
 
-            {/* File List Section */}
+            {/* File List */}
             <Box sx={{ 
                 width: '50%', 
                 display: 'flex', 
@@ -287,7 +287,7 @@ const FileList = () => {
                     </Box>
                 )}
             </Box>
-        </Box>
+        </Box> {/* End of outer Box */}
     );
 };
 
