@@ -219,7 +219,7 @@ const FileList = () => {
 
             {/* File List */}
             <Box sx={{ width: '50%' }}>
-            {(!uploadedFiles || uploadedFiles.length === 0) ? (
+                {(!uploadedFiles || uploadedFiles.length === 0) ? (
                 <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
                         No files uploaded yet
@@ -280,8 +280,8 @@ const FileList = () => {
                         ))}
                     </List>
                 </Box>
-            )}
-        </Box>
+                )}
+            </Box>
     );
 };
 
