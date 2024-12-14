@@ -220,14 +220,15 @@ function App() {
                             }}>
                                 <Box sx={{
                                     display: 'flex',
-                                    flexDirection: { xs: 'column', md: 'row' },
+                                    flexDirection: 'column',
                                     gap: 2,
                                     height: '100%'
                                 }}>
                                     <Box sx={{ 
-                                        width: { xs: '100%', md: '300px' },
+                                        width: '100%',
                                         display: 'flex',
-                                        flexDirection: 'column'
+                                        flexDirection: 'column',
+                                        mb: 2
                                     }}>
                                         <InputSelector />
                                         {isLoading ? (
