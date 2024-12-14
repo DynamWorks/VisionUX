@@ -216,15 +216,12 @@ function App() {
                                 }}
                             />
                             <Typography variant="h4" component="h1" sx={{ 
-                                background: 'linear-gradient(45deg, #D4AF37 30%, #FFD700 90%)',
-                                backgroundClip: 'text',
-                                WebkitBackgroundClip: 'text',
-                                color: 'transparent',
+                                color: '#ffffff',
                                 fontWeight: 700,
                                 textAlign: 'center',
                                 flex: 1,
                                 animation: 'titleGlow 2s ease-in-out infinite',
-                                textShadow: '0 0 10px rgba(212, 175, 55, 0.3)',
+                                textShadow: '0 0 15px rgba(255, 255, 255, 0.5)',
                                 letterSpacing: '2px'
                             }}>
                                 VisionUX
