@@ -119,7 +119,7 @@ class ChatService:
                 "chat_messages": result.get('messages', []),
                 "suggested_tool":result.get('suggested_tool', ''),
                 "confirmed": result.get('confirmed', False),
-                "visualization": f"{vis_path / result.get('video_path').stem}_edges.mp4" if result.get('suggested_tool') == 'edge_detection' else f"{vis_path / result.get('video_path').stem}_objects.mp4" if result.get('suggested_tool') == 'object_detection' else None
+                "visualization": str(vis_path / f"{result.get('video_path').stem}_edges.mp4") if result.get('suggested_tool') == 'edge_detection' else str(vis_path / f"{result.get('video_path').stem}_objects.mp4") if result.get('suggested_tool') == 'object_detection' else None
             }
 
             return response
