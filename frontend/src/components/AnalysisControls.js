@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button, ToggleButton, Switch, FormControlLabel, ButtonGroup } from '@mui/material';
+import useChat from '../hooks/useChat';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
@@ -25,9 +26,10 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
         showObjectVisualization,
         setShowObjectVisualization,
         currentVisualization,
-        setCurrentVisualization,
-        addMessage
+        setCurrentVisualization
     } = useStore();
+    
+    const { addMessage } = useChat();
 
     const handleSceneAnalysis = async () => {
         try {
