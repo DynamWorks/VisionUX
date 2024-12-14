@@ -68,7 +68,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                             control={
                                 <Switch
                                     checked={showEdgeVisualization}
-                                    onChange={(e) => setShowEdgeVisualization(e.target.checked)}
+                                    onChange={(e) => {
+                                        setShowEdgeVisualization(e.target.checked);
+                                        if (e.target.checked) {
+                                            setShowObjectVisualization(false);
+                                        }
+                                    }}
                                 />
                             }
                             label={
@@ -82,7 +87,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                             control={
                                 <Switch
                                     checked={showObjectVisualization}
-                                    onChange={(e) => setShowObjectVisualization(e.target.checked)}
+                                    onChange={(e) => {
+                                        setShowObjectVisualization(e.target.checked);
+                                        if (e.target.checked) {
+                                            setShowEdgeVisualization(false);
+                                        }
+                                    }}
                                 />
                             }
                             label={
@@ -138,7 +148,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         }
                         console.log('Edge detection complete:', data);
                         if (data.visualization) {
-                            setCurrentVisualization(data.visualization);
+                            setCurrentVisualization(`tmp_content/visualizations/${data.visualization}`);
                             setShowEdgeVisualization(true);
                             // Force video reload to trigger auto-play
                             const videoElement = document.querySelector('video');
@@ -182,7 +192,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         // Handle successful object detection
                         console.log('Object detection complete:', data);
                         if (data.visualization) {
-                            setCurrentVisualization(data.visualization);
+                            setCurrentVisualization(`tmp_content/visualizations/${data.visualization}`);
                             setShowObjectVisualization(true);
                         }
                     })
