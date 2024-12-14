@@ -215,6 +215,16 @@ const FileList = () => {
                 )}
             </Box>
 
+                {uploadError && (
+                    <Typography
+                        color="error"
+                        variant="body2"
+                        align="center"
+                        sx={{ mt: 1 }}
+                    >
+                        {uploadError}
+                    </Typography>
+                )}
             </Box>
 
             {/* File List Section */}
@@ -287,7 +297,7 @@ const FileList = () => {
                     </Box>
                 )}
             </Box>
-        </Box>
+        </Box> {/* End of FileList component */}
     );
 };
 
