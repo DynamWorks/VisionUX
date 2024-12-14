@@ -120,6 +120,11 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                             }
                                         } else {
                                             setShowObjectVisualization(false);
+                                            // Force video reload to show original
+                                            const videoElement = document.querySelector('video');
+                                            if (videoElement) {
+                                                videoElement.load();
+                                            }
                                         }
                                     }}
                                     disabled={!currentVideo || !currentVisualization?.includes('_objects')}
