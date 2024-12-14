@@ -158,8 +158,8 @@ function App() {
             <Box
                 sx={{
                     minHeight: '100vh',
-                    background: theme => `${theme.palette.background.gradient}, ${theme.palette.background.pattern}`,
-                    backgroundSize: '100% 100%, 20px 20px',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    backgroundSize: 'cover',
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'background 0.3s ease-in-out'
