@@ -139,9 +139,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            video_file: currentVideo.name,
-                            save_analysis: false,
-                            output_name: `${currentVideo.name}_edges`
+                            video_file: currentVideo.name
                         })
                     })
                     .then(response => response.json())
@@ -151,7 +149,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         }
                         console.log('Edge detection complete:', data);
                         if (data.visualization) {
-                            setCurrentVisualization(`tmp_content/visualizations/${data.visualization}`);
+                            setCurrentVisualization(data.visualization);
                             setShowEdgeVisualization(true);
                             setShowObjectVisualization(false);
                             // Force video reload to trigger auto-play
@@ -196,7 +194,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         // Handle successful object detection
                         console.log('Object detection complete:', data);
                         if (data.visualization) {
-                            setCurrentVisualization(`tmp_content/visualizations/${data.visualization}`);
+                            setCurrentVisualization(data.visualization);
                             setShowObjectVisualization(true);
                             setShowEdgeVisualization(false);
                         }
