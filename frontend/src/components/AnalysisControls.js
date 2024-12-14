@@ -14,6 +14,8 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
         currentVideo, 
         isEdgeDetectionEnabled, 
         setEdgeDetectionEnabled,
+        isObjectDetectionEnabled, 
+        setObjectDetectionEnabled,
         autoAnalysisEnabled,
         setAutoAnalysisEnabled,
         isRagEnabled,
@@ -23,7 +25,8 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
         showObjectVisualization,
         setShowObjectVisualization,
         currentVisualization,
-        setCurrentVisualization
+        setCurrentVisualization,
+        addMessage
     } = useStore();
 
     const handleSceneAnalysis = async () => {
@@ -147,6 +150,10 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         if (data.error) {
                             throw new Error(data.error);
                         }
+                        // Add RAG response and handle tool execution
+                        if (data.rag_response) {
+                            addMessage('System', data.rag_response);
+                        }
                         console.log('Edge detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
@@ -177,10 +184,10 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
             </Button>
             <Button
                 variant="contained"
-                startIcon={<TimelineIcon />}
+                startIcon={isObjectDetectionEnabled ? <CircularProgress size={20} color="inherit" /> : <TimelineIcon />}
                 onClick={() => {
                     if (!currentVideo) return;
-                    
+                    setObjectDetectionEnabled(true);
                     fetch(`${process.env.REACT_APP_API_URL}/api/v1/detect_objects`, {
                         method: 'POST',
                         headers: {
@@ -194,6 +201,11 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     .then(data => {
                         if (data.error) {
                             throw new Error(data.error);
+                        }
+
+                        // Add RAG response and handle tool execution
+                        if (data.rag_response) {
+                            addMessage('System', data.rag_response);
                         }
                         // Handle successful object detection
                         console.log('Object detection complete:', data);
@@ -209,12 +221,15 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                     })
                     .catch(error => {
                         console.error('Object detection failed:', error);
+                    })
+                    .finally(() => {
+                        setObjectDetectionEnabled(false);
                     });
                 }}
-                disabled={!currentVideo}
+                disabled={!currentVideo || isObjectDetectionEnabled}
                 sx={{ flex: 1 }}
             >
-                Object Detection
+                {isObjectDetectionEnabled ? 'Processing...' : 'Object Detection'}
             </Button>
         </Box>
     </Box>

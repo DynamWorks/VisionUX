@@ -66,6 +66,7 @@ const useChat = () => {
             }
 
             const data = await response.json();
+            console.log('Chat response:', data);
 
             // Add user message
             addMessage('user', message);
@@ -78,49 +79,22 @@ const useChat = () => {
                 if (data.tool) {
                     const { setShowEdgeVisualization, setShowObjectVisualization, currentVideo } = useStore.getState();
                     
-                    // Call appropriate API based on tool
-                    if (data.tool === 'edge_detection' || data.tool === 'object_detection') {
-                        const endpoint = data.tool === 'edge_detection' ? 'detect_edges' : 'detect_objects';
-                        
-                        try {
-                            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/${endpoint}`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    video_file: currentVideo.name
-                                })
-                            });
+                    const { setCurrentVisualization } = useStore.getState();
+                    setCurrentVisualization(data.visualization);
+                    
+                    // Toggle appropriate visualization
+                    if (data.tool === 'edge_detection') {
+                        setShowEdgeVisualization(true);
+                        setShowObjectVisualization(false);
+                    } else {
+                        setShowObjectVisualization(true);
+                        setShowEdgeVisualization(false);
+                    }
 
-                            if (!response.ok) {
-                                throw new Error(`Failed to execute ${data.tool}`);
-                            }
-
-                            const result = await response.json();
-                            if (result.visualization) {
-                                const { setCurrentVisualization } = useStore.getState();
-                                setCurrentVisualization(result.visualization);
-                                
-                                // Toggle appropriate visualization
-                                if (data.tool === 'edge_detection') {
-                                    setShowEdgeVisualization(true);
-                                    setShowObjectVisualization(false);
-                                } else {
-                                    setShowObjectVisualization(true);
-                                    setShowEdgeVisualization(false);
-                                }
-
-                                // Force video reload
-                                const videoElement = document.querySelector('video');
-                                if (videoElement) {
-                                    videoElement.load();
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`${data.tool} error:`, error);
-                            addMessage('error', `Failed to execute ${data.tool}: ${error.message}`);
-                        }
+                    // Force video reload
+                    const videoElement = document.querySelector('video');
+                    if (videoElement) {
+                        videoElement.load();
                     }
                 }
             }
