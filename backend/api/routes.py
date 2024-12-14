@@ -314,7 +314,10 @@ def chat_analysis():
         
         rag_response = response.get("answer").content if hasattr(response.get("answer"), 'content') else str(response.get("answer"))
 
-        return jsonify({"rag_response": rag_response})
+        return jsonify({
+            "rag_response": rag_response,
+            "tool": response.get("suggested_tool") if response.get("confirmed") else None
+        })
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
