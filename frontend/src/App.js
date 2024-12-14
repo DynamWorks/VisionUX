@@ -157,9 +157,11 @@ function App() {
             <Box
                 sx={{
                     minHeight: '100vh',
-                    bgcolor: 'background.default',
+                    background: theme => `${theme.palette.background.gradient}, ${theme.palette.background.pattern}`,
+                    backgroundSize: '100% 100%, 20px 20px',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    transition: 'background 0.3s ease-in-out'
                 }}
             >
                 <Container

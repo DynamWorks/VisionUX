@@ -16,6 +16,8 @@ const theme = createTheme({
     background: {
       default: '#1A1A1A',
       paper: '#2A2A2A',
+      gradient: 'linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%)',
+      pattern: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
     },
     text: {
       primary: '#FFFFFF',
