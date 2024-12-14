@@ -137,21 +137,33 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
         const checkVisualizationAvailability = async () => {
             try {
-                // Only check if visualization toggles are active
-                const { showEdgeVisualization, showObjectVisualization } = useStore.getState();
+                const baseName = file.name.replace(/\.[^/.]+$/, '');
+                const visualizations = {
+                    edge: `visualizations/${baseName}_edges.mp4`,
+                    object: `visualizations/${baseName}_objects.mp4`
+                };
                 
-                if (showEdgeVisualization) {
-                    const edgeVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_edges.mp4`;
-                    const edgeResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${edgeVideoPath}`);
-                    if (edgeResponse.ok) {
-                        useStore.getState().setCurrentVisualization(`tmp_content/${edgeVideoPath}`);
+                // Check all visualization types regardless of toggle state
+                const results = {};
+                for (const [type, path] of Object.entries(visualizations)) {
+                    try {
+                        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${path}`);
+                        results[type] = response.ok;
+                    } catch (error) {
+                        console.error(`Error checking ${type} visualization:`, error);
+                        results[type] = false;
                     }
-                } else if (showObjectVisualization) {
-                    const objectVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_objects.mp4`;
-                    const objectResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${objectVideoPath}`);
-                    if (objectResponse.ok) {
-                        useStore.getState().setCurrentVisualization(`tmp_content/${objectVideoPath}`);
-                    }
+                }
+                
+                // Update store with availability
+                useStore.getState().setVisualizationsAvailable(results);
+                
+                // Set current visualization based on active toggle
+                const { showEdgeVisualization, showObjectVisualization } = useStore.getState();
+                if (showEdgeVisualization && results.edge) {
+                    useStore.getState().setCurrentVisualization(`tmp_content/${visualizations.edge}`);
+                } else if (showObjectVisualization && results.object) {
+                    useStore.getState().setCurrentVisualization(`tmp_content/${visualizations.object}`);
                 }
             } catch (error) {
                 console.error('Error checking visualizations:', error);
