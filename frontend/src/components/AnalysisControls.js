@@ -83,10 +83,6 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                             if (videoElement) {
                                                 videoElement.load();
                                             }
-                                            // Trigger edge detection if not already done
-                                            if (!currentVisualization?.includes('_edges')) {
-                                                setEdgeDetectionEnabled(true);
-                                            }
                                         } else {
                                             setShowEdgeVisualization(false);
                                             // Force video reload to show original
@@ -114,9 +110,6 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                         if (e.target.checked) {
                                             setShowObjectVisualization(true);
                                             setShowEdgeVisualization(false);
-                                            // Trigger object detection if not already done
-                                            if (!currentVisualization?.includes('_objects')) {
-                                                setObjectDetectionEnabled(true);
                                             }
                                         } else {
                                             setShowObjectVisualization(false);
