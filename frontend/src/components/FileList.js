@@ -223,9 +223,9 @@ const FileList = () => {
                     <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
                             No files uploaded yet
-                    </Typography>
-                </Box>
-            ) : (
+                        </Typography>
+                    </Box>
+                ) : (
 
                 <Box>
                     <Typography variant="h6" sx={{ mb: 1 }}>
