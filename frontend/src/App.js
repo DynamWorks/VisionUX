@@ -221,8 +221,21 @@ function App() {
                                 textAlign: 'center',
                                 flex: 1,
                                 animation: 'titleGlow 2s ease-in-out infinite',
-                                textShadow: '0 0 15px rgba(255, 255, 255, 0.5)',
-                                letterSpacing: '2px'
+                                textShadow: '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4), 0 0 30px rgba(255,255,255,0.2)',
+                                letterSpacing: '3px',
+                                position: 'relative',
+                                zIndex: 1,
+                                '&::after': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: '120%',
+                                    height: '120%',
+                                    background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                                    zIndex: -1
+                                }
                             }}>
                                 VisionUX
                             </Typography>
