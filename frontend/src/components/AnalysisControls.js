@@ -96,7 +96,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                             }
                                         }
                                     }}
-                                    disabled={!currentVideo || !currentVisualization?.includes('_edges')}
+                                    disabled={!currentVideo || !useStore.getState().visualizationsAvailable.edge}
                                 />
                             }
                             label={
@@ -128,7 +128,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                             videoElement.load();
                                         }
                                     }}
-                                    disabled={!currentVideo || !currentVisualization?.includes('_objects')}
+                                    disabled={!currentVideo || !useStore.getState().visualizationsAvailable.object}
                                 />
                             }
                             label={

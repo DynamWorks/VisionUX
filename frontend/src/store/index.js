@@ -35,6 +35,10 @@ const useStore = create(
     showEdgeVisualization: false,
     showObjectVisualization: false,
     currentVisualization: null,
+    visualizationsAvailable: {
+        edge: false,
+        object: false
+    },
 
     // Video actions
     setUploadedFiles: (files) => set({ uploadedFiles: Array.isArray(files) ? files : [] }),
@@ -53,6 +57,7 @@ const useStore = create(
     setShowEdgeVisualization: (show) => set({ showEdgeVisualization: show }),
     setShowObjectVisualization: (show) => set({ showObjectVisualization: show }),
     setCurrentVisualization: (path) => set({ currentVisualization: path }),
+    setVisualizationsAvailable: (available) => set({ visualizationsAvailable: available }),
 
     // Reset state
     resetVideoState: () => set({
