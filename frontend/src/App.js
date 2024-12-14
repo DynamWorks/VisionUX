@@ -276,7 +276,7 @@ function App() {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: 3,
-                                maxWidth: '1600px',
+                                width: '100%', // Change maxWidth to width
                                 mx: 'auto',
                                 height: '100%'
                             }}>
