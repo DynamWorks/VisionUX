@@ -218,7 +218,13 @@ const FileList = () => {
             </Box>
 
             {/* File List Section */}
-            <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ 
+                width: '50%', 
+                display: 'flex', 
+                flexDirection: 'column',
+                height: '100%',
+                overflow: 'auto'
+            }}>
                 {!uploadedFiles?.length ? (
                     <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
@@ -226,7 +232,7 @@ const FileList = () => {
                         </Typography>
                     </Box>
                 ) : (
-                    <Box>
+                    <Box sx={{ height: '100%', overflow: 'auto' }}>
                         <Typography variant="h6" sx={{ mb: 1 }}>
                             Uploaded Files
                         </Typography>
