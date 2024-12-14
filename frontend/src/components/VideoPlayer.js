@@ -135,8 +135,31 @@ const VideoPlayer = ({ file, visualizationPath }) => {
             return;
         }
 
+        const checkVisualizationAvailability = async () => {
+            try {
+                const edgeVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_edges.mp4`;
+                const objectVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_objects.mp4`;
+                
+                // Check edge detection video
+                const edgeResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${edgeVideoPath}`);
+                if (edgeResponse.ok) {
+                    useStore.getState().setCurrentVisualization(`tmp_content/${edgeVideoPath}`);
+                }
+                
+                // Check object detection video
+                const objectResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${objectVideoPath}`);
+                if (objectResponse.ok) {
+                    useStore.getState().setCurrentVisualization(`tmp_content/${objectVideoPath}`);
+                }
+            } catch (error) {
+                console.error('Error checking visualizations:', error);
+            }
+        };
+
         const loadVideo = async () => {
             try {
+                await checkVisualizationAvailability();
+                
                 // Determine which video to load based on visualization toggles
                 let videoPath;
                 if ((showEdgeVisualization || showObjectVisualization) && currentVisualization) {
