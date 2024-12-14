@@ -276,9 +276,10 @@ function App() {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: 3,
-                                width: '100%', // Change maxWidth to width
+                                width: '100%',
                                 mx: 'auto',
-                                height: '100%'
+                                height: '100%',
+                                minHeight: 0 // Add this to allow proper flex behavior
                             }}>
                                 <Box sx={{
                                     display: 'flex',
@@ -330,7 +331,8 @@ function App() {
                                 flexDirection: 'column',
                                 borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
                                 boxShadow: '0px 0px 15px rgba(0,0,0,0.2)',
-                                height: '100%'
+                                height: '100%',
+                                minHeight: 0 // Add this to allow proper flex behavior
                             }}
                         >
                             <Box sx={{
