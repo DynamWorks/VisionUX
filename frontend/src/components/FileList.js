@@ -235,17 +235,6 @@ const FileList = () => {
                 height: '100%',
                 overflow: 'auto'
             }}>
-                {uploadError && (
-                    <Typography
-                        color="error"
-                        variant="body2"
-                        align="center"
-                        sx={{ mt: 1 }}
-                    >
-                        {uploadError}
-                    </Typography>
-                )}
-
                 {!uploadedFiles?.length ? (
                     <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
@@ -308,7 +297,7 @@ const FileList = () => {
                     </Box>
                 )}
             </Box>
-        </Box>
+        </Box> {/* End of FileList */}
     );
 };
 
