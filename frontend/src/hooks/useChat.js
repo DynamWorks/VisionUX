@@ -75,14 +75,14 @@ const useChat = () => {
                 addMessage('assistant', data.rag_response);
                 
                 // Check for tool execution
-                if (typeof data.rag_response === 'object' && data.rag_response.tool) {
+                if (typeof data.rag_response === 'object' && data.tool) {
                     const { setShowEdgeVisualization, setShowObjectVisualization } = useStore.getState();
                     
                     // Toggle appropriate visualization based on tool
-                    if (data.rag_response.tool === 'edge_detection') {
+                    if (data.tool === 'edge_detection') {
                         setShowEdgeVisualization(true);
                         setShowObjectVisualization(false);
-                    } else if (data.rag_response.tool === 'object_detection') {
+                    } else if (data.tool === 'object_detection') {
                         setShowObjectVisualization(true);
                         setShowEdgeVisualization(false);
                     }
