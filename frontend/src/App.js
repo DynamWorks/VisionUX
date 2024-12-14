@@ -157,7 +157,7 @@ function App() {
             <Box
                 sx={{
                     minHeight: '100vh',
-                    bgcolor: '#0a0a0a',
+                    bgcolor: 'background.default',
                     display: 'flex',
                     flexDirection: 'column'
                 }}
@@ -173,11 +173,16 @@ function App() {
                 >
                     {/* Header */}
                     <Box sx={{ mb: 4 }}>
-                        <Typography variant="h4" component="h1" gutterBottom sx={{ color: 'white' }}>
-                            Vision LLM
+                        <Typography variant="h1" component="h1" gutterBottom sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 500,
+                            textAlign: 'center',
+                            mb: 3
+                        }}>
+                            Camera Playground
                         </Typography>
                         {error && (
-                            <Typography color="error" sx={{ mb: 2 }}>
+                            <Typography color="error" sx={{ mb: 2, textAlign: 'center' }}>
                                 Error: {error}
                             </Typography>
                         )}
