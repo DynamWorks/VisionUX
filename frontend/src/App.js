@@ -179,12 +179,14 @@ function App() {
                         elevation={3}
                         sx={{
                             mb: 4,
-                            p: 2,
-                            bgcolor: 'background.paper',
-                            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                            p: 3,
+                            minHeight: '80px',
+                            background: 'linear-gradient(135deg, #2A2A2A 0%, #1A1A1A 100%)',
+                            borderBottom: '2px solid #D4AF37',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between'
+                            justifyContent: 'space-between',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
                         }}
                     >
                         <Box sx={{ 
