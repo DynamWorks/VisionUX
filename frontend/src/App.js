@@ -180,7 +180,7 @@ function App() {
                         sx={{
                             mb: 4,
                             p: 3,
-                            minHeight: '100px',
+                            minHeight: '150px',
                             background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
                             borderBottom: '2px solid rgba(255,255,255,0.2)',
                             display: 'flex',
