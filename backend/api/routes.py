@@ -179,11 +179,17 @@ def detect_objects():
         from backend.core.analysis_tools import ObjectDetectionTool
         detection_tool = ObjectDetectionTool()
         result = detection_tool._run(video_path)
+        vis_path = Path("tmp_content/visualizations")
+        response = {
+            "rag_response": result,
+            "tool": "object_detection",
+            "visualization": str( vis_path / f'{video_path.stem}'+'_objects.mp4' )
+        }
         
-        if isinstance(result, dict) and 'error' in result:
-            return jsonify(result), 404
+        if isinstance(response, dict) and 'error' in result:
+            return jsonify(response), 404
             
-        return jsonify(result)
+        return jsonify(response)
 
     except Exception as e:
         logger.error("Object detection failed", exc_info=True)
@@ -211,11 +217,17 @@ def detect_edges():
         from backend.core.analysis_tools import EdgeDetectionTool
         edge_tool = EdgeDetectionTool()
         result = edge_tool._run(video_path, save_analysis=save_analysis)
+        vis_path = Path("tmp_content/visualizations")
+        response = {
+            "rag_response": result,
+            "tool": "edge_detection",
+            "visualization":str( vis_path / f'{video_path.stem}'+'_edges.mp4' )
+        }
         
-        if isinstance(result, dict) and 'error' in result:
-            return jsonify(result), 404
+        if isinstance(response, dict) and 'error' in result:
+            return jsonify(response), 404
             
-        return jsonify(result)
+        return jsonify(response)
 
     except Exception as e:
         logger.error("Edge detection failed", exc_info=True)
@@ -313,10 +325,12 @@ def chat_analysis():
             )
         
         rag_response = response.get("answer").content if hasattr(response.get("answer"), 'content') else str(response.get("answer"))
-
+        #import pdb; pdb.set_trace()
+        vis_path = Path("tmp_content/visualizations")
         return jsonify({
             "rag_response": rag_response,
-            "tool": response.get("suggested_tool") if response.get("confirmed") else None
+            "tool": response.get("suggested_tool") if response.get("confirmed") else None,
+            "visualization": response.get("visualization")
         })
 
     except Exception as e:

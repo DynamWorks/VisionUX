@@ -91,20 +91,22 @@ class SceneAnalysisTool(BaseTool):
 class ObjectDetectionTool(BaseTool):
     name: str = "object_detection" 
     description: str = "Detect objects in the current video"
-    detection_service: Any = None
+    cv_service: Any = None
     
-    def __init__(self, detection_service):
+    def __init__(self, chat_service=None):
         super().__init__()
-        self.detection_service = detection_service
+        from backend.services import CVService
+        self.cv_service = CVService()
         
     def _run(self, video_path: Path = None, **kwargs) -> Dict:
         """Run object detection on video file or frames"""
         try:
-            if not video_path or not video_path.exists():
-                return {'error': f"Video file not found: {video_path}"}
+            video_file = Path("tmp_content/uploads") / video_path.name
+            if not video_file.exists():
+                return {'error': f"Video file not found: {video_path.name}"}
 
             # Create video capture
-            cap = cv2.VideoCapture(str(video_path))
+            cap = cv2.VideoCapture(str(video_file))
             if not cap.isOpened():
                 return {'error': 'Failed to open video file'}
 
@@ -135,7 +137,7 @@ class ObjectDetectionTool(BaseTool):
                         break
 
                     # Run detection on frame
-                    result = self.detection_service.detect_objects(frame)
+                    result = self.cv_service.detect_objects(frame)
                     if 'error' in result:
                         continue
 
@@ -181,13 +183,14 @@ class ObjectDetectionTool(BaseTool):
             content_manager = ContentManager()
             saved_path = content_manager.save_analysis(results, analysis_id)
 
-            return {
-                'analysis_id': analysis_id,
-                'detections': detections,
-                'frame_count': frame_count,
-                'storage_path': str(saved_path),
-                'visualization': str(output_video)
-            }
+            # return {
+            #     'analysis_id': analysis_id,
+            #     'detections': detections,
+            #     'frame_count': frame_count,
+            #     'storage_path': str(saved_path),
+            #     'visualization': str(output_video)
+            # }
+            return f"Object detection completed. If the request was for the whole video please toggle the Show-Object-Detection button and play he video!"
 
         except Exception as e:
             logger.error(f"Object detection error: {e}")
@@ -196,20 +199,22 @@ class ObjectDetectionTool(BaseTool):
 class EdgeDetectionTool(BaseTool):
     name: str = "edge_detection"
     description: str = "Detect edges in the current video"
-    edge_service: Any = None
+    cv_service: Any = None
     
-    def __init__(self, edge_service):
+    def __init__(self, chat_service=None):
         super().__init__()
-        self.edge_service = edge_service
+        from backend.services import CVService
+        self.cv_service = CVService()
         
-    def _run(self, video_path: Path = None, save_analysis: bool = True, **kwargs) -> Dict:
+    def _run(self, video_path: Path = None, save_analysis: bool = False, **kwargs) -> Dict:
         """Run edge detection on video file or frames"""
         try:
-            if not video_path or not video_path.exists():
-                return {'error': f"Video file not found: {video_path}"}
+            video_file = Path("tmp_content/uploads") / video_path.name
+            if not video_file.exists():
+                return {'error': f"Video file not found: {video_path.name}"}
 
             # Create video capture
-            cap = cv2.VideoCapture(str(video_path))
+            cap = cv2.VideoCapture(str(video_file))
             if not cap.isOpened():
                 return {'error': 'Failed to open video file'}
 
@@ -240,7 +245,7 @@ class EdgeDetectionTool(BaseTool):
                         break
 
                     # Run edge detection on frame
-                    result = self.edge_service.detect_edges(frame)
+                    result = self.cv_service.detect_edges(frame)
                     if 'error' in result:
                         continue
 
@@ -266,82 +271,83 @@ class EdgeDetectionTool(BaseTool):
                 'visualization': str(output_video)
             }
 
-            if save_analysis:
-                analysis_id = f"edge_detection_{int(time.time())}"
-                
-                # Convert edge_results to compressed format
-                compressed_results = []
-                for result in edge_results:
-                    if 'edges' in result:
-                        edges = np.array(result['edges'])
-                        non_zero = np.nonzero(edges)
-                        compressed_result = {
-                            'frame_number': result['frame_number'],
-                            'timestamp': result['timestamp'],
-                            'shape': edges.shape,
-                            'positions': list(zip(non_zero[0].tolist(), non_zero[1].tolist()))
-                        }
-                    else:
-                        compressed_result = {
-                            'frame_number': result['frame_number'],
-                            'timestamp': result['timestamp']
-                        }
-                    compressed_results.append(compressed_result)
+            
+            analysis_id = f"edge_detection_{int(time.time())}"
+            
+            # Convert edge_results to compressed format
+            compressed_results = []
+            for result in edge_results:
+                if 'edges' in result and save_analysis:
+                    edges = np.array(result['edges'])
+                    non_zero = np.nonzero(edges)
+                    compressed_result = {
+                        'frame_number': result['frame_number'],
+                        'timestamp': result['timestamp'],
+                        'shape': edges.shape,
+                        'positions': list(zip(non_zero[0].tolist(), non_zero[1].tolist()))
+                    }
+                else:
+                    compressed_result = {
+                        'frame_number': result['frame_number'],
+                        'timestamp': result['timestamp']
+                    }
+                compressed_results.append(compressed_result)
 
-                # Prepare results
-                results = {
-                    'video_file': video_path.name,
-                    'frame_count': frame_count,
-                    'edge_results': compressed_results,
-                    'visualization': str(output_video),
-                    'timestamp': time.time(),
-                    'format': 'sparse',
-                    'tracked_objects': []
-                }
+            # Prepare results
+            results = {
+                'video_file': video_path.name,
+                'frame_count': frame_count,
+                'edge_results': compressed_results,
+                'visualization': str(output_video),
+                'timestamp': time.time(),
+                'format': 'sparse',
+                'tracked_objects': []
+            }
 
-                # Extract tracked objects data
-                tracked_objects = {}
-                for result in edge_results:
-                    if 'tracked_objects' in result:
-                        for obj in result['tracked_objects']:
-                            obj_id = obj['id']
-                            if obj_id not in tracked_objects:
-                                tracked_objects[obj_id] = {
-                                    'id': obj_id,
-                                    'first_frame': result['frame_number'],
-                                    'last_frame': result['frame_number'],
-                                    'trajectory': [],
-                                    'bbox_history': []
-                                }
-                            tracked_obj = tracked_objects[obj_id]
-                            tracked_obj['last_frame'] = result['frame_number']
-                            if 'center' in obj:
-                                tracked_obj['trajectory'].append({
-                                    'frame': result['frame_number'],
-                                    'position': obj['center']
-                                })
-                            if 'bbox' in obj:
-                                tracked_obj['bbox_history'].append({
-                                    'frame': result['frame_number'],
-                                    'bbox': obj['bbox']
-                                })
+            # Extract tracked objects data
+            tracked_objects = {}
+            for result in edge_results:
+                if 'tracked_objects' in result:
+                    for obj in result['tracked_objects']:
+                        obj_id = obj['id']
+                        if obj_id not in tracked_objects:
+                            tracked_objects[obj_id] = {
+                                'id': obj_id,
+                                'first_frame': result['frame_number'],
+                                'last_frame': result['frame_number'],
+                                'trajectory': [],
+                                'bbox_history': []
+                            }
+                        tracked_obj = tracked_objects[obj_id]
+                        tracked_obj['last_frame'] = result['frame_number']
+                        if 'center' in obj:
+                            tracked_obj['trajectory'].append({
+                                'frame': result['frame_number'],
+                                'position': obj['center']
+                            })
+                        if 'bbox' in obj:
+                            tracked_obj['bbox_history'].append({
+                                'frame': result['frame_number'],
+                                'bbox': obj['bbox']
+                            })
 
-                # Add tracked objects to results
-                results['tracked_objects'] = list(tracked_objects.values())
+            # Add tracked objects to results
+            results['tracked_objects'] = list(tracked_objects.values())
 
-                # Save analysis results
-                from backend.content_manager import ContentManager
-                content_manager = ContentManager()
-                saved_path = content_manager.save_analysis(results, analysis_id)
-                response_data.update({
-                    'analysis_id': analysis_id,
-                    'storage_path': str(saved_path)
-                })
-            else:
-                # When save_analysis is disabled, only include tracked objects
-                response_data['tracked_objects'] = results.get('tracked_objects', [])
+            # Save analysis results
+            from backend.content_manager import ContentManager
+            content_manager = ContentManager()
+            saved_path = content_manager.save_analysis(results, analysis_id)
+            response_data.update({
+                'analysis_id': analysis_id,
+                'storage_path': str(saved_path)
+            })
+            # else:
+            #     # When save_analysis is disabled, only include tracked objects
+            #     response_data['tracked_objects'] = results.get('tracked_objects', [])
 
-            return response_data
+            # return response_data
+            return f"Edge detection completed. If the request was for the whole video please toggle the Show-Edge-Detection button and play the video!"
 
         except Exception as e:
             logger.error(f"Edge detection error: {e}")
