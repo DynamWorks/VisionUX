@@ -181,12 +181,23 @@ function App() {
                             mb: 4,
                             p: 3,
                             minHeight: '80px',
-                            background: 'linear-gradient(135deg, #2A2A2A 0%, #1A1A1A 100%)',
-                            borderBottom: '2px solid #D4AF37',
+                            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                            borderBottom: '2px solid rgba(255,255,255,0.2)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+                            boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+                            position: 'relative',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                                pointerEvents: 'none'
+                            }
                         }}
                     >
                         <Box sx={{ 
