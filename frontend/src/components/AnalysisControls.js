@@ -114,22 +114,18 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                         if (e.target.checked) {
                                             setShowObjectVisualization(true);
                                             setShowEdgeVisualization(false);
-                                            // Force video reload to show original
-                                            const videoElement = document.querySelector('video');
-                                            if (videoElement) {
-                                                videoElement.load();
-                                            }
                                             // Trigger object detection if not already done
                                             if (!currentVisualization?.includes('_objects')) {
                                                 setObjectDetectionEnabled(true);
                                             }
                                         } else {
                                             setShowObjectVisualization(false);
-                                            // Force video reload to show original
-                                            const videoElement = document.querySelector('video');
-                                            if (videoElement) {
-                                                videoElement.load();
-                                            }
+                                            setCurrentVisualization(null);
+                                        }
+                                        // Force video reload to show original
+                                        const videoElement = document.querySelector('video');
+                                        if (videoElement) {
+                                            videoElement.load();
                                         }
                                     }}
                                     disabled={!currentVideo || !currentVisualization?.includes('_objects')}
