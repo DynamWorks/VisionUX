@@ -147,7 +147,7 @@ const FileList = () => {
     };
 
     return (
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Upload Zone */}
             <Box sx={{ width: '100%', mb: 2 }}>
                 <Box

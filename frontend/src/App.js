@@ -198,11 +198,11 @@ function App() {
                             flexDirection: { xs: 'column', lg: 'row' }
                         }}
                     >
-                        {/* Left Panel */}
+                        {/* Main Panel */}
                         <Paper
                             elevation={3}
                             sx={{
-                                width: { xs: '100%', lg: '300px' },
+                                flex: 2,
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
@@ -212,46 +212,45 @@ function App() {
                             <Box sx={{
                                 p: 2,
                                 flex: 1,
-                                overflowY: 'auto',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                gap: 2
                             }}>
-                                <InputSelector />
-                                {isLoading ? (
-                                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Loading...
-                                        </Typography>
+                                <Box sx={{
+                                    display: 'flex',
+                                    flexDirection: { xs: 'column', md: 'row' },
+                                    gap: 2,
+                                    height: '100%'
+                                }}>
+                                    <Box sx={{ 
+                                        width: { xs: '100%', md: '300px' },
+                                        display: 'flex',
+                                        flexDirection: 'column'
+                                    }}>
+                                        <InputSelector />
+                                        {isLoading ? (
+                                            <Box sx={{ p: 2, textAlign: 'center' }}>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Loading...
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            inputMode === 'upload' ? <FileList /> : <CameraSelector />
+                                        )}
                                     </Box>
-                                ) : (
-                                    inputMode === 'upload' ? <FileList /> : <CameraSelector />
-                                )}
-                            </Box>
-                        </Paper>
-
-                        {/* Center Panel */}
-                        <Paper
-                            elevation={3}
-                            sx={{
-                                flex: 1,
-                                bgcolor: '#121212',
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                        >
-                            <Box sx={{
-                                p: 2,
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <CustomViewer />
-                                <AnalysisControls
-                                    onSceneAnalysis={handleSceneAnalysis}
-                                    onEdgeDetection={handleEdgeDetection}
-                                    disabled={!isStreaming}
-                                />
+                                    <Box sx={{ 
+                                        flex: 1,
+                                        display: 'flex',
+                                        flexDirection: 'column'
+                                    }}>
+                                        <CustomViewer />
+                                        <AnalysisControls
+                                            onSceneAnalysis={handleSceneAnalysis}
+                                            onEdgeDetection={handleEdgeDetection}
+                                            disabled={!isStreaming}
+                                        />
+                                    </Box>
+                                </Box>
                             </Box>
                         </Paper>
 
