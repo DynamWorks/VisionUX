@@ -137,19 +137,21 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
         const checkVisualizationAvailability = async () => {
             try {
-                const edgeVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_edges.mp4`;
-                const objectVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_objects.mp4`;
+                // Only check if visualization toggles are active
+                const { showEdgeVisualization, showObjectVisualization } = useStore.getState();
                 
-                // Check edge detection video
-                const edgeResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${edgeVideoPath}`);
-                if (edgeResponse.ok) {
-                    useStore.getState().setCurrentVisualization(`tmp_content/${edgeVideoPath}`);
-                }
-                
-                // Check object detection video
-                const objectResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${objectVideoPath}`);
-                if (objectResponse.ok) {
-                    useStore.getState().setCurrentVisualization(`tmp_content/${objectVideoPath}`);
+                if (showEdgeVisualization) {
+                    const edgeVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_edges.mp4`;
+                    const edgeResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${edgeVideoPath}`);
+                    if (edgeResponse.ok) {
+                        useStore.getState().setCurrentVisualization(`tmp_content/${edgeVideoPath}`);
+                    }
+                } else if (showObjectVisualization) {
+                    const objectVideoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_objects.mp4`;
+                    const objectResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${objectVideoPath}`);
+                    if (objectResponse.ok) {
+                        useStore.getState().setCurrentVisualization(`tmp_content/${objectVideoPath}`);
+                    }
                 }
             } catch (error) {
                 console.error('Error checking visualizations:', error);
@@ -158,7 +160,11 @@ const VideoPlayer = ({ file, visualizationPath }) => {
 
         const loadVideo = async () => {
             try {
-                await checkVisualizationAvailability();
+                // Only check visualizations if a toggle is active
+                const { showEdgeVisualization, showObjectVisualization } = useStore.getState();
+                if (showEdgeVisualization || showObjectVisualization) {
+                    await checkVisualizationAvailability();
+                }
                 
                 // Determine which video to load based on visualization toggles
                 let videoPath;
