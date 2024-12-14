@@ -139,9 +139,7 @@ const VideoPlayer = ({ file, visualizationPath }) => {
             try {
                 // Determine which video to load based on visualization toggles
                 let videoPath;
-                if (showEdgeVisualization && currentVisualization) {
-                    videoPath = currentVisualization.replace(/^tmp_content\//, '');
-                } else if (showObjectVisualization && currentVisualization) {
+                if ((showEdgeVisualization || showObjectVisualization) && currentVisualization) {
                     videoPath = currentVisualization.replace(/^tmp_content\//, '');
                 } else {
                     videoPath = `uploads/${file.name}`;

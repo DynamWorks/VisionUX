@@ -73,9 +73,15 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                 <Switch
                                     checked={showEdgeVisualization}
                                     onChange={(e) => {
-                                        setShowEdgeVisualization(e.target.checked);
                                         if (e.target.checked) {
+                                            setShowEdgeVisualization(true);
                                             setShowObjectVisualization(false);
+                                            // Trigger edge detection if not already done
+                                            if (!currentVisualization?.includes('_edges')) {
+                                                setEdgeDetectionEnabled(true);
+                                            }
+                                        } else {
+                                            setShowEdgeVisualization(false);
                                         }
                                     }}
                                     disabled={!currentVideo || !currentVisualization}
@@ -93,9 +99,15 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                 <Switch
                                     checked={showObjectVisualization}
                                     onChange={(e) => {
-                                        setShowObjectVisualization(e.target.checked);
                                         if (e.target.checked) {
+                                            setShowObjectVisualization(true);
                                             setShowEdgeVisualization(false);
+                                            // Trigger object detection if not already done
+                                            if (!currentVisualization?.includes('_objects')) {
+                                                setObjectDetectionEnabled(true);
+                                            }
+                                        } else {
+                                            setShowObjectVisualization(false);
                                         }
                                     }}
                                     disabled={!currentVideo || !currentVisualization?.includes('_objects')}

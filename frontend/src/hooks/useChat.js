@@ -82,13 +82,15 @@ const useChat = () => {
                     const { setCurrentVisualization } = useStore.getState();
                     setCurrentVisualization(data.visualization);
                     
-                    // Toggle appropriate visualization
+                    // Toggle appropriate visualization based on tool
                     if (data.tool === 'edge_detection') {
                         setShowEdgeVisualization(true);
                         setShowObjectVisualization(false);
-                    } else {
+                        setCurrentVisualization(data.visualization);
+                    } else if (data.tool === 'object_detection') {
                         setShowObjectVisualization(true);
                         setShowEdgeVisualization(false);
+                        setCurrentVisualization(data.visualization);
                     }
 
                     // Force video reload
