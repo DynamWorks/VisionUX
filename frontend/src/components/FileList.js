@@ -226,8 +226,7 @@ const FileList = () => {
                         </Typography>
                     </Box>
                 ) : (
-
-                <Box>
+                    <Box>
                     <Typography variant="h6" sx={{ mb: 1 }}>
                         Uploaded Files
                     </Typography>
