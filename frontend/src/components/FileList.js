@@ -215,17 +215,7 @@ const FileList = () => {
                 )}
             </Box>
 
-                {uploadError && (
-                    <Typography
-                        color="error"
-                        variant="body2"
-                        align="center"
-                        sx={{ mt: 1 }}
-                    >
-                        {uploadError}
-                    </Typography>
-                )}
-            </Box>
+              
 
             {/* File List Section */}
             <Box sx={{ 
@@ -244,7 +234,7 @@ const FileList = () => {
                 ) : (
                     <Box sx={{ height: '100%', overflow: 'auto' }}>
                         <Typography variant="h6" sx={{ mb: 1 }}>
-                            Uploaded Files
+                                {/*Uploaded Files*/}
                         </Typography>
                         <List>
                             {uploadedFiles.map((file, index) => (
@@ -297,7 +287,7 @@ const FileList = () => {
                     </Box>
                 )}
             </Box>
-        </Box> {/* End of FileList */}
+        </Box> 
     );
 };
 
