@@ -323,7 +323,7 @@ function App() {
                         <Paper
                             elevation={3}
                             sx={{
-                                width: { xs: '100%', lg: '400px' },
+                                width: { xs: '100%', lg: '500px' },
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
