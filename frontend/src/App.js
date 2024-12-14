@@ -189,8 +189,9 @@ function App() {
                     >
                         <Box sx={{ 
                             display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 2
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%'
                         }}>
                             <img 
                                 src={logo} 
@@ -202,11 +203,20 @@ function App() {
                                 }}
                             />
                             <Typography variant="h4" component="h1" sx={{ 
-                                color: 'text.primary',
-                                fontWeight: 500,
+                                background: 'linear-gradient(45deg, #D4AF37 30%, #FFD700 90%)',
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                color: 'transparent',
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                flex: 1,
+                                animation: 'titleGlow 2s ease-in-out infinite',
+                                textShadow: '0 0 10px rgba(212, 175, 55, 0.3)',
+                                letterSpacing: '2px'
                             }}>
                                 VisionUX
                             </Typography>
+                            <Box sx={{ width: '40px' }} /> {/* Spacer to balance logo */}
                         </Box>
                         {error && (
                             <Typography color="error">
