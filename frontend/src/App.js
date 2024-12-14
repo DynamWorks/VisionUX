@@ -187,7 +187,12 @@ function App() {
                             justifyContent: 'space-between'
                         }}
                     >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 2,
+                            margin: '0 auto'
+                        }}>
                             <img 
                                 src={logo} 
                                 alt="VisionUX Logo" 
