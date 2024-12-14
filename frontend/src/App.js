@@ -210,11 +210,13 @@ function App() {
                             }}
                         >
                             <Box sx={{
-                                p: 2,
+                                p: 3,
                                 flex: 1,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: 2
+                                gap: 3,
+                                maxWidth: '1600px',
+                                mx: 'auto'
                             }}>
                                 <Box sx={{
                                     display: 'flex',
@@ -258,12 +260,13 @@ function App() {
                         <Paper
                             elevation={3}
                             sx={{
-                                width: { xs: '100%', lg: '400px' },
+                                width: { xs: '100%', lg: '500px' },
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                borderLeft: '1px solid rgba(255, 255, 255, 0.1)'
+                                borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                                boxShadow: '0px 0px 15px rgba(0,0,0,0.2)'
                             }}
                         >
                             <Box sx={{

@@ -57,7 +57,13 @@ const Chat = () => {
     };
 
     return (
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ 
+            mt: 2, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 2.5,
+            height: '100%'
+        }}>
             <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
