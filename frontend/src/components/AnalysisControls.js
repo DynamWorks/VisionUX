@@ -22,6 +22,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
         setShowEdgeVisualization,
         showObjectVisualization,
         setShowObjectVisualization,
+        currentVisualization,
         setCurrentVisualization
     } = useStore();
 
