@@ -228,6 +228,7 @@ class EdgeDetectionTool(BaseTool):
             vis_path = Path("tmp_content/visualizations")
             vis_path.mkdir(parents=True, exist_ok=True)
             output_video = vis_path / f"{video_path.stem}_edges.mp4"
+            output_video_str = str(output_video)  # Convert to string for response
             writer = cv2.VideoWriter(
                 str(output_video),
                 cv2.VideoWriter_fourcc(*'avc1'),
