@@ -255,6 +255,7 @@ function App() {
                             gap: 3,
                             flex: 1,
                             minHeight: 0,
+                            height: 'calc(100vh - 250px)', // Account for header and padding
                             flexDirection: { xs: 'column', lg: 'row' }
                         }}
                     >
@@ -276,7 +277,8 @@ function App() {
                                 flexDirection: 'column',
                                 gap: 3,
                                 maxWidth: '1600px',
-                                mx: 'auto'
+                                mx: 'auto',
+                                height: '100%'
                             }}>
                                 <Box sx={{
                                     display: 'flex',
@@ -321,13 +323,14 @@ function App() {
                         <Paper
                             elevation={3}
                             sx={{
-                                width: { xs: '100%', lg: '500px' },
+                                width: { xs: '100%', lg: '400px' },
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
-                                boxShadow: '0px 0px 15px rgba(0,0,0,0.2)'
+                                boxShadow: '0px 0px 15px rgba(0,0,0,0.2)',
+                                height: '100%'
                             }}
                         >
                             <Box sx={{
