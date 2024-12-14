@@ -153,6 +153,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         if (data.visualization) {
                             setCurrentVisualization(`tmp_content/visualizations/${data.visualization}`);
                             setShowEdgeVisualization(true);
+                            setShowObjectVisualization(false);
                             // Force video reload to trigger auto-play
                             const videoElement = document.querySelector('video');
                             if (videoElement) {
@@ -197,6 +198,7 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         if (data.visualization) {
                             setCurrentVisualization(`tmp_content/visualizations/${data.visualization}`);
                             setShowObjectVisualization(true);
+                            setShowEdgeVisualization(false);
                         }
                     })
                     .catch(error => {
