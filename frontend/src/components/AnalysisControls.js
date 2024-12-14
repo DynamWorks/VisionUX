@@ -150,8 +150,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         console.log('Edge detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
-                            setShowEdgeVisualization(true);
-                            setShowObjectVisualization(false);
+                            // Only set visualization if not already set by chat response
+                            const { showEdgeVisualization } = useStore.getState();
+                            if (!showEdgeVisualization) {
+                                setShowEdgeVisualization(true);
+                                setShowObjectVisualization(false);
+                            }
                             // Force video reload to trigger auto-play
                             const videoElement = document.querySelector('video');
                             if (videoElement) {
@@ -195,8 +199,12 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                         console.log('Object detection complete:', data);
                         if (data.visualization) {
                             setCurrentVisualization(data.visualization);
-                            setShowObjectVisualization(true);
-                            setShowEdgeVisualization(false);
+                            // Only set visualization if not already set by chat response
+                            const { showObjectVisualization } = useStore.getState();
+                            if (!showObjectVisualization) {
+                                setShowObjectVisualization(true);
+                                setShowEdgeVisualization(false);
+                            }
                         }
                     })
                     .catch(error => {

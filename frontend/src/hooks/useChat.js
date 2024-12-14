@@ -70,9 +70,23 @@ const useChat = () => {
             // Add user message
             addMessage('user', message);
 
-            // Add RAG response if available
+            // Add RAG response and handle tool execution
             if (data.rag_response) {
                 addMessage('assistant', data.rag_response);
+                
+                // Check for tool execution
+                if (typeof data.rag_response === 'object' && data.rag_response.tool) {
+                    const { setShowEdgeVisualization, setShowObjectVisualization } = useStore.getState();
+                    
+                    // Toggle appropriate visualization based on tool
+                    if (data.rag_response.tool === 'edge_detection') {
+                        setShowEdgeVisualization(true);
+                        setShowObjectVisualization(false);
+                    } else if (data.rag_response.tool === 'object_detection') {
+                        setShowObjectVisualization(true);
+                        setShowEdgeVisualization(false);
+                    }
+                }
             }
 
             // Add analysis results if available
