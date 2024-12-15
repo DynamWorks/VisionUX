@@ -57,9 +57,25 @@ const Chat = () => {
     };
 
     return (
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Chat</Typography>
+        <Box sx={{ 
+            mt: 2, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 2.5,
+            height: '100%'
+        }}>
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                mb: 2,
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                pb: 1
+            }}>
+                <Typography variant="h6" sx={{ 
+                    color: 'primary.main',
+                    fontWeight: 500
+                }}>Chat Assistant</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
                         startIcon={<RefreshIcon />}
@@ -110,11 +126,12 @@ const Chat = () => {
                 ref={chatBoxRef}
                 sx={{
                     p: 2,
-                    height: isMobile ? '200px' : isTablet ? '300px' : 'calc(100vh - 900px)',
-                    minHeight: '200px',
+                    height: isMobile ? '300px' : isTablet ? '400px' : 'calc(100vh - 400px)',
+                    minHeight: '300px',
                     overflowY: 'auto',
                     bgcolor: '#1a1a1a',
                     color: 'white',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
                     '&::-webkit-scrollbar': {
                         width: '8px',
                     },

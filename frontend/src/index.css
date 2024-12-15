@@ -18,6 +18,30 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+@keyframes titleGlow {
+    from {
+        filter: brightness(100%);
+        transform: scale(1);
+    }
+    50% {
+        filter: brightness(120%);
+        transform: scale(1.05);
+    }
+    to {
+        filter: brightness(100%);
+        transform: scale(1);
+    }
+}
+
+@keyframes spin3D {
+    from {
+        transform: rotateY(0deg);
+    }
+    to {
+        transform: rotateY(360deg);
+    }
+}
+
 .app-container {
     display: flex;
     flex-direction: column;

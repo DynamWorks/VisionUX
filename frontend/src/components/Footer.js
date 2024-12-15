@@ -8,18 +8,21 @@ const Footer = () => {
         <Box 
             component="footer" 
             sx={{ 
-                bgcolor: '#333333',
-                color: '#bd9544',
+                bgcolor: 'background.paper',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                 py: 2,
+                mt: 'auto',
                 textAlign: 'center'
             }}
         >
-            <Typography variant="body2">
-                &copy; {currentYear} Video Analytics | All Rights Reserved |{' '}
+            <Typography variant="body2" color="text.secondary">
+                © {currentYear} DynamWorks LLC | All Rights Reserved |{' '}
                 <Link 
-                    href="/privacy"
+                    href="https://www.dynamworks.com/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     sx={{ 
-                        color: '#bd9544',
+                        color: 'primary.main',
                         textDecoration: 'none',
                         '&:hover': {
                             textDecoration: 'underline'
@@ -29,6 +32,22 @@ const Footer = () => {
                     Privacy Policy
                 </Link>
             </Typography>
+            <Box sx={{ mt: 1 }}>
+                <Link
+                    href="https://www.dynamworks.com/contact"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                        color: 'primary.main',
+                        textDecoration: 'none',
+                        '&:hover': {
+                            textDecoration: 'underline'
+                        }
+                    }}
+                >
+                    Contact Us
+                </Link>
+            </Box>
         </Box>
     );
 };

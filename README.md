@@ -5,61 +5,55 @@ A comprehensive real-time video analytics platform with AI-powered analysis capa
 ## Project Structure
 
 ```
-video-analytics/
+vision-llm/
 ├── backend/
 │   ├── api/
 │   │   ├── __init__.py
 │   │   └── routes.py              # API endpoint definitions
-│   ├── config/
-│   │   ├── __init__.py
-│   │   ├── aws.py                 # AWS configuration
-│   │   └── urls.py                # URL configuration
 │   ├── core/
 │   │   ├── __init__.py
-│   │   └── swarm_agents.py        # Multi-agent analysis system
+│   │   ├── agent_framework.py     # Agent orchestration
+│   │   └── analysis_tools.py      # Analysis tools
 │   ├── services/
+│   │   ├── __init__.py
 │   │   ├── chat_service.py        # Chat processing service
-│   │   ├── edge_detection_service.py
+│   │   ├── cv_service.py          # Computer vision service
 │   │   ├── rag_service.py         # Retrieval Augmented Generation
-│   │   ├── scene_service.py       # Scene analysis service
+│   │   └── scene_service.py       # Scene analysis service
 │   ├── utils/
 │   │   ├── handlers/
-│   │   │   ├── aws_websocket_handler.py
+│   │   │   ├── __init__.py
 │   │   │   ├── base_handler.py
 │   │   │   ├── camera_stream_handler.py
 │   │   │   ├── file_list_handler.py
 │   │   │   ├── handler_interface.py
 │   │   │   ├── message_router.py
 │   │   │   ├── progress_handler.py
-│   │   │   ├── video_upload_handler.py
+│   │   │   └── video_upload_handler.py
 │   │   ├── video_streaming/
 │   │   │   ├── __init__.py
-│   │   │   ├── cv_subscribers.py
 │   │   │   ├── stream_manager.py
 │   │   │   ├── stream_publisher.py
 │   │   │   ├── stream_subscriber.py
 │   │   │   └── websocket_publisher.py
-│   │   ├── custom_viewer.py
-│   │   ├── edge_detection_subscriber.py
-│   │   ├── frame_processor.py
-│   │   ├── memory_manager.py
-│   │   ├── rerun_manager.py
-│   │   ├── rerun_processor.py
-│   │   ├── socket_handler.py
-│   │   ├── video_stream.py
-│   │   └── viewer_factory.py
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── env_validator.py
+│   │   └── socket_handler.py
 │   ├── __init__.py
 │   ├── app.py                     # Main Flask application
 │   ├── config.yaml                # Configuration file
 │   ├── content_manager.py         # Content/file management
-│   ├── requirements.txt           # Python dependencies
 │   └── run.py                     # Application entry point
 ├── frontend/
 │   ├── public/
 │   │   ├── favicon.ico
+│   │   ├── favicon.png
 │   │   └── index.html
 │   ├── src/
 │   │   ├── assets/
+│   │   │   ├── favicon.ico
+│   │   │   ├── favicon.png
 │   │   │   └── logo.png
 │   │   ├── components/
 │   │   │   ├── AnalysisControls.js
@@ -68,15 +62,21 @@ video-analytics/
 │   │   │   ├── CustomViewer.js
 │   │   │   ├── ErrorBoundary.js
 │   │   │   ├── FileList.js
+│   │   │   ├── Footer.js
 │   │   │   ├── Header.js
-│   │   │   ├── RestartControls.js
+│   │   │   ├── InputSelector.js
+│   │   │   ├── StreamRenderer.js
+│   │   │   ├── VideoPlayer.js
 │   │   │   └── VideoUpload.js
+│   │   ├── hooks/
+│   │   │   ├── useChat.js
+│   │   │   └── useVideo.js
 │   │   ├── services/
 │   │   │   └── websocket.js       # WebSocket service
-│   │   ├── stores/
-│   │   │   ├── index.js
-│   │   │   └── videoStore.js      # Video state management
+│   │   ├── store/
+│   │   │   └── index.js           # Zustand store
 │   │   ├── App.js                 # Main React component
+│   │   ├── index.css              # Global styles
 │   │   ├── index.js               # Application entry point
 │   │   └── theme.js               # Material-UI theme
 │   └── package.json               # Node.js dependencies
@@ -130,6 +130,26 @@ npm install
 3. Configure environment:
 - Copy `backend/.env.example` to `backend/.env`
 - Update configuration in `backend/config.yaml`
+
+### Environment Variables
+
+The following environment variables need to be configured in `.env`:
+
+Required:
+- `API_HOST`: API server bind address
+- `API_PORT`: API server port
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `GEMINI_API_KEY`: Your Gemini API key
+
+Optional:
+- `API_DEBUG`: Enable API debug mode (default: false)
+- `API_CORS_ORIGINS`: CORS allowed origins (default: *)
+- `WS_HOST`: WebSocket server host (default: localhost)
+- `WS_PORT`: WebSocket server port (default: 8000)
+- `WS_DEBUG`: Enable WebSocket debug mode (default: false)
+- `OPENAI_MODEL`: OpenAI model to use (default: gpt-4o-mini)
+- `GEMINI_MODEL`: Gemini model to use (default: gemini-1.5-flash)
+- `LOG_LEVEL`: Logging level (default: INFO)
 
 4. Start backend server:
 ```bash

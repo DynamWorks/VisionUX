@@ -29,8 +29,16 @@ const useStore = create(
     isAnalyzing: false,
     analysisError: null,
     isEdgeDetectionEnabled: false,
+    isObjectDetectionEnabled: false,
     autoAnalysisEnabled: false,
     isRagEnabled: false,
+    showEdgeVisualization: false,
+    showObjectVisualization: false,
+    currentVisualization: null,
+    visualizationsAvailable: {
+        edge: false,
+        object: false
+    },
 
     // Video actions
     setUploadedFiles: (files) => set({ uploadedFiles: Array.isArray(files) ? files : [] }),
@@ -43,8 +51,13 @@ const useStore = create(
     setIsAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
     setAnalysisError: (error) => set({ analysisError: error }),
     setEdgeDetectionEnabled: (enabled) => set({ isEdgeDetectionEnabled: enabled }),
+    setObjectDetectionEnabled: (enabled) => set({ isObjectDetectionEnabled: enabled }),
     setAutoAnalysisEnabled: (enabled) => set({ autoAnalysisEnabled: enabled }),
     setRagEnabled: (enabled) => set({ isRagEnabled: enabled }),
+    setShowEdgeVisualization: (show) => set({ showEdgeVisualization: show }),
+    setShowObjectVisualization: (show) => set({ showObjectVisualization: show }),
+    setCurrentVisualization: (path) => set({ currentVisualization: path }),
+    setVisualizationsAvailable: (available) => set({ visualizationsAvailable: available }),
 
     // Reset state
     resetVideoState: () => set({
@@ -101,7 +114,11 @@ const useStore = create(
     name: 'video-analytics-storage',
     partialize: (state) => ({
         currentVideo: state.currentVideo,
-        uploadedFiles: state.uploadedFiles
+        uploadedFiles: state.uploadedFiles,
+        visualizationsAvailable: state.visualizationsAvailable,
+        showEdgeVisualization: state.showEdgeVisualization,
+        showObjectVisualization: state.showObjectVisualization,
+        currentVisualization: state.currentVisualization
     })
 }));
 

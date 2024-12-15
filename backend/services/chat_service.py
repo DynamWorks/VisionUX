@@ -111,11 +111,24 @@ class ChatService:
             # )
             
             # Process workflow result
+            vis_path = Path("tmp_content/visualizations")
+            video_path = Path(result.get('video_path', ''))
+            video_stem = video_path.stem if isinstance(video_path, Path) else Path(str(video_path)).stem
+            
+            visualization = None
+            if result.get('suggested_tool') == 'edge_detection':
+                visualization = str(vis_path / f"{video_stem}_edges.mp4")
+            elif result.get('suggested_tool') == 'object_detection':
+                visualization = str(vis_path / f"{video_stem}_objects.mp4")
+                
             response = {
                 "answer": result.get('final_response', ''),
                 "sources": result.get('retriever_result', []),
                 "timestamp": time.time(),
-                "chat_messages": result.get('messages', [])
+                "chat_messages": result.get('messages', []),
+                "suggested_tool": result.get('suggested_tool', ''),
+                "confirmed": result.get('confirmed', False),
+                "visualization": visualization
             }
 
             return response

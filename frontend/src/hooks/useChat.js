@@ -66,13 +66,39 @@ const useChat = () => {
             }
 
             const data = await response.json();
+            console.log('Chat response:', data);
 
             // Add user message
             addMessage('user', message);
 
-            // Add RAG response if available
+            // Add RAG response and handle tool execution
             if (data.rag_response) {
                 addMessage('assistant', data.rag_response);
+                
+                // Check for tool execution
+                if (data.tool) {
+                    const { setShowEdgeVisualization, setShowObjectVisualization, currentVideo } = useStore.getState();
+                    
+                    const { setCurrentVisualization } = useStore.getState();
+                    setCurrentVisualization(data.visualization);
+                    
+                    // Toggle appropriate visualization based on tool
+                    if (data.tool === 'edge_detection') {
+                        setShowEdgeVisualization(true);
+                        setShowObjectVisualization(false);
+                        setCurrentVisualization(data.visualization);
+                    } else if (data.tool === 'object_detection') {
+                        setShowObjectVisualization(true);
+                        setShowEdgeVisualization(false);
+                        setCurrentVisualization(data.visualization);
+                    }
+
+                    // Force video reload
+                    const videoElement = document.querySelector('video');
+                    if (videoElement) {
+                        videoElement.load();
+                    }
+                }
             }
 
             // Add analysis results if available

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import logo from './assets/logo.png';
 import { Container, Box, Paper, Typography, useTheme } from '@mui/material';
 import AnalysisControls from './components/AnalysisControls';
 import { ThemeProvider } from '@mui/material/styles';
@@ -157,9 +158,11 @@ function App() {
             <Box
                 sx={{
                     minHeight: '100vh',
-                    bgcolor: '#0a0a0a',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    backgroundSize: 'cover',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    transition: 'background 0.3s ease-in-out'
                 }}
             >
                 <Container
@@ -172,16 +175,78 @@ function App() {
                     }}
                 >
                     {/* Header */}
-                    <Box sx={{ mb: 4 }}>
-                        <Typography variant="h4" component="h1" gutterBottom sx={{ color: 'white' }}>
-                            Vision LLM
-                        </Typography>
+                    <Paper 
+                        elevation={3}
+                        sx={{
+                            mb: 4,
+                            p: 3,
+                            minHeight: '150px',
+                            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                            borderBottom: '2px solid rgba(255,255,255,0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+                            position: 'relative',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                                pointerEvents: 'none'
+                            }
+                        }}
+                    >
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%'
+                        }}>
+                            <img 
+                                src={logo} 
+                                alt="VisionUX Logo" 
+                                style={{ 
+                                    height: '40px',
+                                    width: 'auto',
+                                    animation: 'spin3D 2s infinite linear'
+                                }}
+                            />
+                            <Typography variant="h4" component="h1" sx={{ 
+                                color: '#ffffff',
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                flex: 1,
+                                animation: 'titleGlow 2s ease-in-out infinite',
+                                textShadow: '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4), 0 0 30px rgba(255,255,255,0.2)',
+                                letterSpacing: '3px',
+                                position: 'relative',
+                                zIndex: 1,
+                                '&::after': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: '120%',
+                                    height: '120%',
+                                    background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                                    zIndex: -1
+                                }
+                            }}>
+                                VisionUX
+                            </Typography>
+                            <Box sx={{ width: '40px' }} /> {/* Spacer to balance logo */}
+                        </Box>
                         {error && (
-                            <Typography color="error" sx={{ mb: 2 }}>
+                            <Typography color="error">
                                 Error: {error}
                             </Typography>
                         )}
-                    </Box>
+                    </Paper>
 
                     {/* Main Content */}
                     <Box
@@ -190,75 +255,87 @@ function App() {
                             gap: 3,
                             flex: 1,
                             minHeight: 0,
+                            height: 'calc(100vh - 250px)', // Account for header and padding
                             flexDirection: { xs: 'column', lg: 'row' }
                         }}
                     >
-                        {/* Left Panel */}
+                        {/* Main Panel */}
                         <Paper
                             elevation={3}
                             sx={{
-                                width: { xs: '100%', lg: '300px' },
+                                flex: 2,
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                height: '100%' // Add explicit height
                             }}
                         >
                             <Box sx={{
-                                p: 2,
+                                p: 3,
                                 flex: 1,
-                                overflowY: 'auto',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                gap: 3,
+                                width: '100%',
+                                mx: 'auto',
+                                height: '100%',
+                                minHeight: 0,
+                                overflow: 'hidden' // Add overflow hidden
                             }}>
-                                <InputSelector />
-                                {isLoading ? (
-                                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Loading...
-                                        </Typography>
+                                <Box sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 2,
+                                    height: '100%'
+                                }}>
+                                    <Box sx={{ 
+                                        width: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        mb: 2,
+                                        flex: 'none' // Prevent flex growth
+                                    }}>
+                                        <InputSelector />
+                                        {isLoading ? (
+                                            <Box sx={{ p: 2, textAlign: 'center' }}>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Loading...
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            inputMode === 'upload' ? <FileList /> : <CameraSelector />
+                                        )}
                                     </Box>
-                                ) : (
-                                    inputMode === 'upload' ? <FileList /> : <CameraSelector />
-                                )}
+                                    <Box sx={{ 
+                                        flex: 1,
+                                        display: 'flex',
+                                        flexDirection: 'column'
+                                    }}>
+                                        <CustomViewer />
+                                        <AnalysisControls
+                                            onSceneAnalysis={handleSceneAnalysis}
+                                            onEdgeDetection={handleEdgeDetection}
+                                            disabled={!isStreaming}
+                                        />
+                                    </Box>
+                                </Box>
                             </Box>
                         </Paper>
 
-                        {/* Center Panel */}
+                        {/* Right Panel - Chat */}
                         <Paper
                             elevation={3}
                             sx={{
-                                flex: 1,
+                                width: { xs: '100%', lg: '500px' },
                                 bgcolor: '#121212',
                                 overflow: 'hidden',
                                 display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                        >
-                            <Box sx={{
-                                p: 2,
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <CustomViewer />
-                                <AnalysisControls
-                                    onSceneAnalysis={handleSceneAnalysis}
-                                    onEdgeDetection={handleEdgeDetection}
-                                    disabled={!isStreaming}
-                                />
-                            </Box>
-                        </Paper>
-
-                        {/* Right Panel */}
-                        <Paper
-                            elevation={3}
-                            sx={{
-                                width: { xs: '100%', lg: '300px' },
-                                bgcolor: '#121212',
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                                boxShadow: '0px 0px 15px rgba(0,0,0,0.2)',
+                                height: '100%',
+                                minHeight: 0 // Add this to allow proper flex behavior
                             }}
                         >
                             <Box sx={{

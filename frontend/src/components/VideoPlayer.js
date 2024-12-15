@@ -7,7 +7,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import { websocketService } from '../services/websocket';
 import useStore from '../store';
 
-const VideoPlayer = ({ file }) => {
+const VideoPlayer = ({ file, visualizationPath }) => {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const animationFrameRef = useRef(null);
@@ -15,7 +15,13 @@ const VideoPlayer = ({ file }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState(null);
-    const { setIsStreaming, setStreamMetrics } = useStore();
+    const { 
+        setIsStreaming, 
+        setStreamMetrics,
+        showEdgeVisualization,
+        showObjectVisualization,
+        currentVisualization
+    } = useStore();
     const lastFrameTimeRef = useRef(Date.now());
     const frameCountRef = useRef(0);
 
@@ -129,22 +135,84 @@ const VideoPlayer = ({ file }) => {
             return;
         }
 
+        const checkVisualizationAvailability = async () => {
+            try {
+                const baseName = file.name.replace(/\.[^/.]+$/, '');
+                const visualizations = {
+                    edge: `visualizations/${baseName}_edges.mp4`,
+                    object: `visualizations/${baseName}_objects.mp4`
+                };
+                
+                // Check all visualization types regardless of toggle state
+                const results = {};
+                for (const [type, path] of Object.entries(visualizations)) {
+                    try {
+                        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${path}`);
+                        results[type] = response.ok;
+                    } catch (error) {
+                        console.error(`Error checking ${type} visualization:`, error);
+                        results[type] = false;
+                    }
+                }
+                
+                // Update store with availability
+                useStore.getState().setVisualizationsAvailable(results);
+                
+                // Set current visualization based on active toggle
+                const { showEdgeVisualization, showObjectVisualization } = useStore.getState();
+                if (showEdgeVisualization && results.edge) {
+                    useStore.getState().setCurrentVisualization(`tmp_content/${visualizations.edge}`);
+                } else if (showObjectVisualization && results.object) {
+                    useStore.getState().setCurrentVisualization(`tmp_content/${visualizations.object}`);
+                }
+            } catch (error) {
+                console.error('Error checking visualizations:', error);
+            }
+        };
+
         const loadVideo = async () => {
             try {
-                // Fetch the file from the server
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/uploads/${file.name}`);
-                if (!response.ok) throw new Error('Failed to load video file');
-
+                // Only check visualizations if a toggle is active
+                const { showEdgeVisualization, showObjectVisualization } = useStore.getState();
+                if (showEdgeVisualization || showObjectVisualization) {
+                    await checkVisualizationAvailability();
+                }
+                
+                // Determine which video to load based on visualization toggles
+                let videoPath;
+                if (showEdgeVisualization && useStore.getState().visualizationsAvailable.edge) {
+                    videoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_edges.mp4`;
+                } else if (showObjectVisualization && useStore.getState().visualizationsAvailable.object) {
+                    videoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_objects.mp4`;
+                } else {
+                    videoPath = `uploads/${file.name}`;
+                }
+                
+                console.log('Loading video from:', videoPath);
+            
+                // Add cache buster to prevent browser caching
+                const cacheBuster = `?t=${Date.now()}`;
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/tmp_content/${videoPath}${cacheBuster}`);
+            
+                if (!response.ok) throw new Error('Failed to load video');
                 const blob = await response.blob();
-                const videoUrl = URL.createObjectURL(blob);
+                const url = URL.createObjectURL(blob);
 
                 if (videoRef.current) {
-                    videoRef.current.src = videoUrl;
+                    videoRef.current.src = url;
+                    videoRef.current.load(); // Force reload of video
                     setIsLoading(true);
                     setError(null);
 
                     videoRef.current.onloadedmetadata = () => {
                         setIsLoading(false);
+                        const currentTime = videoRef.current.currentTime;
+                        
+                        // Preserve playback state when switching
+                        if (isPlaying) {
+                            videoRef.current.play();
+                            startVideoProcessing();
+                        }
                     };
 
                     videoRef.current.onerror = () => {
@@ -153,7 +221,10 @@ const VideoPlayer = ({ file }) => {
                     };
                 }
 
-                return videoUrl;
+                // Cleanup function for URL
+                return () => {
+                    URL.revokeObjectURL(url);
+                };
             } catch (err) {
                 console.error('Error loading video:', err);
                 setError(err.message);
@@ -172,7 +243,7 @@ const VideoPlayer = ({ file }) => {
                 URL.revokeObjectURL(videoUrl);
             }
         };
-    }, [file]);
+    }, [file, showEdgeVisualization, currentVisualization]);
 
     // Cleanup on unmount
     useEffect(() => {

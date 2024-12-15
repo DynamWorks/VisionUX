@@ -9,9 +9,61 @@ import json
 import shutil
 import logging
 import numpy as np
+from typing import Optional, Tuple
+
+def setup_video_writer(video_file: str, cap: cv2.VideoCapture) -> Tuple[cv2.VideoWriter, Path]:
+    """Setup video writer with common configuration"""
+    vis_path = Path("tmp_content/visualizations")
+    vis_path.mkdir(parents=True, exist_ok=True)
+    output_video = vis_path / f"{video_file}.mp4"
+    
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    
+    writer = cv2.VideoWriter(
+        str(output_video),
+        cv2.VideoWriter_fourcc(*'avc1'),
+        fps,
+        (width, height)
+    )
+    
+    return writer, output_video
+
+def validate_video_file(video_file: str) -> Path:
+    """Validate video file exists and return path"""
+    if not video_file:
+        raise ValueError('No video file specified')
+        
+    video_path = Path("tmp_content/uploads") / video_file
+    if not video_path.exists():
+        raise FileNotFoundError(f'Video file not found: {video_file}')
+        
+    return video_path
+
+def handle_frame_write(writer: cv2.VideoWriter, frame: np.ndarray, frame_count: int) -> bool:
+    """Handle frame validation and writing with error checking"""
+    try:
+        if frame is None or frame.size == 0:
+            logger.warning(f"Invalid frame at position {frame_count}")
+            return False
+
+        if frame.dtype != np.uint8:
+            frame = frame.astype(np.uint8)
+        if len(frame.shape) == 2:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        elif frame.shape[2] == 4:
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+
+        writer.write(frame)
+        return True
+        
+    except Exception as e:
+        logger.error(f"Frame write error at position {frame_count}: {e}")
+        return False
 
 from backend.utils.video_streaming.stream_manager import StreamManager
-from backend.services import SceneAnalysisService, ChatService
+from backend.services import SceneAnalysisService, ChatService, CVService
 from backend.utils.config import Config
 from backend.content_manager import ContentManager
 from pathlib import Path
@@ -45,7 +97,7 @@ def clear_files():
     except Exception as e:
         logger.error(f"Error clearing files: {e}")
         return jsonify({"error": str(e)}), 500
-from backend.services import SceneAnalysisService, ChatService
+from backend.services import SceneAnalysisService, ChatService, CVService
 from backend.utils.config import Config
 from backend.content_manager import ContentManager
 
@@ -54,6 +106,7 @@ content_manager = ContentManager()
 config = Config()
 scene_service = SceneAnalysisService()
 chat_service = ChatService()
+cv_service = CVService()
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -61,20 +114,29 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 api = Blueprint('api', __name__)
 
-@api.route('/tmp_content/uploads/<path:filename>')
-def serve_video(filename):
-    """Serve uploaded video files"""
+@api.route('/tmp_content/<path:filepath>')
+def serve_video(filepath):
+    """Serve video files from any tmp_content subdirectory"""
     try:
-        # Use absolute path resolved from project root
-        uploads_path = Path("tmp_content/uploads").resolve()
-        if not uploads_path.exists():
-            uploads_path.mkdir(parents=True, exist_ok=True)
+        # Ensure path is within tmp_content
+        base_path = Path("tmp_content").resolve()
+        file_path = (base_path / filepath).resolve()
+        
+        # Security check - ensure file is within tmp_content
+        if not str(file_path).startswith(str(base_path)):
+            return jsonify({'error': 'Invalid file path'}), 403
             
-        file_path = uploads_path / filename
         if not file_path.exists():
-            return jsonify({'error': f'File not found: {filename}'}), 404
+            logger.error(f"File not found: {file_path}")
+            return jsonify({'error': f'File not found: {filepath}'}), 404
             
-        return send_from_directory(uploads_path, filename, as_attachment=False)
+        logger.info(f"Serving file: {file_path}")
+            
+        # Get directory and filename
+        directory = file_path.parent
+        filename = file_path.name
+            
+        return send_from_directory(directory, filename, as_attachment=False)
     except Exception as e:
         logger.error(f"Error serving video file: {e}")
         return jsonify({'error': str(e)}), 500
@@ -97,6 +159,84 @@ def health_check():
         logger.error(f"Health check failed: {e}")
         return jsonify({'status': 'error', 'error': str(e)}), 500
 
+@api.route('/detect_objects', methods=['POST'])
+def detect_objects():
+    """Detect objects in video file"""
+    try:
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+            
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        try:
+            video_path = validate_video_file(data.get('video_file'))
+        except (ValueError, FileNotFoundError) as e:
+            return jsonify({'error': str(e)}), 400
+
+        # Call object detection tool
+        from backend.core.analysis_tools import ObjectDetectionTool
+        detection_tool = ObjectDetectionTool()
+        result = detection_tool._run(video_path)
+        vis_path = Path("tmp_content/visualizations")
+        output_video = vis_path / f"{video_path.stem}_objects.mp4"                     
+        output_video_str = str(output_video)  # Convert to string for response 
+        response = {                                                                 
+                 "rag_response": result,                                                  
+                 "tool": "object_detection",                                                
+                 "visualization": output_video_str                                        
+             } 
+        
+        if isinstance(response, dict) and 'error' in result:
+            return jsonify(response), 404
+            
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error("Object detection failed", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/detect_edges', methods=['POST'])
+def detect_edges():
+    """Detect edges in video file"""
+    try:
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+            
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+            
+        # Get save_analysis parameter, default to True for backward compatibility
+        save_analysis = data.get('save_analysis', True)
+        
+        try:
+            video_path = validate_video_file(data.get('video_file'))
+        except (ValueError, FileNotFoundError) as e:
+            return jsonify({'error': str(e)}), 400
+        # Call edge detection tool
+        from backend.core.analysis_tools import EdgeDetectionTool
+        edge_tool = EdgeDetectionTool()
+        result = edge_tool._run(video_path, save_analysis=save_analysis)
+        vis_path = Path("tmp_content/visualizations")
+        output_video = vis_path / f"{video_path.stem}_edges.mp4"                     
+        output_video_str = str(output_video)  # Convert to string for response 
+        response = {                                                                 
+                 "rag_response": result,                                                  
+                 "tool": "edge_detection",                                                
+                 "visualization": output_video_str                                        
+             } 
+        
+        if isinstance(response, dict) and 'error' in result:
+            return jsonify(response), 404
+            
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error("Edge detection failed", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @api.route('/analyze_scene', methods=['POST'])
 def analyze_scene():
     """Analyze scene from video file"""
@@ -107,144 +247,58 @@ def analyze_scene():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
-        
-        # Get stream type and video file information
-        stream_type = data.get('stream_type', 'video')
+
         video_file = data.get('video_file')
-        
-        # For video files, verify existence
-        if stream_type == 'video':
-            if not video_file:
-                return jsonify({'error': 'No video file specified'}), 400
-            video_path = Path("tmp_content/uploads") / video_file
-            if not video_path.exists():
-                return jsonify({'error': f'Video file not found: {video_file}'}), 404
+        if not video_file:
+            return jsonify({'error': 'No video file specified'}), 400
             
-        num_frames = int(data.get('num_frames', 8))
+        video_path = Path("tmp_content/uploads") / video_file
+        if not video_path.exists():
+            return jsonify({'error': f'Video file not found: {video_file}'}), 404
+
+        # Use SceneAnalysisTool for analysis
+        from backend.core.analysis_tools import SceneAnalysisTool
+        scene_tool = SceneAnalysisTool()
         
         try:
-            # Create a new video capture for analysis
-            cap = cv2.VideoCapture(str(video_path))
-            if not cap.isOpened():
-                return jsonify({'error': 'Failed to open video file'}), 500
-
-            try:
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                duration = total_frames / fps if fps > 0 else 0
-
-                if total_frames < num_frames:
-                    num_frames = total_frames
-
-                interval = max(1, total_frames // num_frames)
-                frame_positions = [i * interval for i in range(num_frames)]
-
-                frames = []
-                frame_numbers = []
-                timestamps = []
-
-                for pos in frame_positions:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
-                    ret, frame = cap.read()
-                    if ret:
-                        timestamp = pos / fps if fps > 0 else 0
-                        frames.append(frame.copy())  # Make a copy of the frame
-                        frame_numbers.append(int(pos))
-                        timestamps.append(timestamp)
-            finally:
-                cap.release()
-
-            if not frames:
-                return jsonify({'error': 'Failed to capture frames'}), 500
-
-            # Build context information
-            context = {
-                'video_file': video_file,
-                'source_type': stream_type,
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-                'frame_count': len(frames),
-                'total_frames': total_frames,
-                'duration': duration,
-                'fps': fps,
-                'frames_analyzed': frame_numbers
-            }
-
-            # Perform analysis
-            analysis = scene_service.analyze_scene(
-                frames,
-                context=str(context),
-                frame_numbers=frame_numbers,
-                timestamps=timestamps
-            )
-
-            if 'error' in analysis:
-                return jsonify({'error': analysis['error']}), 500
-
-            # Prepare response
-            response_data = {
-                'scene_analysis': analysis['scene_analysis'],
-                'technical_details': analysis['technical_details'],
-                'metadata': {
-                    'timestamp': time.time(),
-                    'video_file': video_file,
-                    'frame_count': len(frames),
-                    'frame_numbers': frame_numbers,
-                    'duration': duration,
-                    'fps': fps
+            result = scene_tool._run(video_path)
+            
+            if isinstance(result, str):
+                # Extract description from success message
+                description = result.replace("Scene analysis completed: ", "")
+                
+                response_data = {
+                    'scene_analysis': {
+                        'description': description
+                    },
+                    'chat_messages': [
+                        {
+                            'role': 'system',
+                            'content': 'Starting scene analysis...'
+                        },
+                        {
+                            'role': 'assistant',
+                            'content': description
+                        },
+                        {
+                            'role': 'system',
+                            'content': 'Analysis complete - results saved.'
+                        }
+                    ]
                 }
-            }
-
-            # Format scene analysis description
-            scene_description = analysis['scene_analysis']['description']
-            formatted_description = f"""Scene Analysis Results:
-
-{scene_description}
-
-Analyzed Frames: {len(frames)}
-Video Duration: {duration:.2f} seconds
-Frame Rate: {fps:.2f} FPS"""
-
-            # Add chat messages to response
-            response_data['chat_messages'] = [
-                {
-                    'role': 'system',
-                    'content': 'Starting scene analysis...'
-                },
-                {
-                    'role': 'assistant',
-                    'content': formatted_description
-                }
-            ]
-
-            # Add technical details if available
-            if response_data['technical_details']:
-                tech_details = json.dumps(response_data['technical_details'], indent=2)
-                response_data['chat_messages'].append({
-                    'role': 'system',
-                    'content': f"Technical Details:\n{tech_details}"
-                })
-
-            # Add completion message
-            response_data['chat_messages'].append({
-                'role': 'system',
-                'content': 'Analysis complete - results saved.'
-            })
-
-            # Save chat messages to history
-            from backend.content_manager import ContentManager
-            content_manager = ContentManager()
-            content_manager.save_chat_history(
-                response_data['chat_messages'],
-                video_file
-            )
-
-            return jsonify(response_data)
-
-        except ValueError as ve:
-            return jsonify({'error': str(ve)}), 400
-
+                
+                # Save chat messages to history
+                content_manager.save_chat_history(
+                    response_data['chat_messages'],
+                    video_file
+                )
+                
+                return jsonify(response_data)
+            else:
+                return jsonify({'error': 'Analysis failed'}), 500
+                
         except Exception as e:
-            logger.error(f"Frame processing error: {e}", exc_info=True)
+            logger.error(f"Scene analysis error: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
     except Exception as e:
@@ -275,8 +329,13 @@ def chat_analysis():
             )
         
         rag_response = response.get("answer").content if hasattr(response.get("answer"), 'content') else str(response.get("answer"))
-
-        return jsonify({"rag_response": rag_response})
+        #import pdb; pdb.set_trace()
+        vis_path = Path("tmp_content/visualizations")
+        return jsonify({
+            "rag_response": rag_response,
+            "tool": response.get("suggested_tool") if response.get("confirmed") else None,
+            "visualization": response.get("visualization")
+        })
 
     except Exception as e:
         logger.error("Chat analysis failed", exc_info=True)
@@ -326,6 +385,7 @@ def upload_file():
         (tmp_content / "analysis").mkdir(parents=True)
         (tmp_content / "chat_history").mkdir(parents=True)
         (tmp_content / "visualizations").mkdir(parents=True)
+        (tmp_content / "knowledgebase").mkdir(parents=True)
         uploads_path.mkdir(parents=True)
         
         logger.info(f"Upload directory: {uploads_path}")
