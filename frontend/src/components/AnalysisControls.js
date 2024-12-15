@@ -185,11 +185,13 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                 ...visualizationsAvailable,
                                 edge: true
                             });
-                            // Only set visualization if not already set by chat response
-                            const { showEdgeVisualization } = useStore.getState();
-                            if (!showEdgeVisualization) {
-                                setShowEdgeVisualization(true);
-                                setShowObjectVisualization(false);
+                            // Update visualization state
+                            setShowEdgeVisualization(true);
+                            setShowObjectVisualization(false);
+                            // Force video reload with new visualization
+                            const videoElement = document.querySelector('video');
+                            if (videoElement) {
+                                videoElement.load();
                             }
                             // Force video reload to trigger auto-play
                             const videoElement = document.querySelector('video');
@@ -245,11 +247,13 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                                 ...visualizationsAvailable,
                                 object: true
                             });
-                            // Only set visualization if not already set by chat response
-                            const { showObjectVisualization } = useStore.getState();
-                            if (!showObjectVisualization) {
-                                setShowObjectVisualization(true);
-                                setShowEdgeVisualization(false);
+                            // Update visualization state
+                            setShowObjectVisualization(true);
+                            setShowEdgeVisualization(false);
+                            // Force video reload with new visualization
+                            const videoElement = document.querySelector('video');
+                            if (videoElement) {
+                                videoElement.load();
                             }
                         }
                     })
