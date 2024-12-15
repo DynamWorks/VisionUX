@@ -4,13 +4,11 @@ import logging
 import time
 import threading
 import os
-import tensorflow as tf
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import defaultdict
 from shapely.geometry import Polygon
 from shapely.geometry.point import Point
-import mediapipe as mp
 from ..utils.video_streaming.stream_subscriber import StreamSubscriber, Frame
 
 class CVService:
@@ -128,8 +126,8 @@ class CVService:
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Prepare input for TensorFlow model
-            input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
+            # # Prepare input for TensorFlow model
+            # input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
             
             # Run detection using OpenCV DNN
             classIds, confidences, boxes = self.net.detect(frame, confThreshold=0.5)
