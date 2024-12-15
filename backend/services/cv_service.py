@@ -38,26 +38,6 @@ class CVService:
         # Initialize TensorFlow model
         self._init_model()
 
-                # Initialize tracking components with thread safety
-        self.track_history = defaultdict(list)
-        self.next_object_id = 0
-        self.tracked_objects = {}
-        
-        # Initialize trackers
-        self.trackers = {}
-        if int(cv2.__version__.split('.')[0]) >= 4:
-            self.multi_tracker = cv2.legacy.MultiTracker_create()
-        else:
-            self.multi_tracker = cv2.MultiTracker_create()
-        self.tracking_history = {}
-
-        # Initialize counting regions
-        self.counting_regions = [{
-            "name": "Full Frame Region",
-            "polygon": None,  # Will be set based on frame dimensions
-            "counts": defaultdict(int),
-            "total_counts": defaultdict(int)
-        }]
 
         # Edge detection parameters
         self.edge_detection_params = {
