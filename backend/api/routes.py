@@ -180,11 +180,13 @@ def detect_objects():
         detection_tool = ObjectDetectionTool()
         result = detection_tool._run(video_path)
         vis_path = Path("tmp_content/visualizations")
-        response = {
-            "rag_response": result,
-            "tool": "object_detection",
-            "visualization": str( vis_path / f'{video_path.stem}'+'_objects.mp4' )
-        }
+        output_video = vis_path / f"{video_path.stem}_objects.mp4"                     
+        output_video_str = str(output_video)  # Convert to string for response 
+        response = {                                                                 
+                 "rag_response": result,                                                  
+                 "tool": "object_detection",                                                
+                 "visualization": output_video_str                                        
+             } 
         
         if isinstance(response, dict) and 'error' in result:
             return jsonify(response), 404
@@ -218,11 +220,13 @@ def detect_edges():
         edge_tool = EdgeDetectionTool()
         result = edge_tool._run(video_path, save_analysis=save_analysis)
         vis_path = Path("tmp_content/visualizations")
-        response = {
-            "rag_response": result,
-            "tool": "edge_detection",
-            "visualization":str( vis_path / f'{video_path.stem}'+'_edges.mp4' )
-        }
+        output_video = vis_path / f"{video_path.stem}_edges.mp4"                     
+        output_video_str = str(output_video)  # Convert to string for response 
+        response = {                                                                 
+                 "rag_response": result,                                                  
+                 "tool": "edge_detection",                                                
+                 "visualization": output_video_str                                        
+             } 
         
         if isinstance(response, dict) and 'error' in result:
             return jsonify(response), 404

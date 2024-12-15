@@ -170,12 +170,12 @@ class RAGService:
 
     def _get_analysis_prompt(self) -> str:
         """Get the analysis prompt template"""
-        return """Analyze these video analysis JSON files and create an extremely detailed text representation that includes:
+        return """Analyze these JSON files and create an extremely detailed text representation that includes:
 
-1. Scene Analysis:
+1. Analysis:
    - Comprehensive scene descriptions from all timestamps
    - All identified objects, people, and their positions
-   - Every detected activity and event
+   - Every detected activity tracked, counted and event
    - Complete environmental details (lighting, setting, background)
    - Temporal changes and scene evolution
 
@@ -238,8 +238,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 try:
                     # Enhanced prompt with structured sections
                     prompt_sections = [
-                        {"text": "Task: Generate a detailed text representation of video analysis data"},
-                        {"text": "Required sections:\n1. Scene Description\n2. Object Analysis\n3. Activity Timeline\n4. Technical Details\n5. Metadata Summary"},
+                        {"text": "Task: Generate a detailed text representation of analysis data"},
+                        {"text": "Required sections:\n1. Detailed Description including accurate numbers to reproduce if available.\n2. Object Analysis\n3. Activity Timeline\n4. Technical Details\n5. Metadata Summary"},
                         {"text": self._get_analysis_prompt()},
                         {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
                     ]

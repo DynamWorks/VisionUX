@@ -199,13 +199,14 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
              2. If a retriever result is available, interpret and suggest an appropriate tool if needed.
                 Available tools:
                 {tools_description}
-                Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
-                If suggesting a tool, explain why it would be helpful and set the tool to the suggested tool_name. 
-                If a tool has been suggested and have valid reason, keep/set the tool_name. 
-                If retriever result is not available and a tool should not be suggested, set the confirmed to False and requires_confirmation to True.
-             3. If the user query is a reply to confirm tool execution question, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool_name. 
-             4. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool_name information if deemed eligible and available.
-             5. With NO user confirfirmation the confirmed should always be False and required confirmation should be True.
+             3. Only suggest a tool if it would provide additional valuable information beyond what's in the retriever result.
+             4. If suggesting a tool, explain why it would be helpful and set the tool to the suggested tool_name. 
+             5. If a tool has been suggested and have valid reason, keep/set the tool_name. 
+             6. If retriever result is not available and a tool should not be suggested, set the confirmed to False and requires_confirmation to True.
+             7. If the user query is a reply to confirm tool execution question, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool_name. 
+             8. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool_name information if deemed eligible and available.
+             9. With NO user confirfirmation the confirmed should always be False and required confirmation should be True.
+             10.If the context is to get information on executed tools or analysis, do not suggest tools, get answer from retriever of the existing analysis.
 
             You must respond with valid JSON in this exact format:
             {{{{"tool": "<tool_name or null if no tool needed>","confirmed": <boolean>,"requires_confirmation": <boolean>,"reason": "<explanation for suggesting or not suggesting a tool>"}}}}"""),
@@ -361,7 +362,7 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
         
         # Extract content from AIMessage or string
         response_text = response.content if hasattr(response, 'content') else str(response)
-        
+
         return {
             **state,
             "final_response": response_text,
@@ -375,11 +376,11 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
                 }
             ],
             "retrieve_info":True,
-            "retriever_result":None,
-            "suggested_tool":None,
-            "tool_input":None,
-            "requires_confirmation":True,
-            "confirmed":False
+            # "retriever_result":None,
+            # "suggested_tool":None,
+            # "tool_input":None,
+            # "requires_confirmation":True,
+            # "confirmed":False
         }
             
     def _analyze_for_tool_suggestion(self, query: str, retriever_response: Optional[str]) -> Optional[Dict]:
