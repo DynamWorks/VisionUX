@@ -193,11 +193,6 @@ const AnalysisControls = ({ onSceneAnalysis, onEdgeDetection }) => {
                             if (videoElement) {
                                 videoElement.load();
                             }
-                            // Force video reload to trigger auto-play
-                            const videoElement = document.querySelector('video');
-                            if (videoElement) {
-                                videoElement.load();
-                            }
                         }
                     })
                     .catch(error => {
