@@ -394,24 +394,54 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             return None
 
     def _get_new_analysis_files(self, metadata_path: Path) -> List[Path]:
-        """Get list of new analysis files to process"""
-        processed_files = set()
+        """Get list of new analysis files to process and update metadata"""
+        processed_files = {}
         if metadata_path.exists():
             try:
                 with open(metadata_path) as f:
                     metadata = json.load(f)
-                    processed_files = set(metadata.get('processed_files', []))
+                    processed_files = metadata.get('processed_files', {})
             except Exception as e:
                 self.logger.warning(f"Error loading metadata: {e}")
 
         analysis_files = sorted(Path("tmp_content/analysis").glob("*.json"))
         new_files = []
         
+        # Update processed files metadata
         for file_path in analysis_files:
-            file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
-            if file_hash not in processed_files:
-                new_files.append(file_path)
-                processed_files.add(file_hash)
+            try:
+                file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
+                file_stat = file_path.stat()
+                
+                file_info = {
+                    'path': str(file_path),
+                    'hash': file_hash,
+                    'size': file_stat.st_size,
+                    'mtime': file_stat.st_mtime,
+                    'processed_at': time.time()
+                }
+                
+                # Check if file is new or modified
+                if file_hash not in processed_files or \
+                   processed_files[file_hash]['mtime'] != file_stat.st_mtime:
+                    new_files.append(file_path)
+                    processed_files[file_hash] = file_info
+            except Exception as e:
+                self.logger.error(f"Error processing file {file_path}: {e}")
+                continue
+
+        # Save updated metadata
+        try:
+            metadata = {
+                'processed_files': processed_files,
+                'last_update': time.time(),
+                'total_files': len(processed_files)
+            }
+            metadata_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+        except Exception as e:
+            self.logger.error(f"Error saving metadata: {e}")
 
         return new_files
 
