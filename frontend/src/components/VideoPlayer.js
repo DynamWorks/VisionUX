@@ -180,8 +180,10 @@ const VideoPlayer = ({ file, visualizationPath }) => {
                 
                 // Determine which video to load based on visualization toggles
                 let videoPath;
-                if ((showEdgeVisualization || showObjectVisualization) && currentVisualization) {
-                    videoPath = currentVisualization.replace(/^tmp_content\//, '');
+                if (showEdgeVisualization && useStore.getState().visualizationsAvailable.edge) {
+                    videoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_edges.mp4`;
+                } else if (showObjectVisualization && useStore.getState().visualizationsAvailable.object) {
+                    videoPath = `visualizations/${file.name.replace(/\.[^/.]+$/, '')}_objects.mp4`;
                 } else {
                     videoPath = `uploads/${file.name}`;
                 }
