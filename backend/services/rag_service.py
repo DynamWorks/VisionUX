@@ -128,6 +128,7 @@ class RAGService:
         
     def _process_analysis_files(self, new_files: List[Path]) -> List[Dict]:
         """Process analysis files and generate text representations"""
+        
         if not new_files:
             return []
 
@@ -170,56 +171,17 @@ class RAGService:
 
     def _get_analysis_prompt(self) -> str:
         """Get the analysis prompt template"""
-        return """Analyze these JSON files and create an extremely detailed text representation that includes:
+        return """**Report Structure:**
+        * **Description:** Detailed textual description of the content if available.
 
-1. Analysis:
-   - Comprehensive scene descriptions from all timestamps
-   - All identified objects, people, and their positions
-   - Every detected activity tracked, counted and event
-   - Complete environmental details (lighting, setting, background)
-   - Temporal changes and scene evolution
+* **Frame** `#<frame_number>:<count_1> <object_type_1>s:<count_2> <object_type_2>s ... :<timestamp> `  (Repeat for each frame).
 
-2. Technical Details:
-   - Full resolution and frame information
-   - All timestamps and frame numbers
-   - Complete video metadata
-   - Processing parameters used
-   - Quality metrics and confidence scores
-
-3. Object & Activity Analysis:
-   - Every detected object with confidence scores
-   - All spatial relationships between objects
-   - Complete activity timelines
-   - Movement patterns and trajectories
-   - Interaction analysis between objects/people
-
-4. Contextual Information:
-   - All relevant background information
-   - Environmental conditions
-   - Camera movement and perspective changes
-   - Scene context and setting details
-   - Temporal context and sequence information
-
-5. Analysis Results:
-   - All detection results with confidence scores
-   - Complete list of identified patterns
-   - Every relationship and correlation found
-   - All technical measurements and metrics
-   - Processing statistics and performance data
-
-6. Metadata & Technical Context:
-   - File processing history
-   - Analysis timestamps
-   - All configuration parameters
-   - System performance metrics
-   - Processing pipeline details
-
-Generate a comprehensive, structured text representation that captures 100% of the information present in the analysis files. Include all numerical values, timestamps, and technical details exactly as they appear in the source data.
-
-Focus on maximum detail and complete accuracy. Do not summarize or omit any information."""
+* **Metadata:** `<metadata_key>:<metadata_value>` (Repeat for each metadata field).  Example keys: `filename`, `analysis_timestamp`, `model_version`, `processing_time`.
+"""
 
     def _generate_text_representations(self, analysis_files: List[Dict]) -> List[Dict]:
         """Generate text representations using Gemini with enhanced error handling and retries"""
+        
         if not analysis_files:
             return []
             
@@ -238,10 +200,10 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                 try:
                     # Enhanced prompt with structured sections
                     prompt_sections = [
-                        {"text": "Task: Generate a detailed text representation of analysis data"},
-                        {"text": "Required sections:\n1. Detailed Description including accurate numbers to reproduce if available.\n2. Object Analysis\n3. Activity Timeline\n4. Technical Details\n5. Metadata Summary"},
+                        {"text": "Analyze the provided JSON data, representing a single computer vision analysis, and generate a structured textual report suitable for Retrieval Augmented Generation (RAG).  The report must reproduce all data from the JSON without interpretation or summarization.  All numerical values (timestamps, confidence scores, etc.), metadata, and technical details must be exact. round all timestamps to 1 decimal."},
+                        {"text": "The report will use a simple, key-value pair format for easy extraction by a RAG system.  Each key-value pair will be on a new line."},
                         {"text": self._get_analysis_prompt()},
-                        {"text": f"Analysis JSON data:\n{json.dumps(file_data['data'], indent=2)}"}
+                        {"text": f"**Input JSON Data:**\n{json.dumps(file_data['data'], indent=2)}"}
                     ]
                     
                     response = self.gemini_model.generate_content(prompt_sections)
@@ -250,7 +212,8 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
                         raise ValueError("Empty response from model")
                     
                     # Extract and validate text
-                    text_representation = response.text if hasattr(response, 'text') else str(response)
+                    # text_representation = response.text if hasattr(response, 'text') else str(response)
+                    text_representation = response.text if hasattr(response, 'candidates') else str(response)
                     if not text_representation.strip():
                         raise ValueError("Empty text representation")
 
@@ -394,24 +357,53 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             return None
 
     def _get_new_analysis_files(self, metadata_path: Path) -> List[Path]:
-        """Get list of new analysis files to process"""
-        processed_files = set()
+        """Get list of new analysis files to process and update metadata"""
+        processed_files = []
         if metadata_path.exists():
             try:
                 with open(metadata_path) as f:
                     metadata = json.load(f)
-                    processed_files = set(metadata.get('processed_files', []))
+                    processed_files = metadata.get('processed_files', [])
             except Exception as e:
                 self.logger.warning(f"Error loading metadata: {e}")
 
         analysis_files = sorted(Path("tmp_content/analysis").glob("*.json"))
         new_files = []
         
+        # Update processed files metadata
         for file_path in analysis_files:
-            file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
-            if file_hash not in processed_files:
-                new_files.append(file_path)
-                processed_files.add(file_hash)
+            try:
+                file_hash = hashlib.md5(file_path.read_bytes()).hexdigest()
+                file_stat = file_path.stat()
+                
+                file_info = {
+                    'path': str(file_path),
+                    'hash': file_hash,
+                    'size': file_stat.st_size,
+                    'mtime': file_stat.st_mtime,
+                    'processed_at': time.time()
+                }
+                
+                # Check if file is new or modified
+                if file_hash not in processed_files:
+                    new_files.append(file_path)
+                    processed_files.append(file_hash)
+            except Exception as e:
+                self.logger.error(f"Error processing file {file_path}: {e}")
+                continue
+
+        # Save updated metadata
+        try:
+            metadata = {
+                'processed_files': processed_files,
+                'last_update': time.time(),
+                'total_files': len(processed_files)
+            }
+            metadata_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+        except Exception as e:
+            self.logger.error(f"Error saving metadata: {e}")
 
         return new_files
 
@@ -641,14 +633,17 @@ Focus on maximum detail and complete accuracy. Do not summarize or omit any info
             'vector_dimensions': 1536,
             'similarity_metric': 'cosine'
         }
-
-        with open(metadata_path, 'w') as f:
-            json.dump({
+        kb_meta = {
                 'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
                 'kb_stats': kb_stats,
                 'last_update': time.time(),
                 'version': '1.0'
-            }, f, indent=2)
+            }
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+        with open(metadata_path, 'w') as f:
+            metadata.update(kb_meta)
+            json.dump(metadata, f, indent=2)
             
     def get_retrieval_chain(self, vectordb: FAISS) -> RetrievalQA:
         """Create retrieval chain with custom prompt"""
@@ -682,7 +677,7 @@ Instructions:
    - edge_detection: Highlight visual boundaries
 5. If the question is within context but requires outside knowledge, answer but only with facts.
 6. If requested to provide details or elaborate, elaborate , but otherwise keep the response short answering clearly and precisely to the point.
-7. If a tool has been suggested to be executed or confirmed to be executed, make sure that it is part of the the above discussed available tools and answer that the tool will be executed. If the tool is not available, politely decline saying that the tool will be included in the future versions. include Tool name (If available else None) and confirmation = True/False in the json response. 
+7. If a tool has been suggested to be executed or confirmed to be executed, make sure that it is part of the the above discussed available tools and answer that the tool will be executed. If the tool is not available, politely decline saying that the tool will be included in the future versions.
 8. If the question is not related to the context, respond with "I'm sorry, I don't have information on that. Is there anything else I can help you with?"
 
 Provide your response in natural language, focusing on being informative and helpful to the user"""

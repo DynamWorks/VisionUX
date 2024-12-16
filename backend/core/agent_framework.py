@@ -136,7 +136,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
 
         # Create/update knowledge base
         try:
-            
             vectordb = self.rag_service.create_knowledge_base(Path(video_path))
             if not vectordb:
                 return {
@@ -206,7 +205,11 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
              7. If the user query is a reply to confirm tool execution question, and identifies user confirmation to the suggested tool,only then set the confirmed to True and requires_confirmation to False along with the tool_name. 
              8. If the user query requests and affirms for tool execution, and if the tool is available and capable of performing the user request, only then set the confirmed to True and requires_confirmation to False. Provide tool_name information if deemed eligible and available.
              9. With NO user confirfirmation the confirmed should always be False and required confirmation should be True.
-             10.If the context is to get information on executed tools or analysis, do not suggest tools, get answer from retriever of the existing analysis.
+             10. If the context is to get information on executed tools or analysis, do not suggest tools, get answer from retriever of the existing analysis.
+             11. If a tool has been suggested and executed already do not suggest the same tool. 
+             12. If a tool is requested for specific frames, politetly respond that the functionality to work on individual frames currently do not exist but will be included in the upcoming releases.
+             13. Always check for the previous user chat query and the provided response before responding. 
+             14. If the user query suggests a question, try to see if there are any analysis performed that may be relavant.
 
             You must respond with valid JSON in this exact format:
             {{{{"tool": "<tool_name or null if no tool needed>","confirmed": <boolean>,"requires_confirmation": <boolean>,"reason": "<explanation for suggesting or not suggesting a tool>"}}}}"""),
@@ -214,7 +217,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
             ("user", "Query: {query}\nretriever_result: {result}\n\nAnalyze the query and suggest a tool if appropriate. Return your response in the required JSON format.")
         ])
         #"input": {{{{"param": "value"}}}},
-
         # Get suggestion from LLM
         chain = prompt | self.llm 
         response = chain.invoke({
@@ -313,7 +315,6 @@ Assistant: I'll run object detection to identify vehicles and other objects. Thi
 
     def _generate_response(self, state: AgentState) -> AgentState:
         """Generate final response combining retriever and tool results"""
-        
         if state.get("error"):
             return {
                 **state,

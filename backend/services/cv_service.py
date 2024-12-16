@@ -4,13 +4,11 @@ import logging
 import time
 import threading
 import os
-import tensorflow as tf
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import defaultdict
 from shapely.geometry import Polygon
 from shapely.geometry.point import Point
-import mediapipe as mp
 from ..utils.video_streaming.stream_subscriber import StreamSubscriber, Frame
 
 class CVService:
@@ -40,26 +38,6 @@ class CVService:
         # Initialize TensorFlow model
         self._init_model()
 
-                # Initialize tracking components with thread safety
-        self.track_history = defaultdict(list)
-        self.next_object_id = 0
-        self.tracked_objects = {}
-        
-        # Initialize trackers
-        self.trackers = {}
-        if int(cv2.__version__.split('.')[0]) >= 4:
-            self.multi_tracker = cv2.legacy.MultiTracker_create()
-        else:
-            self.multi_tracker = cv2.MultiTracker_create()
-        self.tracking_history = {}
-
-        # Initialize counting regions
-        self.counting_regions = [{
-            "name": "Full Frame Region",
-            "polygon": None,  # Will be set based on frame dimensions
-            "counts": defaultdict(int),
-            "total_counts": defaultdict(int)
-        }]
 
         # Edge detection parameters
         self.edge_detection_params = {
@@ -68,8 +46,7 @@ class CVService:
             'overlay_mode': False,
             'blur_size': 5,
             'blur_sigma': 0,
-            'track_objects': True,  # Enable object tracking
-            'min_object_area': 500  # Minimum contour area to track
+            'min_object_area': 500
         }
 
         # Motion detection parameters
@@ -128,18 +105,12 @@ class CVService:
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Prepare input for TensorFlow model
-            input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
+            # # Prepare input for TensorFlow model
+            # input_tensor = tf.convert_to_tensor(frame[np.newaxis, ...])
             
             # Run detection using OpenCV DNN
             classIds, confidences, boxes = self.net.detect(frame, confThreshold=0.5)
             
-            # Initialize counting region if needed
-            if self.counting_regions[0]["polygon"] is None:
-                height, width = frame.shape[:2]
-                self.counting_regions[0]["polygon"] = Polygon([
-                    (0, 0), (width, 0), (width, height), (0, height)
-                ])
 
             detections = []
             
@@ -162,42 +133,18 @@ class CVService:
                     
                     # Create detection entry
                     bbox = [xmin, ymin, xmax, ymax]
-                    track_id = i + 1
                     # confidence already set above
-                    
-                    # Calculate center point
-                    center_x = (bbox[0] + bbox[2]) / 2
-                    center_y = (bbox[1] + bbox[3]) / 2
-                    
-                    # Update tracking history
-                    track = self.track_history[track_id]
-                    track.append((float(center_x), float(center_y)))
-                    if len(track) > 30:  # Keep last 30 points
-                        track.pop(0)
-                    
-                    # Check regions and update counts
-                    for region in self.counting_regions:
-                        if region["polygon"].contains(Point(center_x, center_y)):
-                            region["counts"][class_name] += 1
-                            region["total_counts"][class_name] += 1
                     
                     detection = {
                         'bbox': bbox,
-                        'confidence': confidence,  # Use the confidence from detection.score[0]
-                        'class': class_name,
-                        'track_id': track_id,
-                        'track_history': track.copy()
+                        'confidence': confidence,
+                        'class': class_name
                     }
                     detections.append(detection)
             
             return {
                 'detections': detections,
-                'timestamp': time.time(),
-                'regions': [{
-                    'name': region['name'],
-                    'counts': dict(region['counts']),
-                    'total_counts': dict(region['total_counts'])
-                } for region in self.counting_regions]
+                'timestamp': time.time()
             }
             
         except Exception as e:
@@ -240,90 +187,8 @@ class CVService:
                 cv2.CHAIN_APPROX_SIMPLE
             )
             
-            # Process contours and prepare for async tracking
-            tracked_objects = []
+            # Process contours
             result = frame.copy()
-            
-            if self.edge_detection_params['track_objects']:
-                import threading
-                
-                def track_object(contour, frame, obj_id):
-                    area = cv2.contourArea(contour)
-                    if area < self.edge_detection_params['min_object_area']:
-                        return None
-                        
-                    x, y, w, h = cv2.boundingRect(contour)
-                    
-                    # Initialize tracker based on OpenCV version
-                    tracker_type = 'KCF'  # Using KCF tracker for better performance
-                    if int(cv2.__version__.split('.')[1]) < 3:
-                        tracker = cv2.Tracker_create(tracker_type)
-                    else:
-                        tracker = cv2.TrackerKCF_create()
-                    
-                    success = tracker.init(frame, (x, y, w, h))
-                    if success:
-                        return {
-                            'id': obj_id,
-                            'tracker': tracker,
-                            'bbox': [x, y, w, h],
-                            'center': (x + w//2, y + h//2),
-                            'tracking_info': {
-                                'type': tracker_type,
-                                'confidence': 1.0,
-                                'frames_tracked': 0,
-                                'last_update': time.time()
-                            }
-                        }
-                    return None
-                
-                # Start tracking threads
-                tracking_threads = []
-                tracking_results = []
-                
-                for contour in contours:
-                    thread = threading.Thread(
-                        target=lambda c=contour: tracking_results.append(
-                            track_object(c, frame.copy(), self.next_object_id)
-                        )
-                    )
-                    tracking_threads.append(thread)
-                    thread.start()
-                    self.next_object_id += 1
-                
-                # Wait for all tracking threads to complete
-                for thread in tracking_threads:
-                    thread.join()
-                
-                # Process tracking results
-                for track_result in tracking_results:
-                    if track_result:
-                        self.trackers[track_result['id']] = track_result['tracker']
-                        tracked_objects.append({
-                            'id': track_result['id'],
-                            'bbox': track_result['bbox'],
-                            'center': track_result['center']
-                        })
-                        
-                        # Draw tracking boxes with IDs
-                        x, y, w, h = track_result['bbox']
-                        cv2.rectangle(result, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                        # Draw ID text with better visibility
-                        text = f"ID: {track_result['id']}"
-                        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
-                        # Draw background rectangle for text
-                        cv2.rectangle(result, (x, y-25), (x + text_size[0], y), (0, 255, 0), -1)
-                        # Draw text
-                        cv2.putText(result, text, (x, y-5),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-
-                        # Save tracking data
-                        from backend.services.tracking_analysis import TrackingAnalysis
-                        tracking_analyzer = TrackingAnalysis()
-                        tracking_path = tracking_analyzer.save_tracking_data(
-                            str(Path(frame.filename).stem) if hasattr(frame, 'filename') else 'edge_detection',
-                            tracked_objects
-                        )
             
             # Draw edges
             edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
@@ -339,9 +204,7 @@ class CVService:
             return {
                 'frame': result,
                 'edges': edges,
-                'tracked_objects': tracked_objects,
-                'params': self.edge_detection_params.copy(),
-                'tracking_analysis': tracking_path if 'tracking_path' in locals() else None
+                'params': self.edge_detection_params.copy()
             }
             
         except Exception as e:
