@@ -133,7 +133,6 @@ class CVService:
                     
                     # Create detection entry
                     bbox = [xmin, ymin, xmax, ymax]
-                    track_id = i + 1
                     # confidence already set above
                     
                     detection = {
@@ -205,9 +204,7 @@ class CVService:
             return {
                 'frame': result,
                 'edges': edges,
-                'tracked_objects': tracked_objects,
-                'params': self.edge_detection_params.copy(),
-                'tracking_analysis': tracking_path if 'tracking_path' in locals() else None
+                'params': self.edge_detection_params.copy()
             }
             
         except Exception as e:
