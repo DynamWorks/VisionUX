@@ -1,6 +1,6 @@
-# Video Analytics Platform
+# VisionUX
 
-A video analytics platform powered by an Agentic RAG framework incorporating OpenAI GPT-4o-mini and Google Gemini-1.5-Flash models. This proof-of-concept application combines computer vision, AI analysis, and interactive visualization for video understanding through an agent-based approach to content processing and user interaction.
+A VisionUX is a video analytics platform powered by an Agentic RAG framework incorporating OpenAI GPT-4o-mini and Google Gemini-1.5-Flash models. This proof-of-concept application combines computer vision, AI analysis, and interactive visualization for video understanding through an agent-based approach to content processing and user interaction.
 
 [![YouTube](http://i.ytimg.com/vi/jx_z7j4_lFQ/hqdefault.jpg)](https://www.youtube.com/watch?v=jx_z7j4_lFQ)
 
