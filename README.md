@@ -1,219 +1,132 @@
 # Video Analytics Platform
 
-A comprehensive real-time video analytics platform with AI-powered analysis capabilities.
+A video analytics platform powered by an Agentic RAG framework incorporating OpenAI GPT-4o-mini and Google Gemini-1.5-Flash models. This proof-of-concept application combines computer vision, AI analysis, and interactive visualization for video understanding through an agent-based approach to content processing and user interaction.
 
-## Project Structure
+## Prerequisites
 
-```
-vision-llm/
-├── backend/
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── routes.py              # API endpoint definitions
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── agent_framework.py     # Agent orchestration
-│   │   └── analysis_tools.py      # Analysis tools
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── chat_service.py        # Chat processing service
-│   │   ├── cv_service.py          # Computer vision service
-│   │   ├── rag_service.py         # Retrieval Augmented Generation
-│   │   └── scene_service.py       # Scene analysis service
-│   ├── utils/
-│   │   ├── handlers/
-│   │   │   ├── __init__.py
-│   │   │   ├── base_handler.py
-│   │   │   ├── camera_stream_handler.py
-│   │   │   ├── file_list_handler.py
-│   │   │   ├── handler_interface.py
-│   │   │   ├── message_router.py
-│   │   │   ├── progress_handler.py
-│   │   │   └── video_upload_handler.py
-│   │   ├── video_streaming/
-│   │   │   ├── __init__.py
-│   │   │   ├── stream_manager.py
-│   │   │   ├── stream_publisher.py
-│   │   │   ├── stream_subscriber.py
-│   │   │   └── websocket_publisher.py
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   ├── env_validator.py
-│   │   └── socket_handler.py
-│   ├── __init__.py
-│   ├── app.py                     # Main Flask application
-│   ├── config.yaml                # Configuration file
-│   ├── content_manager.py         # Content/file management
-│   └── run.py                     # Application entry point
-├── frontend/
-│   ├── public/
-│   │   ├── favicon.ico
-│   │   ├── favicon.png
-│   │   └── index.html
-│   ├── src/
-│   │   ├── assets/
-│   │   │   ├── favicon.ico
-│   │   │   ├── favicon.png
-│   │   │   └── logo.png
-│   │   ├── components/
-│   │   │   ├── AnalysisControls.js
-│   │   │   ├── CameraSelector.js
-│   │   │   ├── Chat.js
-│   │   │   ├── CustomViewer.js
-│   │   │   ├── ErrorBoundary.js
-│   │   │   ├── FileList.js
-│   │   │   ├── Footer.js
-│   │   │   ├── Header.js
-│   │   │   ├── InputSelector.js
-│   │   │   ├── StreamRenderer.js
-│   │   │   ├── VideoPlayer.js
-│   │   │   └── VideoUpload.js
-│   │   ├── hooks/
-│   │   │   ├── useChat.js
-│   │   │   └── useVideo.js
-│   │   ├── services/
-│   │   │   └── websocket.js       # WebSocket service
-│   │   ├── store/
-│   │   │   └── index.js           # Zustand store
-│   │   ├── App.js                 # Main React component
-│   │   ├── index.css              # Global styles
-│   │   ├── index.js               # Application entry point
-│   │   └── theme.js               # Material-UI theme
-│   └── package.json               # Node.js dependencies
-└── README.md
-```
+- Python 3.11
+- Node.js 20.17.0
+- npm 10.8.2
+- Conda (for environment management)
+- OpenAI API key
+- Google Gemini API key
 
-## Features
+## Installation
 
-- Real-time video processing
-- Camera stream support
-- Video file upload/management
-- Edge detection
-- Object detection
-- Scene analysis
-- Chat interface with RAG
-- WebSocket communication
-- Custom video viewer
+### Backend Setup
 
-## Technology Stack
+1. Create and activate a Python virtual environment:
 
-### Backend
-- Python 3.8+
-- Flask
-- OpenCV
-- PyTorch
-- Socket.IO
-- GPT-4V
-- RAG (Retrieval Augmented Generation)
-
-### Frontend
-- React.js
-- Material-UI
-- Socket.IO Client
-- WebSocket
-- Zustand (State Management)
-
-## Setup
-
-1. Install backend dependencies:
 ```bash
+conda create --name visionux python=3.11
+conda activate visionux
 cd backend
 pip install -r requirements.txt
 ```
 
-2. Install frontend dependencies:
+2. Copy and configure environment variables:
+
 ```bash
+cp .env.example .env
+```
+
+Required environment variables:
+
+```bash
+API_HOST=localhost
+API_PORT=8000
+OPENAI_API_KEY=your_openai_key_here
+GEMINI_API_KEY=your_gemini_key_here
+```
+
+### Frontend Setup
+
+1. In a new terminal (without Python virtual environment):
+
+```bash
+conda deactivate
 cd frontend
 npm install
 ```
 
-3. Configure environment:
-- Copy `backend/.env.example` to `backend/.env`
-- Update configuration in `backend/config.yaml`
+2. Copy and configure environment variables:
 
-### Environment Variables
-
-The following environment variables need to be configured in `.env`:
-
-Required:
-- `API_HOST`: API server bind address
-- `API_PORT`: API server port
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `GEMINI_API_KEY`: Your Gemini API key
-
-Optional:
-- `API_DEBUG`: Enable API debug mode (default: false)
-- `API_CORS_ORIGINS`: CORS allowed origins (default: *)
-- `WS_HOST`: WebSocket server host (default: localhost)
-- `WS_PORT`: WebSocket server port (default: 8000)
-- `WS_DEBUG`: Enable WebSocket debug mode (default: false)
-- `OPENAI_MODEL`: OpenAI model to use (default: gpt-4o-mini)
-- `GEMINI_MODEL`: Gemini model to use (default: gemini-1.5-flash)
-- `LOG_LEVEL`: Logging level (default: INFO)
-
-4. Start backend server:
 ```bash
-cd backend
-python run.py
+cp .env.example .env
 ```
 
-5. Start frontend development server:
+Configure with these settings:
+
+```bash
+REACT_APP_API_URL=http://localhost:8000
+REACT_APP_WS_URL=http://localhost:8000
+REACT_APP_API_VERSION=/api/v1
+REACT_APP_WS_PORT=8000
+REACT_APP_WS_HOST=localhost
+REACT_APP_STREAM_PORT=8001
+REACT_APP_STREAM_WS_URL=http://localhost:8001
+```
+
+## Running the Application
+
+1. Start the backend server:
+
+```bash
+cd backend
+python run.py --config config.yaml
+```
+
+2. In a separate terminal, start the frontend:
+
 ```bash
 cd frontend
 npm start
 ```
 
-## Architecture
+The application will be available at `http://localhost:3000`
 
-### Video Processing Pipeline
-1. Input Sources:
-   - Camera streams
-   - Uploaded video files
-2. Frame Processing:
-   - Edge detection
-   - Object detection
-   - Scene analysis
-3. Real-time Visualization:
-   - Custom viewer
-   - WebSocket streaming
-   - Analysis overlays
+## Usage Guidelines
 
-### Analysis Pipeline
-1. Scene Understanding:
-   - GPT-4V integration
-   - Multi-agent swarm analysis
-2. Chat System:
-   - RAG-based retrieval
-   - Context-aware responses
-3. Results Storage:
-   - Temporary storage
-   - Analysis persistence
-   - Automatic cleanup
+### Video Requirements
 
-## Configuration
+- Recommended video length: 10-20 seconds for optimal performance
+- Primary supported format: MP4
+- Other formats (AVI, MOV, WEBM) may work but might have compatibility issues
+- Maximum file size: 100MB
 
-Key configuration files:
-- `backend/config.yaml`: Main configuration
-- `backend/.env`: Environment variables
-- `frontend/.env`: Frontend configuration
+### Current Limitations
 
-## Development
+- This is a proof-of-concept implementation
+- Camera functionality is disabled (planned for future releases)
+- Video processing is optimized for short clips
+- Users should test thoroughly and report any issues
 
-### Adding New Features
-1. Backend:
-   - Add routes in `api/routes.py`
-   - Create services in `services/`
-   - Add handlers in `utils/handlers/`
+## Features
 
-2. Frontend:
-   - Add components in `components/`
-   - Update state in `stores/`
-   - Configure WebSocket in `services/`
+- Video file upload and management
+- AI-powered scene analysis
+- Object detection
+- Edge detection
+- Chat interface with RAG (Retrieval Augmented Generation)
+- Analysis results visualization
 
-### Testing
-- Backend tests in `backend/tests/`
-- Frontend tests with Jest/React Testing Library
+## Support
+
+For support questions, please open an issue in the repository.
 
 ## License
 
-MIT License
+Licensing Terms for VisionUX
+
+Commercial License
+
+If you intend to use VisionUX to develop commercial sites, themes, projects, or applications, the Commercial License is the appropriate option. This license allows you to keep your source code proprietary.
+
+For inquiries regarding the Commercial License, please contact us at contact@dynamworks.com.
+
+Open Source License
+
+VisionUX is also available under the GNU Affero General Public License v3 (GNU AGPL v3).
+If you are developing an open-source application under a license compatible with the GNU AGPL v3, you may use VisionUX under the terms of this license.
+
+For more information on the GNU AGPL v3, please visit [GNU AGPL v3 Overview](https://www.gnu.org/licenses/agpl-3.0.en.html).
