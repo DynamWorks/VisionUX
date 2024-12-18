@@ -1,14 +1,10 @@
 *_Dataset
-*.avi
-*.mp4
-*.jpg
 .aider*
 .env
 tmp_content/
 others/
 aider_old/
 .vscode
-sample_video.mp4
 # Python cache files
 __pycache__/
 *.py[cod]
@@ -38,7 +34,6 @@ tmp_content/
 #models/
 node_modules/
 
-unknown_video_analysis_1732865618_1732865618.json
 *.pem
 research-codes/
 Reports/
